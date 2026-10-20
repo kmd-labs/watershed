@@ -18,16 +18,15 @@ import { Nutrient, RAMP_TOKENS, SPEC_BREAKS } from './core/data/nutrients';
 import {
   CYANO_BREAKS,
   CYANO_TOKENS,
-  OXYGEN_THRESHOLDS,
-  OXYGEN_TOKENS,
   SeaGrid,
   SeaLayer,
   SeaLayersService,
   UMOL_PER_ML,
-  gridArea,
   gridValueAt,
+  oxygenChangeGrid,
   oxygenClass
 } from './core/data/sea-layers';
+import { OxygenMode, OxygenTimelineComponent } from './panels/oxygen-timeline.component';
 import { GlobeComponent, GlobeHover } from './globe/globe.component';
 import { BasinListComponent } from './panels/basin-list.component';
 import { BasinDetailComponent } from './panels/basin-detail.component';
@@ -46,7 +45,8 @@ import { MethodComponent } from './panels/method.component';
     GlobeComponent,
     BasinListComponent,
     BasinDetailComponent,
-    CountryListComponent
+    CountryListComponent,
+    OxygenTimelineComponent
   ],
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss'
@@ -66,7 +66,9 @@ export class AppComponent {
   readonly chevronDownIcon = ChevronDown;
   readonly chevronUpIcon = ChevronUp;
   readonly riversIcon = Waves;
-  readonly phosphorusIcon = CircleDot;
+  readonly dischargeIcon = CircleDot;
+  readonly nutrients: Nutrient[] = ['n', 'p'];
+  readonly nutrientIcons: Record<Nutrient, typeof Sprout> = { n: Sprout, p: Leaf };
   readonly bordersIcon = MapIcon;
   readonly labelsIcon = Type;
 
@@ -74,24 +76,48 @@ export class AppComponent {
   readonly selected = signal<number>(-1);
   readonly panelOpen = signal<boolean>(!this.bp.mobile());
   readonly showRivers = signal(true);
-  readonly showPhosphorus = signal(true);
+  readonly showDischarge = signal(true);
   readonly listTab = signal<'rivers' | 'countries'>('rivers');
 
-  /** Reference circles for the phosphorus legend (area ∝ load, largest = biggest river). */
+  /** Reference circles for the discharge legend (area ∝ load, largest = biggest river). */
   readonly discLegend = computed(() => {
     const d = this.store.data();
-    if (!d) return [];
-    const max = Math.max(...d.basins.map(b => b.load.p));
+    const nut = this.nutrient();
+    if (!d) return { color: '', items: [] };
+    const max = Math.max(...d.basins.map(b => b.load[nut]));
+    const refs = nut === 'n' ? [1000, 10000, max] : [100, 1000, max];
     const D = 34;
-    return [100, 1000, max].map(v => ({ size: Math.max(4, D * Math.sqrt(v / max)), label: this.i18n.tonnes(v) }));
+    return {
+      color: `var(--color-${RAMP_TOKENS[nut][5]})`,
+      items: refs.map(v => ({ size: Math.max(4, D * Math.sqrt(v / max)), label: this.i18n.tonnes(v) }))
+    };
   });
   readonly showBorders = signal(false);
   readonly showLabels = signal(true);
   readonly seaLayer = signal<SeaLayer>('none');
 
+  /** Year and display mode of the dead-zone layer. */
+  readonly oxygenYear = signal(2020);
+  readonly oxygenMode = signal<OxygenMode>('state');
+
+  /** Oxygen frame for the selected year (raw values, used for tooltips). */
+  readonly oxygenFrame = computed<SeaGrid | null>(() => {
+    const s = this.sea.oxygen();
+    if (!s) return null;
+    const i = s.years.indexOf(this.oxygenYear());
+    return s.frames[i >= 0 ? i : s.frames.length - 1];
+  });
+
+  /** What the globe actually paints for the sea. */
+  readonly globeSeaLayer = computed<SeaLayer>(() =>
+    this.seaLayer() === 'oxygen' && this.oxygenMode() === 'change' ? 'oxygenChange' : this.seaLayer()
+  );
+
   readonly seaGrid = computed<SeaGrid | null>(() => {
-    const l = this.seaLayer();
-    return l === 'oxygen' ? this.sea.oxygen() : l === 'cyano' ? this.sea.cyano() : null;
+    const l = this.globeSeaLayer();
+    const s = this.sea.oxygen();
+    if (l === 'oxygenChange') return s ? oxygenChangeGrid(s, this.oxygenYear()) : null;
+    return l === 'oxygen' ? this.oxygenFrame() : l === 'cyano' ? this.sea.cyano() : null;
   });
 
   readonly seaToggles = computed(() => {
@@ -109,21 +135,7 @@ export class AppComponent {
     if (layer === 'none') return null;
     if (layer === 'cyano' && this.sea.cyanoMissing()) return { kind: 'missing' as const, note: t.cyanoUnavailable };
     if (!g) return { kind: 'loading' as const, note: t.layerLoading };
-    if (layer === 'oxygen') {
-      const hyp = gridArea(g, v => v < OXYGEN_THRESHOLDS.hypoxic);
-      const anox = gridArea(g, v => v < OXYGEN_THRESHOLDS.anoxic);
-      const round = (v: number) => this.i18n.num(Math.round(v / 1000) * 1000);
-      return {
-        kind: 'oxygen' as const,
-        title: t.oxygenLegendTitle,
-        period: t.oxygenPeriod,
-        items: [
-          { color: `var(--color-${OXYGEN_TOKENS.anoxic})`, label: t.oxygenAnoxic },
-          { color: `var(--color-${OXYGEN_TOKENS.hypoxic})`, label: t.oxygenHypoxic }
-        ],
-        note: t.oxygenStats(round(hyp), round(anox))
-      };
-    }
+    if (layer === 'oxygen') return { kind: 'oxygen' as const, series: this.sea.oxygen()! };
     return {
       kind: 'cyano' as const,
       title: t.cyanoLegendTitle,
@@ -183,7 +195,7 @@ export class AppComponent {
     const t = this.i18n.t();
     return [
       { label: t.layerRivers, icon: this.riversIcon, on: this.showRivers },
-      { label: t.layerPhosphorus, icon: this.phosphorusIcon, on: this.showPhosphorus },
+      { label: t.layerDischarge, icon: this.dischargeIcon, on: this.showDischarge },
       { label: t.layerBorders, icon: this.bordersIcon, on: this.showBorders },
       { label: t.layerLabels, icon: this.labelsIcon, on: this.showLabels }
     ];
@@ -215,15 +227,16 @@ export class AppComponent {
   }
 
   private seaTooltip(lon: number, lat: number): string {
-    const g = this.seaGrid();
+    const oxygen = this.seaLayer() === 'oxygen';
+    const g = oxygen ? this.oxygenFrame() : this.seaGrid();
     const t = this.i18n.t();
     if (!g) return '';
     const v = gridValueAt(g, lon, lat);
     if (Number.isNaN(v)) return '';
-    if (this.seaLayer() === 'oxygen') {
+    if (oxygen) {
       const c = oxygenClass(v);
       const suffix = c === 'anoxic' ? ` · ${t.oxygenTooltipAnoxic}` : c === 'hypoxic' ? ` · ${t.oxygenTooltipHypoxic}` : '';
-      return t.oxygenTooltip(this.i18n.num(v / UMOL_PER_ML, 1)) + suffix;
+      return `${this.oxygenYear()}: ` + t.oxygenTooltip(this.i18n.num(v / UMOL_PER_ML, 1)) + suffix;
     }
     return t.cyanoTooltip(`${Math.round(v * 100)}%`);
   }

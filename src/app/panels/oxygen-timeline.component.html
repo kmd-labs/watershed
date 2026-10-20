@@ -1,0 +1,72 @@
+@let t = i18n.t();
+@let c = chart();
+
+<div class="head">
+  <div class="head__title">
+    {{ t.oxygenLegendTitle }}
+    <span class="head__year">{{ year() }}</span>
+    <span class="head__unit">{{ t.oxygenWindow }}</span>
+  </div>
+  <div class="mode" role="radiogroup" [attr.aria-label]="t.oxygenModeLabel">
+    <app-button variant="toggle" [active]="mode() === 'state'" (btnClick)="modeChange.emit('state')">{{ t.oxygenModeState }}</app-button>
+    <app-button variant="toggle" [active]="mode() === 'change'" (btnClick)="modeChange.emit('change')">{{ t.oxygenModeChange }}</app-button>
+  </div>
+</div>
+
+@if (mode() === 'state') {
+  <div class="items">
+    <span class="item"><i [style.background]="colors.anoxic"></i>{{ t.oxygenAnoxic }}</span>
+    <span class="item"><i [style.background]="colors.hypoxic"></i>{{ t.oxygenHypoxic }}</span>
+  </div>
+} @else {
+  <div class="items">
+    <span class="item"><i [style.background]="colors.appeared"></i>{{ t.oxygenAppeared }}</span>
+    <span class="item"><i [style.background]="colors.persistent"></i>{{ t.oxygenPersistent }}</span>
+    <span class="item"><i [style.background]="colors.recovered"></i>{{ t.oxygenRecovered }}</span>
+  </div>
+}
+
+<figure class="chart">
+  <figcaption class="chart__cap">
+    {{ t.oxygenChartTitle }}:
+    <b [style.color]="colors.hypoxic">{{ stats().hyp }}</b> {{ t.thousandKm2 }} {{ t.oxygenChartHyp }},
+    <b [style.color]="colors.anoxic">{{ stats().anox }}</b> {{ t.thousandKm2 }} {{ t.oxygenChartAnox }}
+  </figcaption>
+  <svg [attr.viewBox]="'0 0 ' + W + ' ' + H" role="img" [attr.aria-label]="t.oxygenChartTitle">
+    @if (mode() === 'change') {
+      <rect class="chart__base" [attr.x]="c.base.x0" [attr.width]="c.base.x1 - c.base.x0" [attr.y]="c.yTop" [attr.height]="c.yBase - c.yTop"></rect>
+    }
+    <line class="chart__grid" x1="0" [attr.x2]="W" [attr.y1]="c.yTop" [attr.y2]="c.yTop"></line>
+    <line class="chart__axis" x1="0" [attr.x2]="W" [attr.y1]="c.yBase" [attr.y2]="c.yBase"></line>
+    <path [attr.d]="c.hypArea" [style.fill]="colors.hypoxic" class="chart__area"></path>
+    <path [attr.d]="c.hypLine" [style.stroke]="colors.hypoxic" class="chart__line"></path>
+    <path [attr.d]="c.anoxArea" [style.fill]="colors.anoxic" class="chart__area"></path>
+    <path [attr.d]="c.anoxLine" [style.stroke]="colors.anoxic" class="chart__line"></path>
+    <line class="chart__cursor" [attr.x1]="c.cursorX" [attr.x2]="c.cursorX" [attr.y1]="c.yTop" [attr.y2]="c.yBase"></line>
+    <text class="chart__tick" x="2" [attr.y]="c.yTop + 9">{{ c.yMaxLabel }}</text>
+    @for (tk of c.ticks; track tk.label) {
+      <text class="chart__tick" [attr.x]="tk.x" [attr.y]="H - 2" [attr.text-anchor]="$first ? 'start' : 'middle'">{{ tk.label }}</text>
+    }
+    @for (h of c.hits; track h.year) {
+      <rect class="chart__hit" [attr.x]="h.x" [attr.width]="h.w" y="0" [attr.height]="H" (click)="pickYear(h.year)">
+        <title>{{ h.title }}</title>
+      </rect>
+    }
+  </svg>
+</figure>
+
+<app-timeline-slider
+  [min]="first()"
+  [max]="last()"
+  [step]="1"
+  [value]="year()"
+  [markers]="markers()"
+  [ariaLabel]="t.timelineLabel"
+  (valueChange)="onSlider($event)"
+  (markerClick)="pickYear($event.value)">
+  <app-button timelineAction variant="play" [active]="playing()" [iconOnly]="true" [ariaLabel]="playing() ? t.pause : t.play" (btnClick)="togglePlay()">
+    <lucide-icon [img]="playing() ? pauseIcon : playIcon" [size]="14"></lucide-icon>
+  </app-button>
+</app-timeline-slider>
+
+<p class="note">{{ mode() === 'change' ? t.oxygenChangeNote : t.oxygenStateNote }}</p>

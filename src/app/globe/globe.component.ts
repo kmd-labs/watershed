@@ -19,7 +19,7 @@ import { LineMaterial } from 'three/examples/jsm/lines/LineMaterial.js';
 import { ThemeService } from '@kmd/design-system';
 import { BalticData, Basin, Poly } from '../core/data/baltic.model';
 import { Nutrient, RAMP_TOKENS, specClass } from '../core/data/nutrients';
-import { CYANO_TOKENS, OXYGEN_TOKENS, SeaGrid, SeaLayer, cyanoClass, oxygenClass } from '../core/data/sea-layers';
+import { CYANO_TOKENS, OXYGEN_CHANGE_TOKENS, OXYGEN_TOKENS, SeaGrid, SeaLayer, cyanoClass, oxygenClass } from '../core/data/sea-layers';
 
 export interface GlobeHover {
   /** Basin under the pointer, or -1 over the sea. */
@@ -34,7 +34,7 @@ const R = 5;
 const DEG = Math.PI / 180;
 const RIVER_WIDTH = [0.5, 0.85, 1.4, 2.2, 3.2];
 const RIVER_OPACITY = [0.3, 0.5, 0.75, 0.9, 0.95];
-/** World radius of the phosphorus circle for the largest river load (circle area ∝ load). */
+/** World radius of the discharge circle for the largest river load (circle area ∝ load). */
 const DISC_MAX_RADIUS = 0.075;
 /** The camera looks this far north of its nadir (× altitude), giving a gentle ~14° oblique view. */
 const PITCH = 0.25;
@@ -82,7 +82,7 @@ interface RiverLayer {
 
 /**
  * Three.js globe of the Baltic drainage basin: catchments shaded by area-specific nutrient load,
- * the HydroRIVERS network, sea overlays, and circles at river mouths sized by the phosphorus load.
+ * the HydroRIVERS network, sea overlays, and circles at river mouths sized by the N or P load.
  */
 @Component({
   selector: 'app-globe',
@@ -104,8 +104,8 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
   readonly nutrient = input<Nutrient>('n');
   readonly selected = input<number>(-1);
   readonly showRivers = input(true);
-  /** Proportional circles of the phosphorus load at river mouths. */
-  readonly showPhosphorus = input(false);
+  /** Proportional circles of the active nutrient's load at river mouths. */
+  readonly showDischarge = input(false);
   readonly showBorders = input(true);
   readonly showLabels = input(true);
   /** Localized label for a river basin (dataset names are Polish). */
@@ -157,14 +157,14 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
       if (!this.ready) return;
       this.drawRegion();
       this.colorRivers();
-      this.colorDiscs();
+      this.layoutDiscs();
     });
     effect(() => {
       const v = this.showRivers();
       this.rivers.visible = v;
     });
     effect(() => {
-      const v = this.showPhosphorus();
+      const v = this.showDischarge();
       if (this.discs) this.discs.visible = v;
     });
     effect(() => {
@@ -238,6 +238,7 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
     this.colors['anoxic'] = tok(OXYGEN_TOKENS.anoxic, '#4f46e5');
     this.colors['hypoxic'] = tok(OXYGEN_TOKENS.hypoxic, '#a78bfa');
     CYANO_TOKENS.forEach((k, i) => (this.colors['cyano' + i] = tok(k, '#38bdf8')));
+    for (const [cat, k] of Object.entries(OXYGEN_CHANGE_TOKENS)) this.colors['change' + cat] = tok(k, '#a78bfa');
   }
 
   private init() {
@@ -264,9 +265,9 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
     this.ready = true;
     this.drawRegion();
     this.colorRivers();
-    this.colorDiscs();
+    this.layoutDiscs();
     this.rivers.visible = this.showRivers();
-    this.discs.visible = this.showPhosphorus();
+    this.discs.visible = this.showDischarge();
     this.buildLabels();
 
     this.resizeObs = new ResizeObserver(() => this.resize());
@@ -372,31 +373,42 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
     });
   }
 
-  /** Flat circles lying on the sphere at river mouths; area ∝ annual phosphorus load. */
+  /** Flat circles lying on the sphere at river mouths; area ∝ annual load of the active nutrient. */
   private buildDiscs(data: BalticData) {
-    // Largest first, so smaller circles are drawn on top of the big ones.
-    const ids = data.basins
-      .filter(b => b.source !== 'none' && b.mouth)
-      .sort((a, b) => b.load.p - a.load.p)
-      .map(b => b.id);
-    this.discBasins = ids;
-    const max = data.basins[ids[0]].load.p;
+    const ids = data.basins.filter(b => b.source !== 'none' && b.mouth).map(b => b.id);
     const geo = new THREE.CircleGeometry(1, 40).rotateX(-Math.PI / 2);
     const mat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.7, depthWrite: false, side: THREE.DoubleSide });
     this.discs = new THREE.InstancedMesh(geo, mat, ids.length);
     this.discs.frustumCulled = false;
     this.discs.renderOrder = 10;
-    const up = new THREE.Vector3(0, 1, 0);
-    const m = new THREE.Matrix4();
-    ids.forEach((id, i) => {
-      const [lon, lat] = data.basins[id].mouth!;
-      const p = lonLatToVec(lon, lat, R * 1.0016);
-      const q = new THREE.Quaternion().setFromUnitVectors(up, p.clone().normalize());
-      const r = Math.max(0.0025, DISC_MAX_RADIUS * Math.sqrt(data.basins[id].load.p / max));
-      this.discs.setMatrixAt(i, m.compose(p, q, new THREE.Vector3(r, 1, r)));
-      this.discs.setColorAt(i, new THREE.Color());
-    });
+    for (let i = 0; i < ids.length; i++) this.discs.setColorAt(i, new THREE.Color());
+    this.discBasins = ids;
     this.scene.add(this.discs);
+  }
+
+  private discNutrient: Nutrient | null = null;
+
+  /** (Re)sizes the circles for the active nutrient; largest first so small ones draw on top. */
+  private layoutDiscs() {
+    const nut = this.nutrient();
+    if (nut !== this.discNutrient) {
+      this.discNutrient = nut;
+      const basins = this.data().basins;
+      const ids = [...this.discBasins].sort((a, b) => basins[b].load[nut] - basins[a].load[nut]);
+      const max = basins[ids[0]].load[nut];
+      const up = new THREE.Vector3(0, 1, 0);
+      const m = new THREE.Matrix4();
+      ids.forEach((id, i) => {
+        const [lon, lat] = basins[id].mouth!;
+        const p = lonLatToVec(lon, lat, R * 1.0016);
+        const q = new THREE.Quaternion().setFromUnitVectors(up, p.clone().normalize());
+        const r = Math.max(0.0025, DISC_MAX_RADIUS * Math.sqrt(basins[id].load[nut] / max));
+        this.discs.setMatrixAt(i, m.compose(p, q, new THREE.Vector3(r, 1, r)));
+      });
+      this.discs.instanceMatrix.needsUpdate = true;
+      this.discBasins = ids;
+    }
+    this.colorDiscs();
   }
 
   // ─── styling (re-run on nutrient / selection change) ─────────────────────
@@ -486,17 +498,19 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
     const sc = small.getContext('2d')!;
     const img = sc.createImageData(g.nlon, g.nlat);
     const rgb = (hex: string) => new THREE.Color(hex);
-    const classColors = layer === 'oxygen'
-      ? { anoxic: rgb(this.colors['anoxic']), hypoxic: rgb(this.colors['hypoxic']) }
-      : null;
+    const classColors = { anoxic: rgb(this.colors['anoxic']), hypoxic: rgb(this.colors['hypoxic']) };
     const cyanoColors = CYANO_TOKENS.map((_, k) => rgb(this.colors['cyano' + k]));
+    const changeColors: Record<number, THREE.Color> = {};
+    for (const cat of Object.keys(OXYGEN_CHANGE_TOKENS)) changeColors[+cat] = rgb(this.colors['change' + cat]);
     for (let i = 0; i < g.nlat; i++) {
       for (let j = 0; j < g.nlon; j++) {
         const v = g.values[i * g.nlon + j];
         let c: THREE.Color | undefined;
-        if (classColors) {
+        if (layer === 'oxygen') {
           const k = oxygenClass(v);
           c = k ? classColors[k] : undefined;
+        } else if (layer === 'oxygenChange') {
+          c = changeColors[v];
         } else {
           const k = cyanoClass(v);
           c = k >= 0 ? cyanoColors[k] : undefined;
@@ -539,10 +553,10 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
     }
   }
 
-  /** Phosphorus circles always use the P ramp; the selected river is inked, the rest fade. */
+  /** Circles use the active nutrient's ramp; the selected river is inked, the rest fade. */
   private colorDiscs() {
     const sel = this.selected();
-    const ramp = this.ramp.p;
+    const ramp = this.ramp[this.nutrient()];
     const strong = ramp[5];
     const faded = ramp[2];
     const ink = new THREE.Color(this.colors['ink']);

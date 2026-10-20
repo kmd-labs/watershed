@@ -12,7 +12,8 @@ npm start          # http://localhost:4200
 
 - **Catchment colour**: area-specific load (kg/km² · yr), 7 classes from a single-hue design-system ramp (orange for N, green for P).
 - **Phosphorus discharge**: circles at river mouths, area ∝ annual P load (t/yr).
-- **Dead zones**: near-bottom oxygen (EMODnet Chemistry / SMHI DIVAnd v2025, autumn 2017–2023), hypoxic < 2 ml/l and anoxic < 0.2 ml/l. Regenerate with `node scripts/build-oxygen.mjs`.
+- **Dead zones over time**: near-bottom oxygen (EMODnet Chemistry / SMHI DIVAnd v2025, autumn 6-year means 1961–2020), hypoxic < 2 ml/l and anoxic < 0.2 ml/l. Year slider with play button, area-over-time chart, and a "change since the 1960s" view (new / persistent / recovered hypoxia vs 1961–1970). Regenerate with `node scripts/build-oxygen.mjs`.
+- **N / P switch**: one toggle drives catchment colours, discharge circles, rankings and country totals.
 - **List / detail panels**: ranking by load, area-specific load, discharge or name; per-river loads, concentrations, hydrology and countries.
 - **Countries tab**: riverine loads aggregated per country, each river split by the country's share of its basin area (a geographic approximation, not HELCOM source apportionment).
 

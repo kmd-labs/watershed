@@ -201,9 +201,12 @@
 
   &--detail {
     @include custom-scrollbar;
-    width: min(360px, 100%);
-    max-height: calc(100dvh - 96px);
+    flex: 0 1 auto;
+    min-height: 140px;
     overflow: auto;
+  }
+
+  &--sea {
     flex: none;
   }
 
@@ -217,18 +220,12 @@
     &--list {
       max-height: 46dvh;
     }
-
-    &--detail {
-      max-height: 46dvh;
-      margin-left: auto;
-    }
   }
 
   @include respond-to("mobile") {
     padding: 10px 12px;
 
-    &--list,
-    &--detail {
+    &--list {
       width: 100%;
     }
 
@@ -241,6 +238,35 @@
       max-height: 50dvh;
       z-index: 2;
     }
+  }
+}
+
+// Right column: the selected catchment scrolls, the sea-layer panel keeps its size below it.
+.dock-col {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: min(370px, 100%);
+  max-height: calc(100dvh - 96px);
+  flex: none;
+  pointer-events: none;
+
+  > * {
+    pointer-events: auto;
+  }
+
+  &--empty {
+    display: none;
+  }
+
+  @include respond-to("tablet") {
+    max-height: 46dvh;
+    margin-left: auto;
+  }
+
+  @include respond-to("mobile") {
+    width: 100%;
+    gap: 8px;
   }
 }
 
@@ -347,8 +373,7 @@
     i {
       flex: none;
       border-radius: 50%;
-      background: color("success-700");
-      opacity: 0.78;
+      opacity: 0.75;
     }
   }
 
@@ -365,6 +390,60 @@
     margin: 8px 0 0;
     font-size: font-size("xxs");
     color: color("text-dim");
+  }
+}
+
+// N / P discharge switch — segmented pill at the top of the legend panel.
+.switch {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2px;
+  padding: 3px;
+  margin-bottom: 12px;
+  background: color("btn-bg");
+  border: 1px solid color("line");
+  border-radius: radius("pill");
+
+  &__opt {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    height: $control-height;
+    padding: 0 12px;
+    font-size: font-size("sm");
+    font-weight: font-weight("medium");
+    color: color("text-dim");
+    background: none;
+    border: 1px solid transparent;
+    border-radius: radius("pill");
+    cursor: pointer;
+    transition: background transition("fast"), color transition("fast"), border-color transition("fast");
+
+    &:hover {
+      color: color("text-main");
+      background: color("btn-hover");
+    }
+
+    &--on {
+      color: color("warning-800");
+      background: color("btn-active-red");
+      border-color: color("btn-active-red-border");
+
+      &:hover {
+        background: color("btn-active-red");
+      }
+    }
+
+    &--p.switch__opt--on {
+      color: color("success-800");
+      background: color("success-soft");
+      border-color: color("success-500");
+
+      &:hover {
+        background: color("success-soft");
+      }
+    }
   }
 }
 

@@ -10,12 +10,12 @@
         [nutrient]="nutrient()"
         [selected]="selected()"
         [showRivers]="showRivers()"
-        [showPhosphorus]="showPhosphorus()"
+        [showDischarge]="showDischarge()"
         [showBorders]="showBorders()"
         [showLabels]="showLabels()"
         [basinLabel]="basinLabel()"
         [subNames]="t.subNames"
-        [seaLayer]="seaLayer()"
+        [seaLayer]="globeSeaLayer()"
         [seaGrid]="seaGrid()"
         (pick)="select($event === selected() ? -1 : $event)"
         (hover)="onHover($event)">
@@ -113,6 +113,21 @@
       </section>
 
       <section class="dock dock--legend glass-panel">
+        <div class="switch" role="radiogroup" [attr.aria-label]="t.nutrientSwitch">
+          @for (n of nutrients; track n) {
+            <button
+              type="button"
+              role="radio"
+              class="switch__opt"
+              [class.switch__opt--on]="nutrient() === n"
+              [class.switch__opt--p]="n === 'p'"
+              [attr.aria-checked]="nutrient() === n"
+              (click)="nutrient.set(n)">
+              <lucide-icon [img]="nutrientIcons[n]" [size]="15"></lucide-icon>
+              <span>{{ n === 'n' ? t.viewNitrogen : t.viewPhosphorus }}</span>
+            </button>
+          }
+        </div>
         <div class="legend">
           <div class="legend__title">
             {{ t.legendTitle(t.nutrientGenitive[nutrient()]) }}
@@ -129,48 +144,20 @@
             }
           </div>
         </div>
-        @if (showPhosphorus()) {
+        @if (showDischarge()) {
+          @let dl = discLegend();
           <div class="legend legend--sea">
-            <div class="legend__title">{{ t.legendDiscsTitle }} <span class="legend__unit">{{ t.legendDiscs }}</span></div>
+            <div class="legend__title">
+              {{ t.legendDiscsTitle(t.nutrientGenitive[nutrient()]) }}
+              <span class="legend__unit">{{ t.legendDiscs(nutrient().toUpperCase()) }}</span>
+            </div>
             <div class="legend__discs">
-              @for (c of discLegend(); track c.label) {
+              @for (c of dl.items; track c.label) {
                 <span class="legend__disc">
-                  <i [style.width.px]="c.size" [style.height.px]="c.size"></i>{{ c.label }}{{ t.perYear }}
+                  <i [style.width.px]="c.size" [style.height.px]="c.size" [style.background]="dl.color"></i>{{ c.label }}{{ t.perYear }}
                 </span>
               }
             </div>
-          </div>
-        }
-        @if (seaLegend(); as sl) {
-          <div class="legend legend--sea">
-            @switch (sl.kind) {
-              @case ('oxygen') {
-                <div class="legend__title">{{ sl.title }} <span class="legend__unit">{{ sl.period }}</span></div>
-                <div class="legend__items">
-                  @for (it of sl.items; track it.label) {
-                    <span class="legend__item"><i [style.background]="it.color"></i>{{ it.label }}</span>
-                  }
-                </div>
-                <div class="legend__note">{{ sl.note }}</div>
-              }
-              @case ('cyano') {
-                <div class="legend__title">{{ sl.title }}</div>
-                <div class="legend__ramp" aria-hidden="true">
-                  @for (c of sl.swatches; track $index) {
-                    <i [style.background]="c"></i>
-                  }
-                </div>
-                <div class="legend__ticks" aria-hidden="true">
-                  @for (tick of sl.ticks; track $index) {
-                    <span [style.left.%]="(($index + 1) / sl.swatches.length) * 100">{{ tick }}</span>
-                  }
-                </div>
-                <div class="legend__note">{{ sl.period }}</div>
-              }
-              @default {
-                <div class="legend__note">{{ sl.note }}</div>
-              }
-            }
           </div>
         }
         <div class="legend__controls">
@@ -214,6 +201,8 @@
         }
       </section>
 
+      <!-- Right column: selected catchment above the sea-layer panel -->
+      <div class="dock-col" [class.dock-col--empty]="!selectedBasin() && !seaLegend()">
       @if (selectedBasin(); as b) {
         <section class="dock dock--detail glass-panel" aria-live="polite">
           <app-basin-detail
@@ -224,6 +213,41 @@
           </app-basin-detail>
         </section>
       }
+      @if (seaLegend(); as sl) {
+        <section class="dock dock--sea glass-panel">
+          @switch (sl.kind) {
+            @case ('oxygen') {
+              <app-oxygen-timeline
+                [series]="sl.series"
+                [year]="oxygenYear()"
+                [mode]="oxygenMode()"
+                (yearChange)="oxygenYear.set($event)"
+                (modeChange)="oxygenMode.set($event)">
+              </app-oxygen-timeline>
+            }
+            @case ('cyano') {
+              <div class="legend">
+                <div class="legend__title">{{ sl.title }}</div>
+                <div class="legend__ramp" aria-hidden="true">
+                  @for (c of sl.swatches; track $index) {
+                    <i [style.background]="c"></i>
+                  }
+                </div>
+                <div class="legend__ticks" aria-hidden="true">
+                  @for (tick of sl.ticks; track $index) {
+                    <span [style.left.%]="(($index + 1) / sl.swatches.length) * 100">{{ tick }}</span>
+                  }
+                </div>
+                <div class="legend__note">{{ sl.period }}</div>
+              </div>
+            }
+            @default {
+              <div class="legend__note">{{ sl.note }}</div>
+            }
+          }
+        </section>
+      }
+      </div>
     </footer>
   }
 

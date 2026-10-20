@@ -1,0 +1,133 @@
+@use "variables" as *;
+
+:host {
+  display: block;
+  font-size: font-size("xxs");
+  color: color("text-main");
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+
+  &__title {
+    font-size: font-size("xs");
+    font-weight: font-weight("semibold");
+  }
+
+  &__year {
+    margin-left: 4px;
+    padding: 1px 8px;
+    border-radius: radius("pill");
+    font-variant-numeric: tabular-nums;
+    color: color("neutral-0");
+    background: color("purple-600");
+  }
+
+  &__unit {
+    margin-left: 4px;
+    font-weight: font-weight("regular");
+    color: color("text-dim");
+  }
+}
+
+.mode {
+  display: flex;
+  gap: 4px;
+}
+
+.items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin-top: 6px;
+}
+
+.item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+
+  i {
+    width: 12px;
+    height: 10px;
+    border-radius: radius("xs");
+  }
+}
+
+.chart {
+  margin: 8px 0 0;
+
+  &__cap {
+    margin-bottom: 2px;
+    color: color("text-note");
+
+    b {
+      font-variant-numeric: tabular-nums;
+    }
+  }
+
+  svg {
+    display: block;
+    width: 100%;
+    height: auto;
+    overflow: visible;
+  }
+
+  &__area {
+    opacity: 0.35;
+  }
+
+  &__line {
+    fill: none;
+    stroke-width: 1.5;
+    stroke-linejoin: round;
+  }
+
+  &__grid {
+    stroke: color("line");
+    stroke-dasharray: 2 3;
+  }
+
+  &__axis {
+    stroke: color("line-strong");
+  }
+
+  &__base {
+    fill: color("btn-bg");
+  }
+
+  &__cursor {
+    stroke: color("text-bright");
+    stroke-width: 1;
+  }
+
+  &__tick {
+    font-size: 8px;
+    fill: color("text-dim");
+    font-family: var(--font-family);
+  }
+
+  &__hit {
+    fill: transparent;
+    cursor: pointer;
+
+    &:hover {
+      fill: color("btn-hover");
+    }
+  }
+}
+
+app-timeline-slider {
+  display: block;
+  margin-top: 6px;
+}
+
+.note {
+  margin: 6px 0 0;
+  line-height: 1.45;
+  color: color("text-dim");
+}

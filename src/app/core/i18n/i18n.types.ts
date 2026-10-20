@@ -44,7 +44,8 @@ export interface Dict {
   expandPanel: string;
   layers: string;
   layerRivers: string;
-  layerPhosphorus: string;
+  layerDischarge: string;
+  nutrientSwitch: string;
   tabRivers: string;
   tabCountries: string;
   countriesTitle: (nutrientGen: string) => string;
@@ -56,10 +57,26 @@ export interface Dict {
   seaLayers: string;
 
   oxygenLegendTitle: string;
-  oxygenPeriod: string;
+  oxygenWindow: string;
   oxygenAnoxic: string;
   oxygenHypoxic: string;
-  oxygenStats: (hypoxic: string, anoxic: string) => string;
+  oxygenModeLabel: string;
+  oxygenModeState: string;
+  oxygenModeChange: string;
+  oxygenAppeared: string;
+  oxygenPersistent: string;
+  oxygenRecovered: string;
+  oxygenChartTitle: string;
+  oxygenChartHyp: string;
+  oxygenChartAnox: string;
+  oxygenChartPoint: (year: number, hypoxic: string, anoxic: string) => string;
+  oxygenInflow: (year: number) => string;
+  oxygenStateNote: string;
+  oxygenChangeNote: string;
+  thousandKm2: string;
+  timelineLabel: string;
+  play: string;
+  pause: string;
   oxygenTooltip: (mlPerL: string) => string;
   oxygenTooltipAnoxic: string;
   oxygenTooltipHypoxic: string;
@@ -90,8 +107,8 @@ export interface Dict {
   estimatedMark: string;
 
   legendTitle: (nutrientGen: string) => string;
-  legendDiscsTitle: string;
-  legendDiscs: string;
+  legendDiscsTitle: (nutrientGen: string) => string;
+  legendDiscs: (symbol: string) => string;
   legendNoData: string;
 
   detailMeasured: (year: number) => string;
