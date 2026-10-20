@@ -1,0 +1,52 @@
+name: Sync Design System Submodule
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'
+  repository_dispatch:
+    types: [design-system-updated]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Generate GitHub App Token
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.KMD_BOT_APP_ID }}
+          private-key: ${{ secrets.KMD_BOT_PRIVATE_KEY }}
+
+      - name: Checkout repository with submodules
+        uses: actions/checkout@v4
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Update design-system submodule to latest main
+        run: |
+          git submodule update --remote --force src/design-system
+
+      - name: Create Pull Request with design-system updates
+        id: cpr
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+          commit-message: "chore(design-system): sync kmd-labs/design-system to latest"
+          title: "chore(design-system): sync kmd-labs/design-system to latest"
+          body: "Automated update of `src/design-system` submodule from `kmd-labs/design-system`."
+          branch: chore/sync-design-system
+          delete-branch: true
+
+      - name: Auto-merge Pull Request
+        if: steps.cpr.outputs.pull-request-number != ''
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          gh pr merge ${{ steps.cpr.outputs.pull-request-number }} --admin --squash --delete-branch

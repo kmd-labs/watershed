@@ -1,0 +1,162 @@
+@let t = i18n.t();
+@let data = store.data();
+
+<main class="viewport">
+  <!-- Fullscreen Visualization Stage -->
+  <section class="stage" [attr.aria-label]="t.stageAriaLabel">
+    @if (data) {
+      <app-globe
+        [data]="data"
+        [nutrient]="nutrient()"
+        [selected]="selected()"
+        [showRivers]="showRivers()"
+        [showColumns]="showColumns()"
+        [showBorders]="showBorders()"
+        [showLabels]="showLabels()"
+        [basinLabel]="basinLabel()"
+        [subNames]="t.subNames"
+        (pick)="select($event === selected() ? -1 : $event)"
+        (hover)="onHover($event)">
+      </app-globe>
+    } @else {
+      <div class="stage__status">{{ store.error() ? t.loadError : t.loading }}</div>
+    }
+  </section>
+
+  <!-- Top HUD: Left Logotype + Language, Right View Switcher -->
+  <header class="header">
+    <div class="header__left">
+      <div class="header__brand glass-panel">
+        <div class="header__logo">
+          <img
+            class="header__logo-img"
+            src="assets/design-system/logo/kmd-black-orange.svg"
+            alt="KMD" />
+        </div>
+        <span class="header__divider" aria-hidden="true"></span>
+        <h1 class="header__app-name">{{ t.appName }}</h1>
+      </div>
+
+      <div class="header__settings glass-panel" role="group" [attr.aria-label]="t.changeLanguage">
+        <app-dropdown
+          variant="ghost"
+          [icon]="bp.mobile() ? null : globeIcon"
+          [options]="langOptions()"
+          [value]="i18n.lang()"
+          [ariaLabel]="t.changeLanguage"
+          (valueChange)="i18n.setLang($event)">
+        </app-dropdown>
+      </div>
+    </div>
+
+    <div class="header__right">
+      <div class="header__view glass-panel">
+        <app-dropdown
+          variant="ghost"
+          align="right"
+          [fullWidth]="true"
+          [options]="viewOptions()"
+          [value]="nutrient()"
+          [icon]="currentViewIcon()"
+          [ariaLabel]="t.chooseView"
+          (valueChange)="nutrient.set($event)">
+        </app-dropdown>
+      </div>
+    </div>
+  </header>
+
+  <!-- Bottom Dock: ranking, legend & layers, selected catchment -->
+  @if (data) {
+    <footer class="dock-wrap">
+      <section class="dock dock--list glass-panel" [class.dock--collapsed]="!panelOpen()">
+        <header class="dock__head">
+          <div>
+            <h2 class="dock__title">{{ t.panelTitle }}</h2>
+            <div class="dock__total">
+              <span class="dock__total-k">{{ t.totalFromRivers }}</span>
+              <span class="dock__total-v">
+                {{ nutrient().toUpperCase() }} {{ i18n.tonnes(data.total.load[nutrient()]) }}<small>{{ t.perYear }}</small>
+              </span>
+            </div>
+          </div>
+          <app-button
+            variant="ghost"
+            [iconOnly]="true"
+            [ariaLabel]="panelOpen() ? t.collapsePanel : t.expandPanel"
+            (btnClick)="panelOpen.set(!panelOpen())">
+            <lucide-icon [img]="panelOpen() ? chevronDownIcon : chevronUpIcon" [size]="16"></lucide-icon>
+          </app-button>
+        </header>
+        @if (panelOpen()) {
+          <app-basin-list
+            class="dock__list"
+            [data]="data"
+            [nutrient]="nutrient()"
+            [selected]="selected()"
+            (select)="select($event, true)">
+          </app-basin-list>
+        }
+      </section>
+
+      <section class="dock dock--legend glass-panel">
+        <div class="legend">
+          <div class="legend__title">
+            {{ t.legendTitle(t.nutrientGenitive[nutrient()]) }}
+            <span class="legend__unit">{{ t.specUnit }}</span>
+          </div>
+          <div class="legend__ramp" aria-hidden="true">
+            @for (c of legend().swatches; track $index) {
+              <i [style.background]="c"></i>
+            }
+          </div>
+          <div class="legend__ticks" aria-hidden="true">
+            @for (tick of legend().ticks; track $index) {
+              <span [style.left.%]="(($index + 1) / legend().swatches.length) * 100">{{ tick }}</span>
+            }
+          </div>
+          <div class="legend__note">
+            <span class="legend__column" aria-hidden="true"></span>{{ t.legendColumns }}
+          </div>
+        </div>
+        <div class="legend__controls">
+          <div class="layers" role="group" [attr.aria-label]="t.layers">
+            @for (l of layers(); track l.label) {
+              <app-button
+                variant="toggle"
+                [active]="l.on()"
+                [ariaLabel]="l.label"
+                [titleText]="l.label"
+                (btnClick)="l.on.set(!l.on())">
+                <lucide-icon [img]="l.icon" [size]="14"></lucide-icon>
+                @if (!bp.mobile()) {
+                  <span>{{ l.label }}</span>
+                }
+              </app-button>
+            }
+          </div>
+          <app-button variant="ghost" (btnClick)="openGlossary()">
+            <lucide-icon [img]="bookOpenIcon" [size]="15"></lucide-icon>
+            <span>{{ t.glossary }}</span>
+          </app-button>
+        </div>
+        @if (!bp.tablet()) {
+          <p class="legend__hint">{{ t.hint }}</p>
+        }
+      </section>
+
+      @if (selectedBasin(); as b) {
+        <section class="dock dock--detail glass-panel" aria-live="polite">
+          <app-basin-detail
+            [data]="data"
+            [basin]="b"
+            [nutrient]="nutrient()"
+            (close)="select(-1)">
+          </app-basin-detail>
+        </section>
+      }
+    </footer>
+  }
+
+  <app-popup [closeAriaLabel]="t.close"></app-popup>
+  <app-tooltip></app-tooltip>
+</main>

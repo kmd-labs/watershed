@@ -1,0 +1,70 @@
+@let t = i18n.t();
+@let b = basin();
+
+<header class="detail__head">
+  <div class="detail__titles">
+    <h2 class="detail__title">{{ title() }}</h2>
+    <p class="detail__kind">{{ kind() }}</p>
+  </div>
+  <app-button variant="ghost" [iconOnly]="true" [ariaLabel]="t.close" (btnClick)="close.emit()">
+    <lucide-icon [img]="closeIcon" [size]="16"></lucide-icon>
+  </app-button>
+</header>
+
+@if (badge(); as bd) {
+  <div class="detail__badge"><app-badge [text]="bd.text" [backgroundColor]="bd.color"></app-badge></div>
+}
+
+@if (b.source === 'none') {
+  <p class="detail__note">{{ t.detailCoast }}</p>
+} @else {
+  <div class="sec">{{ t.nutrientLoads }}</div>
+  <div class="tiles">
+    @for (n of nutrients; track n) {
+      <div class="tile" [class.tile--active]="n === nutrient()">
+        <div class="tile__k">
+          <i class="tile__swatch" [style.background]="swatch(n)"></i>
+          {{ t.nutrientName[n] }}
+        </div>
+        <div class="tile__v">
+          @if (b.source === 'estimated') {<span class="tile__approx">≈</span>}{{ i18n.tonnes(b.load[n]) }}<span class="tile__unit">{{ t.perYear }}</span>
+        </div>
+        <div class="tile__s">{{ spec(n) }} {{ t.specUnit }}</div>
+        <div class="tile__s">{{ conc(n) }} {{ t.concUnit }}</div>
+      </div>
+    }
+  </div>
+
+  <dl class="facts">
+    <dt>{{ t.shareOfTotal }} ({{ t.nutrientGenitive[nutrient()] }})</dt>
+    <dd>{{ share() }}</dd>
+    <dt>{{ t.rankLabel }} ({{ t.nutrientGenitive[nutrient()] }})</dt>
+    <dd>{{ rank() }}</dd>
+  </dl>
+
+  <div class="sec">{{ t.hydrology }}</div>
+  <dl class="facts">
+    <dt>{{ t.meanFlow }}</dt>
+    <dd>{{ i18n.num(b.dis, b.dis < 10 ? 2 : b.dis < 100 ? 1 : 0) }} {{ t.flowUnit }}</dd>
+    <dt>{{ t.basinArea }}</dt>
+    <dd>{{ i18n.num(b.area, b.area < 100 ? 1 : 0) }} {{ t.areaUnit }}</dd>
+    @if (b.mouth) {
+      <dt>{{ t.mouth }}</dt>
+      <dd>{{ i18n.num(b.mouth[1], 2) }}°N, {{ i18n.num(b.mouth[0], 2) }}°E</dd>
+    }
+    @if (b.place) {
+      <dt>{{ t.nearestPlace }}</dt>
+      <dd>{{ b.place }} ({{ b.pcc }}), {{ i18n.num(b.pkm ?? 0, 1) }} {{ t.km }} {{ t.fromMouth }}</dd>
+    }
+  </dl>
+}
+
+<div class="sec">{{ t.countriesInBasin }}</div>
+<div class="bars">
+  @for (c of countries(); track c.name) {
+    <div class="bar">
+      <div class="bar__track"><div [style.width.%]="c.pct"></div><span>{{ c.name }}</span></div>
+      <b>{{ i18n.num(c.pct, 1) }}%</b>
+    </div>
+  }
+</div>

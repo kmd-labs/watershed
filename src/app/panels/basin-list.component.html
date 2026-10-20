@@ -1,0 +1,60 @@
+@let t = i18n.t();
+
+<div class="filters">
+  <input
+    class="filters__search"
+    type="search"
+    [placeholder]="t.searchPlaceholder"
+    [attr.aria-label]="t.search"
+    [value]="query()"
+    (input)="onQuery($event)" />
+  <select [attr.aria-label]="t.subBasinFilter" (change)="onSubFilter($event)">
+    <option value="-1" [selected]="subFilter() === -1">{{ t.allSubBasins }}</option>
+    @for (name of t.subNames; track $index) {
+      <option [value]="$index" [selected]="subFilter() === $index">{{ name }}</option>
+    }
+  </select>
+  <select [attr.aria-label]="t.sortBy" (change)="onSort($event)">
+    <option value="load" [selected]="sort() === 'load'">{{ t.sortLoad }}</option>
+    <option value="spec" [selected]="sort() === 'spec'">{{ t.sortSpec }}</option>
+    <option value="flow" [selected]="sort() === 'flow'">{{ t.sortFlow }}</option>
+    <option value="name" [selected]="sort() === 'name'">{{ t.sortName }}</option>
+  </select>
+</div>
+
+<div class="list-title">
+  <span>{{ title() }}</span>
+  @if (sort() === 'spec') {
+    <span class="list-title__unit">{{ t.specUnit }}</span>
+  } @else if (sort() === 'load' || sort() === 'name') {
+    <span class="list-title__unit">{{ t.perYear }}</span>
+  }
+</div>
+
+<div class="list" role="listbox" [attr.aria-label]="title()">
+  @for (r of rows(); track r.b.id) {
+    <button
+      type="button"
+      class="row"
+      role="option"
+      [attr.data-id]="r.b.id"
+      [attr.aria-selected]="r.b.id === selected()"
+      [class.row--on]="r.b.id === selected()"
+      (click)="select.emit(r.b.id === selected() ? -1 : r.b.id)">
+      <i class="row__swatch" [style.background]="r.swatch"></i>
+      <span class="row__name">
+        {{ r.name }}
+        <em class="row__sub">· {{ r.sub }}</em>
+      </span>
+      <span class="row__bar" aria-hidden="true"><span [style.width.%]="r.bar"></span></span>
+      <b class="row__value">
+        @if (r.estimated && sort() !== 'flow') {
+          <span class="row__approx" [title]="t.estimatedMark">≈</span>
+        }
+        {{ r.value }}
+      </b>
+    </button>
+  } @empty {
+    <div class="empty">{{ t.noResults }}</div>
+  }
+</div>
