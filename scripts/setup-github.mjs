@@ -21,39 +21,73 @@ const protection = {
   "allow_fork_syncing": false
 };
 
+const run = (cmd, opts = {}) => execSync(cmd, { stdio: 'inherit', ...opts });
+const runSilent = (cmd, opts = {}) => execSync(cmd, { stdio: 'pipe', ...opts });
+
 try {
-  // Ensure repo exists on GitHub under kmd-labs (or create it if missing)
+  // 1. Verify GitHub CLI authentication
   try {
-    execSync(`gh repo view ${repo}`, { stdio: 'ignore' });
+    runSilent('gh auth status');
+  } catch {
+    console.warn('⚠️ GitHub CLI (gh) is not authenticated. Please run "gh auth login" and then "npm run setup:github".');
+    process.exit(0);
+  }
+
+  // 2. Ensure repo exists on GitHub under kmd-labs (or create it if missing)
+  try {
+    runSilent(`gh repo view ${repo}`);
   } catch {
     console.log(`Creating public repository ${repo}...`);
-    execSync(`gh repo create ${repo} --public --source=. --remote=origin`, { stdio: 'inherit' });
+    run(`gh repo create ${repo} --public`);
   }
 
-  // Ensure origin remote is configured and main is pushed
+  // 3. Ensure origin remote is configured
   try {
-    execSync('git remote get-url origin', { stdio: 'ignore' });
+    runSilent('git remote get-url origin');
   } catch {
-    execSync(`git remote add origin https://github.com/${repo}.git`, { stdio: 'inherit' });
+    run(`git remote add origin https://github.com/${repo}.git`);
   }
-  execSync('git push -u origin main', { stdio: 'inherit' });
 
-  // Enable GitHub Pages via GitHub Actions workflow if not already enabled
+  // 4. Enable GitHub Pages via GitHub Actions BEFORE pushing so the initial workflow succeeds immediately
+  console.log(`🌐 Enabling GitHub Pages (GitHub Actions) on ${repo}...`);
   try {
-    execSync(`gh api repos/${repo}/pages -X POST -f build_type=workflow`, { stdio: 'ignore' });
+    runSilent(`gh api repos/${repo}/pages -X POST -f build_type=workflow`);
+    console.log('✅ GitHub Pages enabled with GitHub Actions!');
   } catch {
     try {
-      execSync(`gh api repos/${repo}/pages -X PUT -f build_type=workflow`, { stdio: 'ignore' });
+      runSilent(`gh api repos/${repo}/pages -X PUT -f build_type=workflow`);
+      console.log('✅ GitHub Pages updated to GitHub Actions!');
     } catch {}
   }
 
-  // Apply canonical KMD main branch protection (1 PR review, dismiss stale reviews, only org admins bypass)
+  // 5. Push main branch
+  console.log(`🚀 Pushing main branch to ${repo}...`);
+  run('git push -u origin main');
+
+  // 6. Confirm GitHub Pages status after branch creation
+  try {
+    runSilent(`gh api repos/${repo}/pages -X POST -f build_type=workflow`);
+  } catch {
+    try {
+      runSilent(`gh api repos/${repo}/pages -X PUT -f build_type=workflow`);
+    } catch {}
+  }
+
+  // 7. Apply canonical KMD main branch protection (1 PR review, dismiss stale reviews, org admins bypass)
   console.log(`🔒 Applying KMD branch protection rules to ${repo} (main)...`);
-  execSync(`gh api repos/${repo}/branches/main/protection -X PUT --input -`, {
-    input: JSON.stringify(protection),
-    stdio: ['pipe', 'inherit', 'inherit']
-  });
-  console.log(`✅ Branch protection & GitHub Pages active on ${repo}!`);
+  try {
+    execSync(`gh api repos/${repo}/branches/main/protection -X PUT --input -`, {
+      input: JSON.stringify(protection),
+      stdio: ['pipe', 'inherit', 'inherit']
+    });
+    console.log(`✅ Branch protection applied to main!`);
+  } catch (protErr) {
+    console.warn('⚠️ Could not apply branch protection rules automatically (requires org admin privileges).');
+  }
+
+  console.log(`\n🎉 Repository setup complete: https://github.com/${repo}`);
+  console.log(`🌐 Live site URL: https://kmd-labs.github.io/watershed/\n`);
 } catch (err) {
-  console.warn('⚠️ Could not complete GitHub repo/protection setup automatically. Run "npm run setup:github" once the repo is pushed.');
+  console.error('⚠️ Could not complete GitHub repo setup automatically:', err.message);
+  console.warn('Run "npm run setup:github" once your repository is ready.');
 }
