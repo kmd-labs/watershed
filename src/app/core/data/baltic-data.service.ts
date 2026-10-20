@@ -1,5 +1,5 @@
 import { Injectable, signal } from '@angular/core';
-import { BalticData, Basin, PackedPolys, Poly, RawBaltic, SubBasin } from './baltic.model';
+import { BalticData, Basin, CountryLoad, PackedPolys, Poly, RawBaltic, SubBasin } from './baltic.model';
 import { computeLoads } from './nutrients';
 
 function decode<T>(b64: string, Ctor: new (buf: ArrayBuffer) => T): T {
@@ -85,6 +85,24 @@ export class BalticDataService {
       return { ...s, id, load };
     });
 
+    // Apportion each river's load to countries by their (normalised) share of the basin area.
+    const byCountry = new Map<string, CountryLoad>();
+    for (const b of basins) {
+      if (b.source === 'none') continue;
+      const sum = b.ctry.reduce((s, [, pct]) => s + pct, 0);
+      if (sum <= 0) continue;
+      for (const [name, pct] of b.ctry) {
+        const f = pct / sum;
+        const c = byCountry.get(name) ?? { name, load: { n: 0, p: 0 }, area: 0, rivers: 0 };
+        c.load.n += b.load.n * f;
+        c.load.p += b.load.p * f;
+        c.area += b.area * f;
+        c.rivers++;
+        byCountry.set(name, c);
+      }
+    }
+    const countries = [...byCountry.values()].sort((a, b) => b.load.n - a.load.n);
+
     const borderXY = decode(B.borders[1], Uint16Array);
     let bo = 0;
     const borders = B.borders[0].map(n => {
@@ -103,6 +121,7 @@ export class BalticDataService {
       bbox: B.bbox,
       basins,
       subs,
+      countries,
       total: {
         parea: B.total.parea,
         dis: B.total.dis,

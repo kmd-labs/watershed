@@ -2,6 +2,7 @@ import { Component, computed, inject } from '@angular/core';
 import { I18nService } from '../core/i18n/i18n.service';
 import { BalticDataService } from '../core/data/baltic-data.service';
 import { HELCOM_REFERENCE } from '../core/data/nutrients';
+import { SeaLayersService } from '../core/data/sea-layers';
 
 /** Bibliographic citations — proper titles, intentionally not translated. */
 const SOURCES = [
@@ -16,6 +17,22 @@ const SOURCES = [
   {
     label: 'Lehner, B., Grill, G. (2013). HydroRIVERS v1.0 & HydroBASINS v1c, WWF / HydroSHEDS.',
     url: 'https://www.hydrosheds.org/products/hydrorivers'
+  },
+  {
+    label: 'EMODnet Chemistry / SMHI (2025). Baltic Sea DIVAnd 6-year seasonal analysis of dissolved oxygen 1950/2023, v2025.',
+    url: 'https://doi.org/10.13120/7ec4c23e-84eb-4e9c-97b4-b2a1c02137db'
+  },
+  {
+    label: 'Hansson, M., Viktorsson, L. (2024). Oxygen Survey in the Baltic Sea 2024. SMHI Report Oceanography No. 80.',
+    url: 'https://www.smhi.se/download/18.4cdca89f195b3c486e53433/1743575814314/Oxygen_timeseries_1960_2024.pdf'
+  },
+  {
+    label: 'Copernicus Marine Service. Baltic Sea summer bloom coverage (OMI_HEALTH_BLOOM_BALTIC_spatiotemporal_coverage).',
+    url: 'https://doi.org/10.48670/mds-00366'
+  },
+  {
+    label: 'Kahru, M., Elmgren, R., Kaiser, J. et al. (2018). Unexplained interannual oscillations of cyanobacterial blooms in the Baltic Sea. Sci. Rep. 8, 6365.',
+    url: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC5913306/'
   },
   {
     label: 'Natural Earth — land, lakes & country borders.',
@@ -37,6 +54,12 @@ const SOURCES = [
     @if (check(); as c) {
       <h3>{{ t.methodCheckTitle }}</h3>
       <p>{{ c }}</p>
+    }
+    <h3>{{ t.methodOxygenTitle }}</h3>
+    <p>{{ t.methodOxygen }}</p>
+    @if (sea.cyanoAvailable()) {
+      <h3>{{ t.methodCyanoTitle }}</h3>
+      <p>{{ t.methodCyano }}</p>
     }
     <h3>{{ t.methodTermsTitle }}</h3>
     <dl>
@@ -68,6 +91,7 @@ const SOURCES = [
 export class MethodComponent {
   readonly i18n = inject(I18nService);
   private readonly store = inject(BalticDataService);
+  readonly sea = inject(SeaLayersService);
   readonly sources = SOURCES;
 
   readonly check = computed(() => {

@@ -44,9 +44,35 @@ export interface Dict {
   expandPanel: string;
   layers: string;
   layerRivers: string;
-  layerColumns: string;
+  layerPhosphorus: string;
+  tabRivers: string;
+  tabCountries: string;
+  countriesTitle: (nutrientGen: string) => string;
+  countriesNote: string;
   layerBorders: string;
   layerLabels: string;
+  layerOxygen: string;
+  layerCyano: string;
+  seaLayers: string;
+
+  oxygenLegendTitle: string;
+  oxygenPeriod: string;
+  oxygenAnoxic: string;
+  oxygenHypoxic: string;
+  oxygenStats: (hypoxic: string, anoxic: string) => string;
+  oxygenTooltip: (mlPerL: string) => string;
+  oxygenTooltipAnoxic: string;
+  oxygenTooltipHypoxic: string;
+  cyanoLegendTitle: string;
+  cyanoPeriod: (from: number, to: number) => string;
+  cyanoTooltip: (pct: string) => string;
+  cyanoUnavailable: string;
+  layerLoading: string;
+  noSeaData: string;
+  methodOxygenTitle: string;
+  methodOxygen: string;
+  methodCyanoTitle: string;
+  methodCyano: string;
   searchPlaceholder: string;
   search: string;
   subBasinFilter: string;
@@ -64,7 +90,8 @@ export interface Dict {
   estimatedMark: string;
 
   legendTitle: (nutrientGen: string) => string;
-  legendColumns: string;
+  legendDiscsTitle: string;
+  legendDiscs: string;
   legendNoData: string;
 
   detailMeasured: (year: number) => string;

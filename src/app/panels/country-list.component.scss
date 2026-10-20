@@ -1,0 +1,24 @@
+@use "variables" as *;
+
+.row {
+  grid-template-columns: minmax(0, 1fr) 54px auto 44px;
+  cursor: default;
+
+  &:hover {
+    background: none;
+  }
+
+  &__share {
+    text-align: right;
+    font-size: font-size("xxs");
+    font-variant-numeric: tabular-nums;
+    color: color("text-dim");
+  }
+}
+
+.note {
+  margin: 10px 2px 0;
+  font-size: font-size("xxs");
+  line-height: 1.45;
+  color: color("text-dim");
+}

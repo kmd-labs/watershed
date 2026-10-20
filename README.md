@@ -11,8 +11,10 @@ npm start          # http://localhost:4200
 ## What's on the map
 
 - **Catchment colour**: area-specific load (kg/km² · yr), 7 classes from a single-hue design-system ramp (orange for N, green for P).
-- **Columns at river mouths**: annual load (t/yr), height linear to the largest river.
+- **Phosphorus discharge**: circles at river mouths, area ∝ annual P load (t/yr).
+- **Dead zones**: near-bottom oxygen (EMODnet Chemistry / SMHI DIVAnd v2025, autumn 2017–2023), hypoxic < 2 ml/l and anoxic < 0.2 ml/l. Regenerate with `node scripts/build-oxygen.mjs`.
 - **List / detail panels**: ranking by load, area-specific load, discharge or name; per-river loads, concentrations, hydrology and countries.
+- **Countries tab**: riverine loads aggregated per country, each river split by the country's share of its basin area (a geographic approximation, not HELCOM source apportionment).
 
 ## Data & method
 

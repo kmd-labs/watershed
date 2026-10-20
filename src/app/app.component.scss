@@ -302,11 +302,54 @@
     color: color("text-note");
   }
 
-  &__column {
-    width: 5px;
-    height: 14px;
-    border-radius: 2px 2px 0 0;
-    background: color("neutral-600");
+  &--sea {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid color("line");
+  }
+
+  &__items {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 14px;
+    margin-top: 6px;
+    font-size: font-size("xxs");
+    color: color("text-main");
+  }
+
+  &__item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+
+    i {
+      width: 12px;
+      height: 10px;
+      border-radius: radius("xs");
+    }
+  }
+
+  &__discs {
+    display: flex;
+    align-items: flex-end;
+    gap: 16px;
+    margin-top: 6px;
+  }
+
+  &__disc {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: font-size("xxs");
+    font-variant-numeric: tabular-nums;
+    color: color("text-note");
+
+    i {
+      flex: none;
+      border-radius: 50%;
+      background: color("success-700");
+      opacity: 0.78;
+    }
   }
 
   &__controls {
@@ -323,6 +366,12 @@
     font-size: font-size("xxs");
     color: color("text-dim");
   }
+}
+
+.tabs {
+  display: flex;
+  gap: 4px;
+  margin-top: 10px;
 }
 
 .layers {

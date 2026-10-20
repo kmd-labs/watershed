@@ -82,6 +82,17 @@ export interface SubBasin extends RawSub {
   load: NutrientPair;
 }
 
+/** River loads apportioned to a country by its share of each basin's area. */
+export interface CountryLoad {
+  /** Dataset country name (Polish). */
+  name: string;
+  load: NutrientPair;
+  /** Basin area within the country, km². */
+  area: number;
+  /** Number of rivers with any part of their basin in the country. */
+  rivers: number;
+}
+
 export interface RiverClassGeometry {
   /** Vertex count per polyline. */
   cnt: Uint16Array;
@@ -95,7 +106,8 @@ export interface BalticData {
   bbox: [number, number, number, number];
   basins: Basin[];
   subs: SubBasin[];
-  total: { parea: number; dis: number; nout: number; load: NutrientPair };
+  countries: CountryLoad[];
+  total:{ parea: number; dis: number; nout: number; load: NutrientPair };
   basinPolys: Poly[];
   outlines: Poly[];
   land: Poly[];

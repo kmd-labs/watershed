@@ -19,24 +19,25 @@ import { LineMaterial } from 'three/examples/jsm/lines/LineMaterial.js';
 import { ThemeService } from '@kmd/design-system';
 import { BalticData, Basin, Poly } from '../core/data/baltic.model';
 import { Nutrient, RAMP_TOKENS, specClass } from '../core/data/nutrients';
+import { CYANO_TOKENS, OXYGEN_TOKENS, SeaGrid, SeaLayer, cyanoClass, oxygenClass } from '../core/data/sea-layers';
 
 export interface GlobeHover {
+  /** Basin under the pointer, or -1 over the sea. */
   id: number;
   x: number;
   y: number;
+  lon: number;
+  lat: number;
 }
 
 const R = 5;
 const DEG = Math.PI / 180;
 const RIVER_WIDTH = [0.5, 0.85, 1.4, 2.2, 3.2];
 const RIVER_OPACITY = [0.3, 0.5, 0.75, 0.9, 0.95];
-const COLUMN_MAX_HEIGHT = 0.8;
-const COLUMN_RADIUS = 0.014;
-/**
- * The camera looks this far north of its nadir (× altitude), pitching the view ~24° so the
- * load columns are seen at an angle instead of head-on.
- */
-const PITCH = 0.45;
+/** World radius of the phosphorus circle for the largest river load (circle area ∝ load). */
+const DISC_MAX_RADIUS = 0.075;
+/** The camera looks this far north of its nadir (× altitude), giving a gentle ~14° oblique view. */
+const PITCH = 0.25;
 const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 
@@ -81,7 +82,7 @@ interface RiverLayer {
 
 /**
  * Three.js globe of the Baltic drainage basin: catchments shaded by area-specific nutrient load,
- * the HydroRIVERS network, and 3D columns at river mouths proportional to the annual load.
+ * the HydroRIVERS network, sea overlays, and circles at river mouths sized by the phosphorus load.
  */
 @Component({
   selector: 'app-globe',
@@ -103,12 +104,16 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
   readonly nutrient = input<Nutrient>('n');
   readonly selected = input<number>(-1);
   readonly showRivers = input(true);
-  readonly showColumns = input(true);
+  /** Proportional circles of the phosphorus load at river mouths. */
+  readonly showPhosphorus = input(false);
   readonly showBorders = input(true);
   readonly showLabels = input(true);
   /** Localized label for a river basin (dataset names are Polish). */
   readonly basinLabel = input<(b: Basin) => string>(b => b.name ?? '');
   readonly subNames = input<string[]>([]);
+  /** Optional sea overlay (near-bottom oxygen or cyanobacteria bloom probability). */
+  readonly seaLayer = input<SeaLayer>('none');
+  readonly seaGrid = input<SeaGrid | null>(null);
 
   readonly pick = output<number>();
   readonly hover = output<GlobeHover | null>();
@@ -123,15 +128,8 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
   private globe!: THREE.Mesh;
   private rivers = new THREE.Group();
   private riverLayers: RiverLayer[] = [];
-  private columns!: THREE.InstancedMesh;
-  private columnBasins: number[] = [];
-  private columnHeights = new Float32Array(0);
-  private columnTargets = new Float32Array(0);
-  private columnRadius = new Float32Array(0);
-  private columnRadiusTargets = new Float32Array(0);
-  private columnBase: THREE.Matrix4[] = [];
-  private columnsDirty = true;
-  private sun = new THREE.DirectionalLight(0xffffff, 1.1);
+  private discs!: THREE.InstancedMesh;
+  private discBasins: number[] = [];
 
   private regionCanvas = document.createElement('canvas');
   private regionCtx!: CanvasRenderingContext2D;
@@ -146,7 +144,6 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
   private resizeObs?: ResizeObserver;
   private ready = false;
   private down: [number, number] | null = null;
-  private lastHover = -2;
   private ramp: Record<Nutrient, THREE.Color[]> = { n: [], p: [] };
   private colors: Record<string, string> = {};
 
@@ -155,18 +152,20 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
       this.nutrient();
       this.selected();
       this.showBorders();
+      this.seaLayer();
+      this.seaGrid();
       if (!this.ready) return;
       this.drawRegion();
       this.colorRivers();
-      this.updateColumnTargets();
+      this.colorDiscs();
     });
     effect(() => {
       const v = this.showRivers();
       this.rivers.visible = v;
     });
     effect(() => {
-      const v = this.showColumns();
-      if (this.columns) this.columns.visible = v;
+      const v = this.showPhosphorus();
+      if (this.discs) this.discs.visible = v;
     });
     effect(() => {
       this.basinLabel();
@@ -190,8 +189,7 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
   flyToBasin(id: number) {
     const b = this.data().basins[id];
     if (!b) return;
-    // Stay far enough back that the basin's own load column fits in the frame.
-    const dist = clamp(R + 0.6 + Math.sqrt(b.kind === 'basin' ? b.area : 400) / 260, R + 0.8, R + 3.4);
+    const dist = clamp(R + 0.4 + Math.sqrt(b.kind === 'basin' ? b.area : 400) / 260, R + 0.6, R + 3.4);
     const target = b.mouth ? [lerp(b.cen[0], b.mouth[0], 0.35), lerp(b.cen[1], b.mouth[1], 0.35)] : b.cen;
     this.fly = { from: this.camera.position.clone(), to: this.cameraFor(target[0], target[1], dist), t: 0 };
   }
@@ -237,6 +235,9 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
     for (const n of ['n', 'p'] as Nutrient[]) {
       this.ramp[n] = RAMP_TOKENS[n].map(k => new THREE.Color(tok(k, '#888888')));
     }
+    this.colors['anoxic'] = tok(OXYGEN_TOKENS.anoxic, '#4f46e5');
+    this.colors['hypoxic'] = tok(OXYGEN_TOKENS.hypoxic, '#a78bfa');
+    CYANO_TOKENS.forEach((k, i) => (this.colors['cyano' + i] = tok(k, '#38bdf8')));
   }
 
   private init() {
@@ -254,24 +255,18 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
     this.controls.minDistance = R + 0.12;
     this.controls.maxDistance = 40;
 
-    this.scene.add(new THREE.AmbientLight(0xffffff, 1.4));
-    this.scene.add(this.sun);
-
     this.buildWorld(data);
     this.buildRegion(data);
     this.buildHalo();
     this.buildRivers(data);
-    this.buildColumns(data);
+    this.buildDiscs(data);
 
     this.ready = true;
     this.drawRegion();
     this.colorRivers();
-    this.updateColumnTargets();
-    this.columnHeights.set(this.columnTargets);
-    this.columnRadius.set(this.columnRadiusTargets);
-    this.columnsDirty = true;
+    this.colorDiscs();
     this.rivers.visible = this.showRivers();
-    this.columns.visible = this.showColumns();
+    this.discs.visible = this.showPhosphorus();
     this.buildLabels();
 
     this.resizeObs = new ResizeObserver(() => this.resize());
@@ -377,28 +372,31 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
     });
   }
 
-  private buildColumns(data: BalticData) {
-    const ids = data.basins.filter(b => b.source !== 'none' && b.mouth).map(b => b.id);
-    this.columnBasins = ids;
-    const geo = new THREE.CylinderGeometry(1, 1, 1, 14, 1, false);
-    geo.translate(0, 0.5, 0);
-    const mat = new THREE.MeshLambertMaterial({ color: 0xffffff });
-    this.columns = new THREE.InstancedMesh(geo, mat, ids.length);
-    this.columns.frustumCulled = false;
-    this.columns.renderOrder = 10;
-    this.columnHeights = new Float32Array(ids.length);
-    this.columnTargets = new Float32Array(ids.length);
-    this.columnRadius = new Float32Array(ids.length);
-    this.columnRadiusTargets = new Float32Array(ids.length);
+  /** Flat circles lying on the sphere at river mouths; area ∝ annual phosphorus load. */
+  private buildDiscs(data: BalticData) {
+    // Largest first, so smaller circles are drawn on top of the big ones.
+    const ids = data.basins
+      .filter(b => b.source !== 'none' && b.mouth)
+      .sort((a, b) => b.load.p - a.load.p)
+      .map(b => b.id);
+    this.discBasins = ids;
+    const max = data.basins[ids[0]].load.p;
+    const geo = new THREE.CircleGeometry(1, 40).rotateX(-Math.PI / 2);
+    const mat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.7, depthWrite: false, side: THREE.DoubleSide });
+    this.discs = new THREE.InstancedMesh(geo, mat, ids.length);
+    this.discs.frustumCulled = false;
+    this.discs.renderOrder = 10;
     const up = new THREE.Vector3(0, 1, 0);
-    this.columnBase = ids.map(id => {
+    const m = new THREE.Matrix4();
+    ids.forEach((id, i) => {
       const [lon, lat] = data.basins[id].mouth!;
-      const p = lonLatToVec(lon, lat, R * 1.0012);
+      const p = lonLatToVec(lon, lat, R * 1.0016);
       const q = new THREE.Quaternion().setFromUnitVectors(up, p.clone().normalize());
-      return new THREE.Matrix4().compose(p, q, new THREE.Vector3(1, 1, 1));
+      const r = Math.max(0.0025, DISC_MAX_RADIUS * Math.sqrt(data.basins[id].load.p / max));
+      this.discs.setMatrixAt(i, m.compose(p, q, new THREE.Vector3(r, 1, r)));
+      this.discs.setColorAt(i, new THREE.Color());
     });
-    for (let i = 0; i < ids.length; i++) this.columns.setColorAt(i, new THREE.Color());
-    this.scene.add(this.columns);
+    this.scene.add(this.discs);
   }
 
   // ─── styling (re-run on nutrient / selection change) ─────────────────────
@@ -428,6 +426,7 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
     const [LON0, LON1, LAT0, LAT1] = data.bbox;
 
     x.fillStyle = this.colors['ocean']; x.fillRect(0, 0, this.RW, this.RH);
+    this.drawSeaLayer();
     x.fillStyle = this.colors['land'];
     for (const p of data.land) { this.pathPoly(p); x.fill('evenodd'); }
 
@@ -473,6 +472,55 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
     this.regionTex.needsUpdate = true;
   }
 
+  /**
+   * Paints the active sea overlay: classes are rasterised one pixel per grid cell, then scaled up
+   * with smoothing so the 0.1° grid reads as soft zones. Land is drawn on top afterwards.
+   */
+  private drawSeaLayer() {
+    const layer = this.seaLayer();
+    const g = this.seaGrid();
+    if (layer === 'none' || !g) return;
+    const small = document.createElement('canvas');
+    small.width = g.nlon;
+    small.height = g.nlat;
+    const sc = small.getContext('2d')!;
+    const img = sc.createImageData(g.nlon, g.nlat);
+    const rgb = (hex: string) => new THREE.Color(hex);
+    const classColors = layer === 'oxygen'
+      ? { anoxic: rgb(this.colors['anoxic']), hypoxic: rgb(this.colors['hypoxic']) }
+      : null;
+    const cyanoColors = CYANO_TOKENS.map((_, k) => rgb(this.colors['cyano' + k]));
+    for (let i = 0; i < g.nlat; i++) {
+      for (let j = 0; j < g.nlon; j++) {
+        const v = g.values[i * g.nlon + j];
+        let c: THREE.Color | undefined;
+        if (classColors) {
+          const k = oxygenClass(v);
+          c = k ? classColors[k] : undefined;
+        } else {
+          const k = cyanoClass(v);
+          c = k >= 0 ? cyanoColors[k] : undefined;
+        }
+        if (!c) continue;
+        const o = ((g.nlat - 1 - i) * g.nlon + j) * 4; // image rows run north → south
+        img.data[o] = c.r * 255; img.data[o + 1] = c.g * 255; img.data[o + 2] = c.b * 255; img.data[o + 3] = 235;
+      }
+    }
+    sc.putImageData(img, 0, 0);
+    const [LON0, LON1, LAT0, LAT1] = this.data().bbox;
+    const sx = this.RW / (LON1 - LON0), sy = this.RH / (LAT1 - LAT0);
+    const x = this.regionCtx;
+    x.imageSmoothingEnabled = true;
+    x.imageSmoothingQuality = 'high';
+    x.drawImage(
+      small,
+      (g.lon0 - g.d / 2 - LON0) * sx,
+      (LAT1 - (g.lat0 + (g.nlat - 1) * g.d + g.d / 2)) * sy,
+      g.nlon * g.d * sx,
+      g.nlat * g.d * sy
+    );
+  }
+
   private colorRivers() {
     const sel = this.selected();
     const on = new THREE.Color(this.colors['river']);
@@ -491,37 +539,15 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
     }
   }
 
-  private updateColumnTargets() {
-    const data = this.data();
-    const nut = this.nutrient();
+  /** Phosphorus circles always use the P ramp; the selected river is inked, the rest fade. */
+  private colorDiscs() {
     const sel = this.selected();
-    const max = Math.max(...this.columnBasins.map(id => data.basins[id].load[nut]));
-    const ramp = this.ramp[nut];
-    const strong = ramp[ramp.length - 2];
+    const ramp = this.ramp.p;
+    const strong = ramp[5];
     const faded = ramp[2];
     const ink = new THREE.Color(this.colors['ink']);
-    this.columnBasins.forEach((id, i) => {
-      const f = data.basins[id].load[nut] / max;
-      this.columnTargets[i] = Math.max(0.002, COLUMN_MAX_HEIGHT * f);
-      this.columnRadiusTargets[i] = 0.2 + 0.8 * Math.sqrt(f);
-      this.columns.setColorAt(i, sel < 0 ? strong : id === sel ? ink : faded);
-    });
-    if (this.columns.instanceColor) this.columns.instanceColor.needsUpdate = true;
-    this.columnsDirty = true;
-  }
-
-  private writeColumnMatrices() {
-    const m = new THREE.Matrix4();
-    const sc = new THREE.Matrix4();
-    const alt = this.camera.position.length() - R;
-    const rad = COLUMN_RADIUS * clamp(alt / 3.4, 0.25, 1.4);
-    for (let i = 0; i < this.columnBasins.length; i++) {
-      const r = rad * this.columnRadius[i];
-      sc.makeScale(r, this.columnHeights[i], r);
-      m.multiplyMatrices(this.columnBase[i], sc);
-      this.columns.setMatrixAt(i, m);
-    }
-    this.columns.instanceMatrix.needsUpdate = true;
+    this.discBasins.forEach((id, i) => this.discs.setColorAt(i, sel < 0 ? strong : id === sel ? ink : faded));
+    if (this.discs.instanceColor) this.discs.instanceColor.needsUpdate = true;
   }
 
   // ─── labels ───────────────────────────────────────────────────────────────
@@ -590,20 +616,25 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
   private ray = new THREE.Raycaster();
   private ndc = new THREE.Vector2();
 
-  private pickAt(clientX: number, clientY: number): number {
+  /** Basin id (or -1 for sea / outside) plus the lon/lat under the pointer; null when off the globe. */
+  private pickAt(clientX: number, clientY: number): { id: number; lon: number; lat: number } | null {
     const rect = this.canvasRef().nativeElement.getBoundingClientRect();
     this.ndc.set(((clientX - rect.left) / rect.width) * 2 - 1, -((clientY - rect.top) / rect.height) * 2 + 1);
     this.ray.setFromCamera(this.ndc, this.camera);
     const hitGlobe = this.ray.intersectObject(this.globe)[0];
-    if (this.columns.visible) {
-      const hitCol = this.ray.intersectObject(this.columns)[0];
-      if (hitCol && hitCol.instanceId !== undefined && (!hitGlobe || hitCol.distance <= hitGlobe.distance + 1e-3)) {
-        return this.columnBasins[hitCol.instanceId];
+    if (this.discs.visible) {
+      // Smallest circle wins where they overlap (instances are ordered largest → smallest).
+      const hits = this.ray.intersectObject(this.discs).filter(h => h.instanceId !== undefined);
+      const hitCol = hits.sort((a, b) => b.instanceId! - a.instanceId!)[0];
+      if (hitCol && (!hitGlobe || hitCol.distance <= hitGlobe.distance + 1e-2)) {
+        const id = this.discBasins[hitCol.instanceId!];
+        const [lon, lat] = this.data().basins[id].mouth!;
+        return { id, lon, lat };
       }
     }
-    if (!hitGlobe) return -1;
+    if (!hitGlobe) return null;
     const [lon, lat] = vecToLonLat(hitGlobe.point);
-    return this.basinAt(lon, lat);
+    return { id: this.basinAt(lon, lat), lon, lat };
   }
 
   private bindPointer(canvas: HTMLCanvasElement) {
@@ -613,21 +644,25 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
       const moved = Math.hypot(e.clientX - this.down[0], e.clientY - this.down[1]);
       this.down = null;
       if (moved > 6) return;
-      const id = this.pickAt(e.clientX, e.clientY);
+      const id = this.pickAt(e.clientX, e.clientY)?.id ?? -1;
       this.zone.run(() => this.pick.emit(id));
     });
     canvas.addEventListener('pointermove', e => {
       if (e.pointerType !== 'mouse' || e.buttons) { this.emitHover(null); return; }
-      const id = this.pickAt(e.clientX, e.clientY);
-      canvas.style.cursor = id >= 0 ? 'pointer' : '';
-      this.emitHover(id >= 0 ? { id, x: e.clientX, y: e.clientY } : null);
+      const hit = this.pickAt(e.clientX, e.clientY);
+      canvas.style.cursor = hit && hit.id >= 0 ? 'pointer' : '';
+      // Sea positions only matter while a sea overlay is shown.
+      const useful = hit && (hit.id >= 0 || this.seaLayer() !== 'none');
+      this.emitHover(useful ? { ...hit, x: e.clientX, y: e.clientY } : null);
     });
     canvas.addEventListener('pointerleave', () => this.emitHover(null));
   }
 
+  private hoverIdle = true;
+
   private emitHover(h: GlobeHover | null) {
-    if (!h && this.lastHover === -1) return;
-    this.lastHover = h ? h.id : -1;
+    if (!h && this.hoverIdle) return;
+    this.hoverIdle = !h;
     this.zone.run(() => this.hover.emit(h));
   }
 
@@ -641,13 +676,11 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
     this.camera.aspect = w / h;
     // Keep the focus clear of the left list panel (desktop) or the bottom dock (portrait).
     if (w / h < 0.9) this.camera.setViewOffset(w, h, 0, h * 0.24, w, h);
-    else if (w > 960) this.camera.setViewOffset(w, h, -Math.min(170, w * 0.11), h * 0.06, w, h);
+    else if (w > 960) this.camera.setViewOffset(w, h, -Math.min(170, w * 0.11), h * 0.16, w, h);
     else this.camera.setViewOffset(w, h, 0, h * 0.08, w, h);
     this.camera.updateProjectionMatrix();
     for (const l of this.riverLayers) l.mat.resolution.set(w, h);
   }
-
-  private lastAlt = -1;
 
   private frame = () => {
     const rawDt = this.clock.getDelta();
@@ -667,20 +700,8 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
     const wf = clamp(Math.sqrt(5.6 / alt), 0.75, 3.2);
     this.riverLayers.forEach((l, i) => (l.mat.linewidth = RIVER_WIDTH[i] * wf));
 
-    // Animate column heights towards their targets; rescale radius with zoom.
-    const k = 1 - Math.pow(0.0015, Math.min(rawDt, 0.1));
-    for (let i = 0; i < this.columnHeights.length; i++) {
-      const d = this.columnTargets[i] - this.columnHeights[i];
-      if (Math.abs(d) > 1e-5) { this.columnHeights[i] += d * k; this.columnsDirty = true; }
-      const dr = this.columnRadiusTargets[i] - this.columnRadius[i];
-      if (Math.abs(dr) > 1e-4) { this.columnRadius[i] += dr * k; this.columnsDirty = true; }
-    }
-    if (Math.abs(alt - this.lastAlt) > 1e-3) { this.columnsDirty = true; this.lastAlt = alt; }
-    if (this.columnsDirty) { this.writeColumnMatrices(); this.columnsDirty = false; }
-
     this.controls.update();
     this.applyPitch();
-    this.sun.position.copy(this.camera.position).add(new THREE.Vector3(0, 3, 0));
     this.renderer.render(this.scene, this.camera);
     const el = this.host.nativeElement;
     this.updateLabels(el.clientWidth, el.clientHeight);

@@ -10,11 +10,13 @@
         [nutrient]="nutrient()"
         [selected]="selected()"
         [showRivers]="showRivers()"
-        [showColumns]="showColumns()"
+        [showPhosphorus]="showPhosphorus()"
         [showBorders]="showBorders()"
         [showLabels]="showLabels()"
         [basinLabel]="basinLabel()"
         [subNames]="t.subNames"
+        [seaLayer]="seaLayer()"
+        [seaGrid]="seaGrid()"
         (pick)="select($event === selected() ? -1 : $event)"
         (hover)="onHover($event)">
       </app-globe>
@@ -88,13 +90,25 @@
           </app-button>
         </header>
         @if (panelOpen()) {
-          <app-basin-list
-            class="dock__list"
-            [data]="data"
-            [nutrient]="nutrient()"
-            [selected]="selected()"
-            (select)="select($event, true)">
-          </app-basin-list>
+          <div class="tabs" role="tablist">
+            <app-button variant="toggle" [active]="listTab() === 'rivers'" (btnClick)="listTab.set('rivers')">
+              <lucide-icon [img]="riversIcon" [size]="14"></lucide-icon><span>{{ t.tabRivers }}</span>
+            </app-button>
+            <app-button variant="toggle" [active]="listTab() === 'countries'" (btnClick)="listTab.set('countries')">
+              <lucide-icon [img]="bordersIcon" [size]="14"></lucide-icon><span>{{ t.tabCountries }}</span>
+            </app-button>
+          </div>
+          @if (listTab() === 'rivers') {
+            <app-basin-list
+              class="dock__list"
+              [data]="data"
+              [nutrient]="nutrient()"
+              [selected]="selected()"
+              (select)="select($event, true)">
+            </app-basin-list>
+          } @else {
+            <app-country-list class="dock__list" [data]="data" [nutrient]="nutrient()"></app-country-list>
+          }
         }
       </section>
 
@@ -114,10 +128,51 @@
               <span [style.left.%]="(($index + 1) / legend().swatches.length) * 100">{{ tick }}</span>
             }
           </div>
-          <div class="legend__note">
-            <span class="legend__column" aria-hidden="true"></span>{{ t.legendColumns }}
-          </div>
         </div>
+        @if (showPhosphorus()) {
+          <div class="legend legend--sea">
+            <div class="legend__title">{{ t.legendDiscsTitle }} <span class="legend__unit">{{ t.legendDiscs }}</span></div>
+            <div class="legend__discs">
+              @for (c of discLegend(); track c.label) {
+                <span class="legend__disc">
+                  <i [style.width.px]="c.size" [style.height.px]="c.size"></i>{{ c.label }}{{ t.perYear }}
+                </span>
+              }
+            </div>
+          </div>
+        }
+        @if (seaLegend(); as sl) {
+          <div class="legend legend--sea">
+            @switch (sl.kind) {
+              @case ('oxygen') {
+                <div class="legend__title">{{ sl.title }} <span class="legend__unit">{{ sl.period }}</span></div>
+                <div class="legend__items">
+                  @for (it of sl.items; track it.label) {
+                    <span class="legend__item"><i [style.background]="it.color"></i>{{ it.label }}</span>
+                  }
+                </div>
+                <div class="legend__note">{{ sl.note }}</div>
+              }
+              @case ('cyano') {
+                <div class="legend__title">{{ sl.title }}</div>
+                <div class="legend__ramp" aria-hidden="true">
+                  @for (c of sl.swatches; track $index) {
+                    <i [style.background]="c"></i>
+                  }
+                </div>
+                <div class="legend__ticks" aria-hidden="true">
+                  @for (tick of sl.ticks; track $index) {
+                    <span [style.left.%]="(($index + 1) / sl.swatches.length) * 100">{{ tick }}</span>
+                  }
+                </div>
+                <div class="legend__note">{{ sl.period }}</div>
+              }
+              @default {
+                <div class="legend__note">{{ sl.note }}</div>
+              }
+            }
+          </div>
+        }
         <div class="legend__controls">
           <div class="layers" role="group" [attr.aria-label]="t.layers">
             @for (l of layers(); track l.label) {
@@ -130,6 +185,21 @@
                 <lucide-icon [img]="l.icon" [size]="14"></lucide-icon>
                 @if (!bp.mobile()) {
                   <span>{{ l.label }}</span>
+                }
+              </app-button>
+            }
+          </div>
+          <div class="layers" role="group" [attr.aria-label]="t.seaLayers">
+            @for (s of seaToggles(); track s.layer) {
+              <app-button
+                variant="toggle"
+                [active]="seaLayer() === s.layer"
+                [ariaLabel]="s.label"
+                [titleText]="s.label"
+                (btnClick)="toggleSea(s.layer)">
+                <lucide-icon [img]="s.icon" [size]="14"></lucide-icon>
+                @if (!bp.mobile()) {
+                  <span>{{ s.label }}</span>
                 }
               </app-button>
             }
