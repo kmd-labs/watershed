@@ -23,6 +23,8 @@
   <meta name="twitter:description" content="Every river that ends in the Baltic Sea, its catchment and the sea it flows into.">
   <meta name="twitter:image" content="https://kmd-labs.github.io/watershed/assets/design-system/og-image.png">
 
+  <!-- The map data is needed right after boot: start the download together with the scripts. -->
+  <link rel="preload" href="assets/data/baltic.json" as="fetch" type="application/json" crossorigin>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">

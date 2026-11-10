@@ -52,7 +52,7 @@ import { CountryListComponent } from './panels/country-list.component';
 import { SeaListComponent } from './panels/sea-list.component';
 import { MethodComponent } from './panels/method.component';
 
-/** The splash stays up at least this long (it doubles as the brand moment). */
+/** The splash stays up at least this long from the start of page load (it doubles as the brand moment). */
 const MIN_SPLASH_MS = 5000;
 /** "Where the rivers end": time per step while playing (reveal ≈ 4.5 s + reading). */
 const STORY_STEP_MS = 8000;
@@ -140,13 +140,13 @@ export class AppComponent {
   readonly posterBusy = signal(false);
   readonly globeProgress = signal(0);
   /** The legend & layers panel can fold down to a single pill. */
-  readonly legendOpen = signal<boolean>(!this.bp.mobile());
+  readonly legendOpen = signal<boolean>(!this.bp.mobile() && !this.bp.mobileLandscape());
   /** "Where the rivers end" presentation. */
   readonly storyStep = signal(0);
   readonly storyPlaying = signal(false);
   private storyTimer: ReturnType<typeof setTimeout> | null = null;
   /** Top-rivers countdown running in the catchments view (shares the step & play state). */
-  readonly topActive = signal(false);
+  readonly topActive = signal(true);
   /** Which presentation is running, if any. */
   readonly presKind = computed<'seas' | 'top' | null>(() =>
     this.view() === 'story' ? 'seas' : this.view() === 'catchments' && this.topActive() ? 'top' : null
@@ -154,17 +154,16 @@ export class AppComponent {
   readonly presSteps = computed(() => (this.presKind() === 'top' ? TOP_N + 2 : STORY_STEPS));
   readonly presDots = computed(() => Array.from({ length: this.presSteps() }, (_, i) => i));
 
-  /** The TOP_N largest river basins, in countdown order (#TOP_N first, #1 last). */
+  /** The TOP_N largest river basins, largest first (step 1 = #1). */
   readonly topOrder = computed(() => {
     const d = this.store.data();
     if (!d) return [];
-    return d.basins.filter(b => b.river).sort((a, b) => b.area - a.area).slice(0, TOP_N).map(b => b.id).reverse();
+    return d.basins.filter(b => b.river).sort((a, b) => b.area - a.area).slice(0, TOP_N).map(b => b.id);
   });
 
   /** While any popup is open the brand pill shows the KMD call to action and the other pills step back. */
   readonly isPopupOpen = computed(() => this.popup.config() !== null);
 
-  private readonly t0 = performance.now();
   private splashDone = false;
 
   constructor() {
@@ -188,7 +187,7 @@ export class AppComponent {
       if (!this.splashDone && this.splash.revealed() && map >= 1) {
         this.splashDone = true;
         performance.mark('watershed:map');
-        setTimeout(() => { this.splash.finish(); performance.mark('watershed:splash'); }, Math.max(0, MIN_SPLASH_MS - (performance.now() - this.t0)));
+        setTimeout(() => { this.splash.finish(); performance.mark('watershed:splash'); }, Math.max(0, MIN_SPLASH_MS - performance.now()));
       }
     });
   }
@@ -301,7 +300,7 @@ export class AppComponent {
         };
       }
       const b = d.basins[order[step - 1]];
-      const rank = TOP_N - step + 1;
+      const rank = step;
       return {
         title: `${rank}. ${b.name ? this.i18n.river(b.name) : t.unnamed}`,
         color: `var(--color-${mosaicToken(b.mosaic, 'light')})`,
@@ -356,6 +355,9 @@ export class AppComponent {
     };
   });
 
+  /** A card is open in the right column (catchment, raindrop or presentation). */
+  readonly hasCard = computed(() => !!this.presKind() || this.view() === 'raindrop' || !!this.selectedBasin());
+
   /** Headline numbers for the whole drainage basin. */
   readonly stats = computed(() => {
     const d = this.store.data();
@@ -392,7 +394,7 @@ export class AppComponent {
       const shown = this.topOrder().slice(0, Math.max(0, step));
       return {
         title: t.topLegend(TOP_N),
-        items: shown.reverse().map(id => {
+        items: shown.map(id => {
           const b = d.basins[id];
           return {
             label: b.name ? this.i18n.river(b.name).replace(/ \(.+\)$/, '') : t.unnamed,

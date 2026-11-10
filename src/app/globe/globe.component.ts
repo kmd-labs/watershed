@@ -83,6 +83,10 @@ const CLICK_SLOP = 6;
 /** Hillshade strength (soft-light blend, applied in the base-map shader). */
 const RELIEF_STRENGTH = 0.9;
 const VFOV = 40;
+/** Pixel ratio at rest (sharp) and while the map moves (fast); back to rest after this idle time. */
+const MAX_DPR = 1.5;
+const MOTION_DPR = 1;
+const MOTION_IDLE_MS = 160;
 const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 /** Yields to the browser between setup stages (a task boundary, so the splash can paint). Not rAF:
@@ -191,6 +195,9 @@ interface Label {
   h: number;
   text: string;
   kind: 'sea' | 'river' | 'big';
+  /** Last values written to the DOM, so unchanged labels cost nothing per frame. */
+  shown?: boolean;
+  tf?: string;
 }
 
 interface RiverLayer {
@@ -316,6 +323,12 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
   private altMax = 3.7;
   private fly: { from: View; to: View; t: number } | null = null;
   private flowOffset = 0;
+  /** Dynamic resolution: sharp at rest, lighter while dragging, pinching, zooming or flying. */
+  private restDpr = 1;
+  private moving = false;
+  private motionTimer: ReturnType<typeof setTimeout> | null = null;
+  /** Touch devices get lighter texture filtering (anisotropy) — invisible at this gentle tilt. */
+  private readonly coarse = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
 
   private labels: Label[] = [];
   private raf = 0;
@@ -474,11 +487,13 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
       this.cam = this.clampView({ lon: this.cam.lon + grab[0] - at[0], lat: this.cam.lat + grab[1] - at[1], alt: this.cam.alt });
     }
     this.placeCamera();
+    this.motion();
     this.invalidate();
   }
 
   /** Zooms by `factor` (< 1 = in) about the screen point (x, y). */
   private zoomAbout(factor: number, x: number, y: number) {
+    this.motion();
     this.placeCamera();
     const grab = this.lonLatAt(x, y);
     this.cam = this.clampView({ ...this.cam, alt: this.cam.alt * factor });
@@ -488,6 +503,28 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
 
   private invalidate() {
     this.dirty = true;
+  }
+
+  private aniso(): number {
+    const max = this.renderer.capabilities.getMaxAnisotropy();
+    return this.coarse ? Math.min(4, max) : max;
+  }
+
+  /** Called on every camera move: drop to MOTION_DPR, restore full sharpness once things settle. */
+  private motion() {
+    if (!this.moving && this.restDpr > MOTION_DPR) {
+      this.moving = true;
+      this.renderer.setPixelRatio(MOTION_DPR);
+    }
+    if (this.motionTimer) clearTimeout(this.motionTimer);
+    this.motionTimer = setTimeout(() => {
+      this.motionTimer = null;
+      if (this.moving) {
+        this.moving = false;
+        this.renderer.setPixelRatio(this.restDpr);
+        this.invalidate();
+      }
+    }, MOTION_IDLE_MS);
   }
 
   // ─── setup ────────────────────────────────────────────────────────────────
@@ -538,7 +575,8 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
 
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: !mobile, powerPreference: 'high-performance' });
     // 1.5 looks nearly as crisp as 2–3 on HiDPI screens at a fraction of the fragment cost.
-    this.renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 1.5));
+    this.restDpr = Math.min(devicePixelRatio || 1, MAX_DPR);
+    this.renderer.setPixelRatio(this.restDpr);
     this.scene.background = new THREE.Color(this.colors['bg']);
     this.emitProgress(0.1);
 
@@ -794,7 +832,7 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
     }
     tex.flipY = false; // the canvas is already drawn south-up
     tex.colorSpace = THREE.SRGBColorSpace;
-    tex.anisotropy = this.renderer.capabilities.getMaxAnisotropy();
+    tex.anisotropy = this.aniso();
     tex.needsUpdate = true;
     const old = this.regionMat.map;
     this.regionMat.map = tex;
@@ -879,7 +917,7 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
     o.tex.dispose();
     o.tex = new THREE.CanvasTexture(o.canvas);
     o.tex.colorSpace = THREE.SRGBColorSpace;
-    o.tex.anisotropy = this.renderer.capabilities.getMaxAnisotropy();
+    o.tex.anisotropy = this.aniso();
     o.mesh.material.map = o.tex;
     o.mesh.material.needsUpdate = true;
     o.mesh.geometry.dispose();
@@ -1060,12 +1098,12 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
     const pos = new Map(order.map((id, k) => [id, k + 1]));
     data.basins.forEach((b, i) => {
       let km = -1, ghost = 0;
-      if (top && topStep <= order.length) {
+      if (top && topStep >= 1 && topStep <= order.length) {
         const s = pos.get(i) ?? Infinity; // step that reveals this basin (never, outside the top)
         ghost = STORY_GHOST;
         km = s < topStep ? -1 : s === topStep ? (this.basinMaxKm[i] || 1) * (1 - e) - 0.001 : 1e9;
       } else if (top) {
-        // Finale: the top rivers in full, everything else stays a ghost.
+        // Intro and finale: the top rivers in full, everything else stays a ghost.
         ghost = STORY_GHOST;
         km = pos.has(i) ? -1 : 1e9;
       } else if (story && step < STORY_STEPS - 1) {
@@ -1251,15 +1289,19 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
     const show = this.showLabels();
     const dist = this.camera.position.length();
     const placed: number[][] = [];
+    const hide = (L: Label) => {
+      if (L.shown !== false) { L.el.style.opacity = '0'; L.shown = false; }
+    };
     for (const L of this.labels) {
       const at = show && dist <= L.maxDist ? this.toScreen(L.p, w, h) : null;
-      if (!at) { L.el.style.opacity = '0'; continue; }
+      if (!at) { hide(L); continue; }
       const [x, y] = at;
       const bx = [x - L.w / 2 - 3, x + L.w / 2 + 3, y - L.h / 2 - 2, y + L.h / 2 + 2];
-      if (placed.some(p => p[0] < bx[1] && bx[0] < p[1] && p[2] < bx[3] && bx[2] < p[3])) { L.el.style.opacity = '0'; continue; }
+      if (placed.some(p => p[0] < bx[1] && bx[0] < p[1] && p[2] < bx[3] && bx[2] < p[3])) { hide(L); continue; }
       placed.push(bx);
-      L.el.style.opacity = '1';
-      L.el.style.transform = `translate(${x}px,${y}px) translate(-50%,-50%)`;
+      if (L.shown !== true) { L.el.style.opacity = '1'; L.shown = true; }
+      const tf = `translate(${Math.round(x)}px,${Math.round(y)}px) translate(-50%,-50%)`;
+      if (tf !== L.tf) { L.el.style.transform = tf; L.tf = tf; }
     }
     const drop = this.dropRef().nativeElement;
     const at = this.dropHead ? this.toScreen(lonLatToVec(this.dropHead[0], this.dropHead[1], R * 1.002), w, h) : null;
@@ -1517,6 +1559,7 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
       // Altitude eases geometrically so zooming in and out feel equally paced.
       this.cam = { lon: lerp(from.lon, to.lon, e), lat: lerp(from.lat, to.lat, e), alt: from.alt * Math.pow(to.alt / from.alt, e) };
       if (this.fly.t >= 1) this.fly = null;
+      this.motion();
       animating = true;
     }
     if (this.showFlow() && this.showRivers()) {

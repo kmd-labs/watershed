@@ -74,7 +74,7 @@
 
   <!-- Bottom Dock: rivers & countries, legend & layers, selected catchment / raindrop -->
   @if (data) {
-    <footer class="dock-wrap">
+    <footer class="dock-wrap" [class.dock-wrap--card]="hasCard()">
       <section class="dock dock--list glass-panel" [class.dock--collapsed]="!panelOpen()">
         <header class="dock__head">
           <h2 class="dock__title">{{ t.panelTitle }}</h2>

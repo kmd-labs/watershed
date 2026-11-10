@@ -77,12 +77,12 @@ export const PL: Dict = {
     `${sea} zbiera zarówno najwięcej lądu (${pa} zlewiska), jak i najwięcej wody rzecznej (${pf}). Sama Newa dostarcza ${neva} całej wody, jaką rzeki wnoszą do Bałtyku.`,
   topButton: 'Top 20',
   hintTop: 'Przechodź między rzekami strzałkami albo naciśnij odtwarzanie · przeciągnij, aby przesunąć · przewiń, aby przybliżyć',
-  topHint: 'Odlicz 20 największych dorzeczy, jedno po drugim',
-  topClose: 'Zakończ odliczanie',
+  topHint: 'Przejdź przez 20 największych dorzeczy, od największego',
+  topClose: 'Zamknij top 20',
   topLegend: n => `Top ${n} dorzeczy, pokazane dotąd`,
   topIntroTitle: n => `${n} największych dorzeczy`,
   topIntroText: (n, area, share) =>
-    `Spośród 1568 rzek zaledwie ${n} odwadnia ${area}, czyli ${share} całego lądu wokół Bałtyku. Odliczmy je od miejsca ${n}. do pierwszego.`,
+    `Spośród 1568 rzek zaledwie ${n} odwadnia ${area}, czyli ${share} całego lądu wokół Bałtyku. Przejdźmy przez nie po kolei, od największej.`,
   topRiverText: (area, share, sea) => `Odwadnia ${area} (${share} zlewiska Bałtyku) i uchodzi do akwenu: ${sea}.`,
   topFinaleTitle: n => `${n} rzek, większość Bałtyku`,
   topFinaleText: (n, sa, sf, rest) =>
