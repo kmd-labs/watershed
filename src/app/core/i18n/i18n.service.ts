@@ -47,12 +47,16 @@ export class I18nService {
     return v.toLocaleString(this.t().numberLocale, { minimumFractionDigits: digits, maximumFractionDigits: digits });
   }
 
-  /** Tonnes per year, compact: "111 kt" / "740 t" / "3,4 t". */
-  tonnes(v: number): string {
+  /** Area: "1.75 million km²" / "192,632 km²" / "48.3 km²". */
+  area(km2: number): string {
     const t = this.t();
-    if (v >= 10_000) return `${this.num(v / 1000)} ${t.kilotonnes}`;
-    if (v >= 1_000) return `${this.num(v / 1000, 1)} ${t.kilotonnes}`;
-    return `${this.num(v, v < 10 ? 1 : 0)} ${t.tonnes}`;
+    if (km2 >= 1_000_000) return `${this.num(km2 / 1_000_000, 2)} ${t.millionKm2}`;
+    return `${this.num(km2, km2 < 100 ? 1 : 0)} ${t.areaUnit}`;
+  }
+
+  /** Discharge in m³/s with precision that suits the magnitude. */
+  flow(m3s: number): string {
+    return `${this.num(m3s, m3s < 10 ? 1 : 0)} ${this.t().flowUnit}`;
   }
 
   private resolveInitialLang(): Lang {

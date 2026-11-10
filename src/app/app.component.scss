@@ -9,83 +9,53 @@
   background: color("bg-deep");
 }
 
+// Brand pill styling lives in the design system's <app-brand>; offsets come from the canonical
+// HUD tokens in _base.scss (--header-offset-*, --dock-*), which already adapt per breakpoint.
 .header {
   position: fixed;
-  top: 16px;
-  left: 16px;
-  right: 16px;
+  top: var(--header-offset-top);
+  left: var(--header-offset-x);
+  right: var(--header-offset-x);
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 12px;
+  gap: spacing("md");
   pointer-events: none;
-  z-index: 20;
+  z-index: 25;
+
+  &--popup-open {
+    z-index: 120;
+
+    .header__settings,
+    .header__view {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+  }
 
   &__left,
   &__right {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: spacing("xs");
     pointer-events: auto;
-  }
-
-  &__brand {
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
-    height: 42px;
-    padding: 4px 14px;
-    border-radius: radius("pill");
-  }
-
-  &__logo {
-    display: inline-flex;
-    align-items: center;
-  }
-
-  &__logo-img {
-    height: 16px;
-    width: auto;
-    display: block;
-    user-select: none;
-  }
-
-  &__divider {
-    width: 1px;
-    height: 16px;
-    background: color("line-strong");
-  }
-
-  &__app-name {
-    margin: 0;
-    font-size: font-size("xs");
-    font-weight: font-weight("medium");
-    color: color("text-dim");
-    white-space: nowrap;
   }
 
   &__settings,
   &__view {
     display: inline-flex;
     align-items: center;
-    padding: 4px;
+    padding: spacing("xxs");
     border-radius: radius("pill");
+    transition: opacity transition("fast"), visibility transition("fast");
   }
 
   &__view {
-    width: 180px;
+    width: 210px;
   }
 
   @include respond-to("mobile") {
-    top: 10px;
-    left: 8px;
-    right: 8px;
-
-    &__app-name,
-    &__divider {
-      display: none;
-    }
-
     &__view {
       width: auto;
     }
@@ -111,24 +81,17 @@
 
 .dock-wrap {
   position: fixed;
-  left: 16px;
-  right: 16px;
-  bottom: 16px;
+  left: var(--dock-offset-x);
+  right: var(--dock-offset-x);
+  bottom: var(--dock-offset-bottom);
   display: flex;
   align-items: flex-end;
-  gap: 12px;
+  gap: var(--dock-gap);
   pointer-events: none;
-  z-index: 15;
+  z-index: 20;
 
   @include respond-to("tablet") {
     flex-wrap: wrap;
-  }
-
-  @include respond-to("mobile") {
-    left: 8px;
-    right: 8px;
-    bottom: 8px;
-    gap: 8px;
   }
 }
 
@@ -139,7 +102,7 @@
 
   &__head {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     justify-content: space-between;
     gap: 8px;
   }
@@ -149,33 +112,6 @@
     font-size: font-size("base");
     font-weight: font-weight("semibold");
     color: color("text-bright");
-  }
-
-  &__total {
-    display: flex;
-    align-items: baseline;
-    gap: 8px;
-    margin-top: 2px;
-  }
-
-  &__total-k {
-    font-size: font-size("xxs");
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: color("text-dim");
-  }
-
-  &__total-v {
-    font-size: font-size("md");
-    font-weight: font-weight("bold");
-    font-variant-numeric: tabular-nums;
-    color: color("text-bright");
-
-    small {
-      font-size: font-size("xs");
-      font-weight: font-weight("regular");
-      color: color("text-dim");
-    }
   }
 
   &--list {
@@ -206,10 +142,6 @@
     overflow: auto;
   }
 
-  &--sea {
-    flex: none;
-  }
-
   @include respond-to("tablet") {
     &--legend {
       order: -1;
@@ -231,9 +163,9 @@
 
     &--detail {
       position: fixed;
-      left: 8px;
-      right: 8px;
-      bottom: 8px;
+      left: var(--dock-offset-x);
+      right: var(--dock-offset-x);
+      bottom: var(--dock-offset-bottom);
       width: auto;
       max-height: 50dvh;
       z-index: 2;
@@ -270,76 +202,53 @@
   }
 }
 
+// ─── Basin stats ────────────────────────────────────────────────────────────
+
+.stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: spacing("xs") spacing("md");
+  margin: spacing("xs") 0 0;
+
+  &__item {
+    min-width: 0;
+  }
+
+  dt {
+    font-size: font-size("xxs");
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: color("text-dim");
+  }
+
+  dd {
+    margin: 2px 0 0;
+    font-size: font-size("md");
+    font-weight: font-weight("bold");
+    font-variant-numeric: tabular-nums;
+    color: color("text-bright");
+    white-space: nowrap;
+  }
+}
+
 // ─── Legend ─────────────────────────────────────────────────────────────────
 
 .legend {
   &__title {
+    margin-bottom: spacing("xs");
     font-size: font-size("xs");
     font-weight: font-weight("semibold");
     color: color("text-main");
   }
 
-  &__unit {
-    margin-left: 4px;
-    font-weight: font-weight("regular");
-    color: color("text-dim");
-  }
-
-  &__ramp {
-    display: grid;
-    grid-auto-flow: column;
-    grid-auto-columns: 1fr;
-    gap: 2px;
-    margin-top: 8px;
-
-    i {
-      height: 10px;
-
-      &:first-child {
-        border-radius: radius("xs") 0 0 radius("xs");
-      }
-
-      &:last-child {
-        border-radius: 0 radius("xs") radius("xs") 0;
-      }
-    }
-  }
-
-  &__ticks {
-    position: relative;
-    height: 16px;
-    font-size: font-size("xxs");
-    font-variant-numeric: tabular-nums;
-    color: color("text-dim");
-
-    span {
-      position: absolute;
-      top: 2px;
-      transform: translateX(-50%);
-    }
-  }
-
-  &__note {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    margin-top: 4px;
-    font-size: font-size("xxs");
-    color: color("text-note");
-  }
-
-  &--sea {
-    margin-top: 10px;
-    padding-top: 10px;
-    border-top: 1px solid color("line");
-  }
-
   &__items {
     display: flex;
     flex-wrap: wrap;
-    gap: 4px 14px;
-    margin-top: 6px;
-    font-size: font-size("xxs");
+    gap: 6px 14px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-size: font-size("xs");
     color: color("text-main");
   }
 
@@ -349,112 +258,49 @@
     gap: 6px;
 
     i {
-      width: 12px;
+      flex: none;
+      width: 14px;
       height: 10px;
       border-radius: radius("xs");
+      box-shadow: inset 0 0 0 1px color("line");
+    }
+
+    i.legend__line {
+      height: 2px;
+      border-radius: radius("pill");
+      box-shadow: none;
     }
   }
 
-  &__discs {
-    display: flex;
-    align-items: flex-end;
-    gap: 16px;
-    margin-top: 6px;
-  }
-
-  &__disc {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    font-size: font-size("xxs");
+  &__note-inline {
     font-variant-numeric: tabular-nums;
-    color: color("text-note");
-
-    i {
-      flex: none;
-      border-radius: 50%;
-      opacity: 0.75;
-    }
+    color: color("text-dim");
   }
 
   &__controls {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 8px;
-    margin-top: 10px;
+    gap: spacing("xs");
+    margin-top: spacing("md");
     flex-wrap: wrap;
   }
 
   &__hint {
-    margin: 8px 0 0;
+    margin: spacing("xs") 0 0;
     font-size: font-size("xxs");
     color: color("text-dim");
   }
 }
 
-// N / P discharge switch — segmented pill at the top of the legend panel.
-.switch {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 2px;
-  padding: 3px;
-  margin-bottom: 12px;
-  background: color("btn-bg");
-  border: 1px solid color("line");
-  border-radius: radius("pill");
-
-  &__opt {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    height: $control-height;
-    padding: 0 12px;
-    font-size: font-size("sm");
-    font-weight: font-weight("medium");
-    color: color("text-dim");
-    background: none;
-    border: 1px solid transparent;
-    border-radius: radius("pill");
-    cursor: pointer;
-    transition: background transition("fast"), color transition("fast"), border-color transition("fast");
-
-    &:hover {
-      color: color("text-main");
-      background: color("btn-hover");
-    }
-
-    &--on {
-      color: color("warning-800");
-      background: color("btn-active-red");
-      border-color: color("btn-active-red-border");
-
-      &:hover {
-        background: color("btn-active-red");
-      }
-    }
-
-    &--p.switch__opt--on {
-      color: color("success-800");
-      background: color("success-soft");
-      border-color: color("success-500");
-
-      &:hover {
-        background: color("success-soft");
-      }
-    }
-  }
-}
-
 .tabs {
   display: flex;
-  gap: 4px;
-  margin-top: 10px;
+  gap: spacing("xxs");
+  margin-top: spacing("sm");
 }
 
 .layers {
   display: flex;
-  gap: 4px;
+  gap: spacing("xxs");
   flex-wrap: wrap;
 }

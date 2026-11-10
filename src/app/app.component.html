@@ -2,21 +2,20 @@
 @let data = store.data();
 
 <main class="viewport">
+  <app-splash></app-splash>
+
   <!-- Fullscreen Visualization Stage -->
   <section class="stage" [attr.aria-label]="t.stageAriaLabel">
     @if (data) {
       <app-globe
         [data]="data"
-        [nutrient]="nutrient()"
+        [view]="view()"
         [selected]="selected()"
         [showRivers]="showRivers()"
-        [showDischarge]="showDischarge()"
         [showBorders]="showBorders()"
         [showLabels]="showLabels()"
         [basinLabel]="basinLabel()"
         [subNames]="t.subNames"
-        [seaLayer]="globeSeaLayer()"
-        [seaGrid]="seaGrid()"
         (pick)="select($event === selected() ? -1 : $event)"
         (hover)="onHover($event)">
       </app-globe>
@@ -26,18 +25,13 @@
   </section>
 
   <!-- Top HUD: Left Logotype + Language, Right View Switcher -->
-  <header class="header">
+  <header class="header" [class.header--popup-open]="isPopupOpen()">
     <div class="header__left">
-      <div class="header__brand glass-panel">
-        <div class="header__logo">
-          <img
-            class="header__logo-img"
-            src="assets/design-system/logo/kmd-black-orange.svg"
-            alt="KMD" />
-        </div>
-        <span class="header__divider" aria-hidden="true"></span>
-        <h1 class="header__app-name">{{ t.appName }}</h1>
-      </div>
+      <app-brand
+        [appName]="t.appName"
+        [lang]="i18n.lang()"
+        (btnClick)="about.open({ lang: i18n.lang() })">
+      </app-brand>
 
       <div class="header__settings glass-panel" role="group" [attr.aria-label]="t.changeLanguage">
         <app-dropdown
@@ -58,29 +52,21 @@
           align="right"
           [fullWidth]="true"
           [options]="viewOptions()"
-          [value]="nutrient()"
+          [value]="view()"
           [icon]="currentViewIcon()"
           [ariaLabel]="t.chooseView"
-          (valueChange)="nutrient.set($event)">
+          (valueChange)="view.set($event)">
         </app-dropdown>
       </div>
     </div>
   </header>
 
-  <!-- Bottom Dock: ranking, legend & layers, selected catchment -->
+  <!-- Bottom Dock: rivers & countries, legend & layers, selected catchment -->
   @if (data) {
     <footer class="dock-wrap">
       <section class="dock dock--list glass-panel" [class.dock--collapsed]="!panelOpen()">
         <header class="dock__head">
-          <div>
-            <h2 class="dock__title">{{ t.panelTitle }}</h2>
-            <div class="dock__total">
-              <span class="dock__total-k">{{ t.totalFromRivers }}</span>
-              <span class="dock__total-v">
-                {{ nutrient().toUpperCase() }} {{ i18n.tonnes(data.total.load[nutrient()]) }}<small>{{ t.perYear }}</small>
-              </span>
-            </div>
-          </div>
+          <h2 class="dock__title">{{ t.panelTitle }}</h2>
           <app-button
             variant="ghost"
             [iconOnly]="true"
@@ -89,6 +75,14 @@
             <lucide-icon [img]="panelOpen() ? chevronDownIcon : chevronUpIcon" [size]="16"></lucide-icon>
           </app-button>
         </header>
+        <dl class="stats">
+          @for (s of stats(); track s.k) {
+            <div class="stats__item">
+              <dt>{{ s.k }}</dt>
+              <dd>{{ s.v }}</dd>
+            </div>
+          }
+        </dl>
         @if (panelOpen()) {
           <div class="tabs" role="tablist">
             <app-button variant="toggle" [active]="listTab() === 'rivers'" (btnClick)="listTab.set('rivers')">
@@ -102,64 +96,34 @@
             <app-basin-list
               class="dock__list"
               [data]="data"
-              [nutrient]="nutrient()"
               [selected]="selected()"
+              [view]="view()"
               (select)="select($event, true)">
             </app-basin-list>
           } @else {
-            <app-country-list class="dock__list" [data]="data" [nutrient]="nutrient()"></app-country-list>
+            <app-country-list class="dock__list" [data]="data"></app-country-list>
           }
         }
       </section>
 
       <section class="dock dock--legend glass-panel">
-        <div class="switch" role="radiogroup" [attr.aria-label]="t.nutrientSwitch">
-          @for (n of nutrients; track n) {
-            <button
-              type="button"
-              role="radio"
-              class="switch__opt"
-              [class.switch__opt--on]="nutrient() === n"
-              [class.switch__opt--p]="n === 'p'"
-              [attr.aria-checked]="nutrient() === n"
-              (click)="nutrient.set(n)">
-              <lucide-icon [img]="nutrientIcons[n]" [size]="15"></lucide-icon>
-              <span>{{ n === 'n' ? t.viewNitrogen : t.viewPhosphorus }}</span>
-            </button>
-          }
-        </div>
+        @let lg = legend();
         <div class="legend">
-          <div class="legend__title">
-            {{ t.legendTitle(t.nutrientGenitive[nutrient()]) }}
-            <span class="legend__unit">{{ t.specUnit }}</span>
-          </div>
-          <div class="legend__ramp" aria-hidden="true">
-            @for (c of legend().swatches; track $index) {
-              <i [style.background]="c"></i>
+          @if (lg.title) {
+            <div class="legend__title">{{ lg.title }}</div>
+          }
+          <ul class="legend__items">
+            @for (it of lg.items; track it.label) {
+              <li class="legend__item">
+                <i [class.legend__line]="it.kind === 'line'" [style.background]="it.color"></i>
+                <span>{{ it.label }}</span>
+                @if (it.note) {
+                  <span class="legend__note-inline">{{ it.note }}</span>
+                }
+              </li>
             }
-          </div>
-          <div class="legend__ticks" aria-hidden="true">
-            @for (tick of legend().ticks; track $index) {
-              <span [style.left.%]="(($index + 1) / legend().swatches.length) * 100">{{ tick }}</span>
-            }
-          </div>
+          </ul>
         </div>
-        @if (showDischarge()) {
-          @let dl = discLegend();
-          <div class="legend legend--sea">
-            <div class="legend__title">
-              {{ t.legendDiscsTitle(t.nutrientGenitive[nutrient()]) }}
-              <span class="legend__unit">{{ t.legendDiscs(nutrient().toUpperCase()) }}</span>
-            </div>
-            <div class="legend__discs">
-              @for (c of dl.items; track c.label) {
-                <span class="legend__disc">
-                  <i [style.width.px]="c.size" [style.height.px]="c.size" [style.background]="dl.color"></i>{{ c.label }}{{ t.perYear }}
-                </span>
-              }
-            </div>
-          </div>
-        }
         <div class="legend__controls">
           <div class="layers" role="group" [attr.aria-label]="t.layers">
             @for (l of layers(); track l.label) {
@@ -176,21 +140,6 @@
               </app-button>
             }
           </div>
-          <div class="layers" role="group" [attr.aria-label]="t.seaLayers">
-            @for (s of seaToggles(); track s.layer) {
-              <app-button
-                variant="toggle"
-                [active]="seaLayer() === s.layer"
-                [ariaLabel]="s.label"
-                [titleText]="s.label"
-                (btnClick)="toggleSea(s.layer)">
-                <lucide-icon [img]="s.icon" [size]="14"></lucide-icon>
-                @if (!bp.mobile()) {
-                  <span>{{ s.label }}</span>
-                }
-              </app-button>
-            }
-          </div>
           <app-button variant="ghost" (btnClick)="openGlossary()">
             <lucide-icon [img]="bookOpenIcon" [size]="15"></lucide-icon>
             <span>{{ t.glossary }}</span>
@@ -201,52 +150,13 @@
         }
       </section>
 
-      <!-- Right column: selected catchment above the sea-layer panel -->
-      <div class="dock-col" [class.dock-col--empty]="!selectedBasin() && !seaLegend()">
-      @if (selectedBasin(); as b) {
-        <section class="dock dock--detail glass-panel" aria-live="polite">
-          <app-basin-detail
-            [data]="data"
-            [basin]="b"
-            [nutrient]="nutrient()"
-            (close)="select(-1)">
-          </app-basin-detail>
-        </section>
-      }
-      @if (seaLegend(); as sl) {
-        <section class="dock dock--sea glass-panel">
-          @switch (sl.kind) {
-            @case ('oxygen') {
-              <app-oxygen-timeline
-                [series]="sl.series"
-                [year]="oxygenYear()"
-                [mode]="oxygenMode()"
-                (yearChange)="oxygenYear.set($event)"
-                (modeChange)="oxygenMode.set($event)">
-              </app-oxygen-timeline>
-            }
-            @case ('cyano') {
-              <div class="legend">
-                <div class="legend__title">{{ sl.title }}</div>
-                <div class="legend__ramp" aria-hidden="true">
-                  @for (c of sl.swatches; track $index) {
-                    <i [style.background]="c"></i>
-                  }
-                </div>
-                <div class="legend__ticks" aria-hidden="true">
-                  @for (tick of sl.ticks; track $index) {
-                    <span [style.left.%]="(($index + 1) / sl.swatches.length) * 100">{{ tick }}</span>
-                  }
-                </div>
-                <div class="legend__note">{{ sl.period }}</div>
-              </div>
-            }
-            @default {
-              <div class="legend__note">{{ sl.note }}</div>
-            }
-          }
-        </section>
-      }
+      <!-- Right column: selected catchment -->
+      <div class="dock-col" [class.dock-col--empty]="!selectedBasin()">
+        @if (selectedBasin(); as b) {
+          <section class="dock dock--detail glass-panel" aria-live="polite">
+            <app-basin-detail [data]="data" [basin]="b" (close)="select(-1)"></app-basin-detail>
+          </section>
+        }
       </div>
     </footer>
   }

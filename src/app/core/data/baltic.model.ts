@@ -56,40 +56,30 @@ export interface RawBaltic {
 /** A polygon = list of rings, each ring a flat [lon, lat, lon, lat, …] array. */
 export type Poly = Float32Array[];
 
-export type LoadSource = 'measured' | 'estimated' | 'none';
-
-export interface NutrientPair {
-  n: number;
-  p: number;
-}
-
-/** One drainage unit (river basin or river-less coastal strip) enriched with nutrient loads. */
+/** One drainage unit: a river basin, or a river-less coastal strip draining straight to the sea. */
 export interface Basin extends RawGroup {
   id: number;
-  /** Annual loads to the sea, tonnes per year. */
-  load: NutrientPair;
-  /** Area-specific loads, kg per km² per year. */
-  spec: NutrientPair;
-  /** Flow-weighted concentration, mg/l. */
-  conc: NutrientPair;
-  source: LoadSource;
+  /** A river basin with a mouth and a modelled discharge (coastal strips are false). */
+  river: boolean;
+  /** "Basin mosaic" palette slot; neighbouring basins never share one where it can be avoided. */
+  mosaic: number;
   bb: [number, number, number, number];
   cen: [number, number];
 }
 
 export interface SubBasin extends RawSub {
   id: number;
-  load: NutrientPair;
 }
 
-/** River loads apportioned to a country by its share of each basin's area. */
-export interface CountryLoad {
+/** A country's part of the whole Baltic drainage basin. */
+export interface CountryArea {
   /** Dataset country name (Polish). */
   name: string;
-  load: NutrientPair;
-  /** Basin area within the country, km². */
+  /** Area within the drainage basin, km². */
   area: number;
-  /** Number of rivers with any part of their basin in the country. */
+  /** Share of the whole drainage basin, %. */
+  pct: number;
+  /** Number of river basins with any part in the country. */
   rivers: number;
 }
 
@@ -106,12 +96,14 @@ export interface BalticData {
   bbox: [number, number, number, number];
   basins: Basin[];
   subs: SubBasin[];
-  countries: CountryLoad[];
-  total:{ parea: number; dis: number; nout: number; load: NutrientPair };
+  countries: CountryArea[];
+  total: RawBaltic['total'];
   basinPolys: Poly[];
   outlines: Poly[];
   land: Poly[];
   lakes: Poly[];
+  /** True where the point lies on one of `lakes` (rasterised, ~0.005° resolution). */
+  inLake: (lon: number, lat: number) => boolean;
   world: Poly[];
   borders: Float32Array[];
   rivers: RiverClassGeometry[];

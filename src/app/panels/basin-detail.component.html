@@ -11,43 +11,34 @@
   </app-button>
 </header>
 
-@if (badge(); as bd) {
-  <div class="detail__badge"><app-badge [text]="bd.text" [backgroundColor]="bd.color"></app-badge></div>
-}
-
-@if (b.source === 'none') {
+@if (!b.river) {
   <p class="detail__note">{{ t.detailCoast }}</p>
-} @else {
-  <div class="sec">{{ t.nutrientLoads }}</div>
-  <div class="tiles">
-    @for (n of nutrients; track n) {
-      <div class="tile" [class.tile--active]="n === nutrient()">
-        <div class="tile__k">
-          <i class="tile__swatch" [style.background]="swatch(n)"></i>
-          {{ t.nutrientName[n] }}
-        </div>
-        <div class="tile__v">
-          @if (b.source === 'estimated') {<span class="tile__approx">≈</span>}{{ i18n.tonnes(b.load[n]) }}<span class="tile__unit">{{ t.perYear }}</span>
-        </div>
-        <div class="tile__s">{{ spec(n) }} {{ t.specUnit }}</div>
-        <div class="tile__s">{{ conc(n) }} {{ t.concUnit }}</div>
-      </div>
-    }
-  </div>
-
   <dl class="facts">
-    <dt>{{ t.shareOfTotal }} ({{ t.nutrientGenitive[nutrient()] }})</dt>
-    <dd>{{ share() }}</dd>
-    <dt>{{ t.rankLabel }} ({{ t.nutrientGenitive[nutrient()] }})</dt>
-    <dd>{{ rank() }}</dd>
+    <dt>{{ t.basinArea }}</dt>
+    <dd>{{ i18n.area(b.parea) }}</dd>
   </dl>
+} @else {
+  <div class="tiles">
+    <div class="tile">
+      <div class="tile__k">{{ t.basinArea }}</div>
+      <div class="tile__v">{{ i18n.area(b.area) }}</div>
+    </div>
+    <div class="tile">
+      <div class="tile__k">{{ t.meanFlow }}</div>
+      <div class="tile__v">{{ i18n.flow(b.dis) }}</div>
+    </div>
+  </div>
 
   <div class="sec">{{ t.hydrology }}</div>
   <dl class="facts">
-    <dt>{{ t.meanFlow }}</dt>
-    <dd>{{ i18n.num(b.dis, b.dis < 10 ? 2 : b.dis < 100 ? 1 : 0) }} {{ t.flowUnit }}</dd>
-    <dt>{{ t.basinArea }}</dt>
-    <dd>{{ i18n.num(b.area, b.area < 100 ? 1 : 0) }} {{ t.areaUnit }}</dd>
+    <dt>{{ t.rankLabel }}</dt>
+    <dd>{{ rank() }}</dd>
+    @if (b.len) {
+      <dt>{{ t.mainRiver }}</dt>
+      <dd>{{ i18n.num(b.len) }} {{ t.km }}</dd>
+    }
+    <dt>{{ t.riverNetwork }}</dt>
+    <dd>{{ i18n.num(b.rkm) }} {{ t.km }}</dd>
     @if (b.mouth) {
       <dt>{{ t.mouth }}</dt>
       <dd>{{ i18n.num(b.mouth[1], 2) }}°N, {{ i18n.num(b.mouth[0], 2) }}°E</dd>

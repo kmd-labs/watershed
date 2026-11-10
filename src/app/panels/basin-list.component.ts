@@ -1,9 +1,9 @@
 import { Component, computed, effect, ElementRef, inject, input, output, signal } from '@angular/core';
 import { I18nService } from '../core/i18n/i18n.service';
 import { BalticData, Basin } from '../core/data/baltic.model';
-import { Nutrient, RAMP_TOKENS, specClass } from '../core/data/nutrients';
+import { MapView, mosaicToken, subToken } from '../core/data/views';
 
-export type ListSort = 'load' | 'spec' | 'flow' | 'name';
+export type ListSort = 'area' | 'flow' | 'name';
 
 interface Row {
   b: Basin;
@@ -12,10 +12,9 @@ interface Row {
   swatch: string;
   value: string;
   bar: number;
-  estimated: boolean;
 }
 
-/** Searchable, filterable ranking of rivers by nutrient load. */
+/** Searchable, filterable list of the rivers draining to the Baltic. */
 @Component({
   selector: 'app-basin-list',
   standalone: true,
@@ -27,15 +26,16 @@ export class BasinListComponent {
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
 
   readonly data = input.required<BalticData>();
-  readonly nutrient = input<Nutrient>('n');
   readonly selected = input<number>(-1);
+  /** Row swatches follow the map: sea sub-basin colour, mosaic colour, or the plain catchment tone. */
+  readonly view = input<MapView>('catchments');
   readonly select = output<number>();
 
   readonly query = signal('');
   readonly subFilter = signal(-1);
-  readonly sort = signal<ListSort>('load');
+  readonly sort = signal<ListSort>('area');
 
-  private readonly rivers = computed(() => this.data().basins.filter(b => b.source !== 'none'));
+  private readonly rivers = computed(() => this.data().basins.filter(b => b.river));
 
   /** Search key per basin (both languages, place name and sub-basin). */
   private readonly keys = computed(() => {
@@ -49,33 +49,26 @@ export class BasinListComponent {
 
   readonly rows = computed<Row[]>(() => {
     const t = this.i18n.t();
-    const nut = this.nutrient();
     const q = this.query().trim().toLocaleLowerCase();
     const fs = this.subFilter();
     const so = this.sort();
+    const view = this.view();
     const keys = this.keys();
     let list = this.rivers().filter(b => (fs < 0 || b.sub === fs) && (!q || keys.get(b.id)!.includes(q)));
     const name = (b: Basin) => (b.name ? this.i18n.river(b.name) : `${t.unnamed} · ${b.place ?? ''}`);
     if (so === 'name') list = [...list].sort((a, b) => (a.name ? 0 : 1) - (b.name ? 0 : 1) || name(a).localeCompare(name(b), t.numberLocale));
     else if (so === 'flow') list = [...list].sort((a, b) => b.dis - a.dis);
-    else if (so === 'spec') list = [...list].sort((a, b) => b.spec[nut] - a.spec[nut]);
-    else list = [...list].sort((a, b) => b.load[nut] - a.load[nut]);
+    else list = [...list].sort((a, b) => b.area - a.area);
 
-    const metric = (b: Basin) => (so === 'spec' ? b.spec[nut] : so === 'flow' ? b.dis : b.load[nut]);
+    const metric = (b: Basin) => (so === 'flow' ? b.dis : b.area);
     const max = Math.max(1e-9, ...list.map(metric));
     return list.map(b => ({
       b,
       name: name(b),
       sub: t.subNames[b.sub],
-      swatch: `var(--color-${RAMP_TOKENS[nut][specClass(nut, b.spec[nut])]})`,
-      value:
-        so === 'spec'
-          ? `${this.i18n.num(b.spec[nut], nut === 'p' ? 1 : 0)}`
-          : so === 'flow'
-            ? `${this.i18n.num(b.dis, b.dis < 10 ? 1 : 0)} ${t.flowUnit}`
-            : this.i18n.tonnes(b.load[nut]),
-      bar: (metric(b) / max) * 100,
-      estimated: b.source === 'estimated'
+      swatch: `var(--color-${view === 'seas' ? subToken(b.sub) : view === 'mosaic' ? mosaicToken(b.mosaic) : 'globe-catchment'})`,
+      value: so === 'flow' ? this.i18n.flow(b.dis) : this.i18n.area(b.area),
+      bar: (metric(b) / max) * 100
     }));
   });
 

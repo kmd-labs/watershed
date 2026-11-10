@@ -1,32 +1,25 @@
-import { Component, computed, inject, signal, viewChild } from '@angular/core';
-import { LucideAngularModule, Globe, BookOpen, ChevronDown, ChevronUp, Leaf, Sprout, Waves, CircleDot, Map as MapIcon, Type, Wind, Microscope } from 'lucide-angular';
+import { Component, computed, effect, inject, signal, viewChild } from '@angular/core';
+import { LucideAngularModule, Globe, BookOpen, ChevronDown, ChevronUp, Droplets, Layers, Palette, Waves, Map as MapIcon, Type } from 'lucide-angular';
 import {
+  AboutService,
+  BrandComponent,
+  BreakpointService,
   ButtonComponent,
   DropdownComponent,
   DropdownOption,
   PopupComponent,
   PopupService,
+  SeoService,
+  SplashComponent,
+  SplashService,
   TooltipComponent,
-  TooltipService,
-  BreakpointService
+  TooltipService
 } from '@kmd/design-system';
 import { I18nService } from './core/i18n/i18n.service';
 import { Lang } from './core/i18n/i18n.types';
 import { BalticDataService } from './core/data/baltic-data.service';
 import { Basin } from './core/data/baltic.model';
-import { Nutrient, RAMP_TOKENS, SPEC_BREAKS } from './core/data/nutrients';
-import {
-  CYANO_BREAKS,
-  CYANO_TOKENS,
-  SeaGrid,
-  SeaLayer,
-  SeaLayersService,
-  UMOL_PER_ML,
-  gridValueAt,
-  oxygenChangeGrid,
-  oxygenClass
-} from './core/data/sea-layers';
-import { OxygenMode, OxygenTimelineComponent } from './panels/oxygen-timeline.component';
+import { MapView, mosaicToken, subToken } from './core/data/views';
 import { GlobeComponent, GlobeHover } from './globe/globe.component';
 import { BasinListComponent } from './panels/basin-list.component';
 import { BasinDetailComponent } from './panels/basin-detail.component';
@@ -38,15 +31,16 @@ import { MethodComponent } from './panels/method.component';
   standalone: true,
   imports: [
     LucideAngularModule,
+    BrandComponent,
     ButtonComponent,
     DropdownComponent,
     PopupComponent,
+    SplashComponent,
     TooltipComponent,
     GlobeComponent,
     BasinListComponent,
     BasinDetailComponent,
-    CountryListComponent,
-    OxygenTimelineComponent
+    CountryListComponent
   ],
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss'
@@ -57,7 +51,9 @@ export class AppComponent {
   readonly popup = inject(PopupService);
   readonly tooltip = inject(TooltipService);
   readonly store = inject(BalticDataService);
-  readonly sea = inject(SeaLayersService);
+  readonly about = inject(AboutService);
+  readonly splash = inject(SplashService);
+  private readonly seo = inject(SeoService);
 
   private readonly globe = viewChild(GlobeComponent);
 
@@ -66,89 +62,39 @@ export class AppComponent {
   readonly chevronDownIcon = ChevronDown;
   readonly chevronUpIcon = ChevronUp;
   readonly riversIcon = Waves;
-  readonly dischargeIcon = CircleDot;
-  readonly nutrients: Nutrient[] = ['n', 'p'];
-  readonly nutrientIcons: Record<Nutrient, typeof Sprout> = { n: Sprout, p: Leaf };
   readonly bordersIcon = MapIcon;
   readonly labelsIcon = Type;
 
-  readonly nutrient = signal<Nutrient>('n');
+  readonly view = signal<MapView>('catchments');
   readonly selected = signal<number>(-1);
   readonly panelOpen = signal<boolean>(!this.bp.mobile());
   readonly showRivers = signal(true);
-  readonly showDischarge = signal(true);
-  readonly listTab = signal<'rivers' | 'countries'>('rivers');
-
-  /** Reference circles for the discharge legend (area ∝ load, largest = biggest river). */
-  readonly discLegend = computed(() => {
-    const d = this.store.data();
-    const nut = this.nutrient();
-    if (!d) return { color: '', items: [] };
-    const max = Math.max(...d.basins.map(b => b.load[nut]));
-    const refs = nut === 'n' ? [1000, 10000, max] : [100, 1000, max];
-    const D = 34;
-    return {
-      color: `var(--color-${RAMP_TOKENS[nut][5]})`,
-      items: refs.map(v => ({ size: Math.max(4, D * Math.sqrt(v / max)), label: this.i18n.tonnes(v) }))
-    };
-  });
   readonly showBorders = signal(false);
   readonly showLabels = signal(true);
-  readonly seaLayer = signal<SeaLayer>('none');
+  readonly listTab = signal<'rivers' | 'countries'>('rivers');
 
-  /** Year and display mode of the dead-zone layer. */
-  readonly oxygenYear = signal(2020);
-  readonly oxygenMode = signal<OxygenMode>('state');
+  /** While any popup is open the brand pill shows the KMD call to action and the other pills step back. */
+  readonly isPopupOpen = computed(() => this.popup.config() !== null);
 
-  /** Oxygen frame for the selected year (raw values, used for tooltips). */
-  readonly oxygenFrame = computed<SeaGrid | null>(() => {
-    const s = this.sea.oxygen();
-    if (!s) return null;
-    const i = s.years.indexOf(this.oxygenYear());
-    return s.frames[i >= 0 ? i : s.frames.length - 1];
-  });
-
-  /** What the globe actually paints for the sea. */
-  readonly globeSeaLayer = computed<SeaLayer>(() =>
-    this.seaLayer() === 'oxygen' && this.oxygenMode() === 'change' ? 'oxygenChange' : this.seaLayer()
-  );
-
-  readonly seaGrid = computed<SeaGrid | null>(() => {
-    const l = this.globeSeaLayer();
-    const s = this.sea.oxygen();
-    if (l === 'oxygenChange') return s ? oxygenChangeGrid(s, this.oxygenYear()) : null;
-    return l === 'oxygen' ? this.oxygenFrame() : l === 'cyano' ? this.sea.cyano() : null;
-  });
-
-  readonly seaToggles = computed(() => {
-    const t = this.i18n.t();
-    const toggles = [{ layer: 'oxygen' as SeaLayer, label: t.layerOxygen, icon: Wind }];
-    if (this.sea.cyanoAvailable()) toggles.push({ layer: 'cyano' as SeaLayer, label: t.layerCyano, icon: Microscope });
-    return toggles;
-  });
-
-  /** Legend + headline numbers for the active sea overlay. */
-  readonly seaLegend = computed(() => {
-    const layer = this.seaLayer();
-    const g = this.seaGrid();
-    const t = this.i18n.t();
-    if (layer === 'none') return null;
-    if (layer === 'cyano' && this.sea.cyanoMissing()) return { kind: 'missing' as const, note: t.cyanoUnavailable };
-    if (!g) return { kind: 'loading' as const, note: t.layerLoading };
-    if (layer === 'oxygen') return { kind: 'oxygen' as const, series: this.sea.oxygen()! };
-    return {
-      kind: 'cyano' as const,
-      title: t.cyanoLegendTitle,
-      period: t.cyanoPeriod(g.meta['yearFrom'] ?? 0, g.meta['yearTo'] ?? 0),
-      swatches: CYANO_TOKENS.map(k => `var(--color-${k})`),
-      ticks: CYANO_BREAKS.map(b => `${Math.round(b * 100)}%`)
-    };
-  });
-
-  toggleSea(layer: SeaLayer) {
-    const next = this.seaLayer() === layer ? 'none' : layer;
-    this.sea.ensure(next);
-    this.seaLayer.set(next);
+  constructor() {
+    effect(() => {
+      const t = this.i18n.t();
+      this.about.setLang(this.i18n.lang());
+      this.seo.update({
+        title: t.docTitle,
+        description: t.metaDescription,
+        image: 'assets/design-system/og-image.png',
+        currentLang: this.i18n.lang(),
+        supportedLangs: this.i18n.langs
+      });
+    });
+    // The splash stays up until its logo reveal has played and the dataset is decoded.
+    effect(() => {
+      const t = this.i18n.t();
+      if (this.store.error()) this.splash.setError(t.loadError);
+      else this.splash.setStatus(t.loading);
+      if (this.splash.revealed() && this.store.data()) this.splash.finish();
+    });
   }
 
   readonly langOptions = computed<DropdownOption<Lang>[]>(() =>
@@ -160,16 +106,68 @@ export class AppComponent {
     }))
   );
 
-  readonly viewOptions = computed<DropdownOption<Nutrient>[]>(() => {
+  readonly viewOptions = computed<DropdownOption<MapView>[]>(() => {
     const t = this.i18n.t();
-    const compact = this.bp.mobile();
     return [
-      { value: 'n', label: t.viewNitrogen, shortLabel: compact ? 'N' : undefined, icon: Sprout },
-      { value: 'p', label: t.viewPhosphorus, shortLabel: compact ? 'P' : undefined, icon: Leaf }
+      { value: 'catchments', label: t.viewCatchments, icon: Droplets },
+      { value: 'seas', label: t.viewSeas, icon: Layers },
+      { value: 'mosaic', label: t.viewMosaic, icon: Palette }
     ];
   });
 
-  readonly currentViewIcon = computed(() => this.viewOptions().find(o => o.value === this.nutrient())?.icon ?? Sprout);
+  readonly currentViewIcon = computed(() => this.viewOptions().find(o => o.value === this.view())?.icon ?? Droplets);
+
+  /** Headline numbers for the whole drainage basin. */
+  readonly stats = computed(() => {
+    const d = this.store.data();
+    const t = this.i18n.t();
+    if (!d) return [];
+    return [
+      { k: t.statArea, v: this.i18n.area(d.total.parea) },
+      { k: t.statOutflow, v: this.i18n.flow(d.total.dis) },
+      { k: t.statRivers, v: this.i18n.num(d.total.nout) },
+      { k: t.statRiverKm, v: `${this.i18n.num(d.total.rkm / 1000)} ${t.thousandKm}` }
+    ];
+  });
+
+  /** Legend for the active view: map symbols, or one swatch per sea sub-basin. */
+  readonly legend = computed(() => {
+    const t = this.i18n.t();
+    const d = this.store.data();
+    if (this.view() === 'mosaic') {
+      const top = d ? d.basins.filter(b => b.river && b.name).sort((a, b) => b.area - a.area).slice(0, 6) : [];
+      return {
+        title: t.legendMosaicTitle,
+        items: top.map(b => ({
+          label: this.i18n.river(b.name!).replace(/ \(.+\)$/, ''),
+          note: '',
+          color: `var(--color-${mosaicToken(b.mosaic)})`,
+          kind: 'line'
+        }))
+      };
+    }
+    if (this.view() === 'seas') {
+      return {
+        title: t.legendSeasTitle,
+        items: t.subNames.map((name, i) => ({
+          label: name,
+          note: d ? this.i18n.area(d.subs[i].parea) : '',
+          color: `var(--color-${subToken(i)})`,
+          kind: 'fill'
+        }))
+      };
+    }
+    return {
+      title: '',
+      items: [
+        { label: t.legendCatchment, note: '', color: 'var(--color-globe-catchment)', kind: 'fill' },
+        { label: t.legendCoast, note: '', color: 'var(--color-globe-coast)', kind: 'fill' },
+        { label: t.legendLake, note: '', color: 'var(--color-globe-lake)', kind: 'fill' },
+        { label: t.legendRiver, note: '', color: 'var(--color-globe-river)', kind: 'line' },
+        { label: t.legendOutline, note: '', color: 'var(--color-globe-outline)', kind: 'line' }
+      ]
+    };
+  });
 
   readonly selectedBasin = computed<Basin | null>(() => {
     const d = this.store.data();
@@ -182,20 +180,10 @@ export class AppComponent {
     return (b: Basin) => (b.name ? this.i18n.river(b.name) : '');
   });
 
-  readonly legend = computed(() => {
-    const nut = this.nutrient();
-    const br = SPEC_BREAKS[nut];
-    return {
-      swatches: RAMP_TOKENS[nut].map(k => `var(--color-${k})`),
-      ticks: br.map(v => this.i18n.num(v))
-    };
-  });
-
   readonly layers = computed(() => {
     const t = this.i18n.t();
     return [
       { label: t.layerRivers, icon: this.riversIcon, on: this.showRivers },
-      { label: t.layerDischarge, icon: this.dischargeIcon, on: this.showDischarge },
       { label: t.layerBorders, icon: this.bordersIcon, on: this.showBorders },
       { label: t.layerLabels, icon: this.labelsIcon, on: this.showLabels }
     ];
@@ -213,32 +201,9 @@ export class AppComponent {
       return;
     }
     const t = this.i18n.t();
-    if (h.id < 0) {
-      const text = this.seaTooltip(h.lon, h.lat);
-      if (text) this.tooltip.show(text, h.x, h.y - 14, 'top');
-      else this.tooltip.hide();
-      return;
-    }
     const b = d.basins[h.id];
-    const nut = this.nutrient();
-    const name = b.kind === 'coast' ? t.coastName : b.name ? this.i18n.river(b.name) : `${t.unnamed} · ${b.place ?? ''}`;
-    const value = b.source === 'none' ? '' : ` · ${nut.toUpperCase()} ${b.source === 'estimated' ? '≈ ' : ''}${this.i18n.tonnes(b.load[nut])}${t.perYear}`;
-    this.tooltip.show(name + value, h.x, h.y - 14, 'top');
-  }
-
-  private seaTooltip(lon: number, lat: number): string {
-    const oxygen = this.seaLayer() === 'oxygen';
-    const g = oxygen ? this.oxygenFrame() : this.seaGrid();
-    const t = this.i18n.t();
-    if (!g) return '';
-    const v = gridValueAt(g, lon, lat);
-    if (Number.isNaN(v)) return '';
-    if (oxygen) {
-      const c = oxygenClass(v);
-      const suffix = c === 'anoxic' ? ` · ${t.oxygenTooltipAnoxic}` : c === 'hypoxic' ? ` · ${t.oxygenTooltipHypoxic}` : '';
-      return `${this.oxygenYear()}: ` + t.oxygenTooltip(this.i18n.num(v / UMOL_PER_ML, 1)) + suffix;
-    }
-    return t.cyanoTooltip(`${Math.round(v * 100)}%`);
+    const name = !b.river ? t.coastName : b.name ? this.i18n.river(b.name) : `${t.unnamed} · ${b.place ?? ''}`;
+    this.tooltip.show(`${name} · ${this.i18n.area(b.river ? b.area : b.parea)}`, h.x, h.y - 14, 'top');
   }
 
   openGlossary() {

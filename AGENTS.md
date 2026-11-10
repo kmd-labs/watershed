@@ -12,6 +12,7 @@ This document defines the mandatory UI, architectural, and engineering conventio
   - Do **not** implement dark mode, light/dark toggle buttons, or theme persistence in `localStorage`.
   - Canvas/WebGL renderers read design tokens at runtime via `ThemeService.getTokenColor(token)` from `:root` CSS custom properties (`--color-*`).
 - **Unified Typography (`Inter`):** All UI elements and `<canvas>` 2D/3D text labels use a single font family (`$font-family: "Inter", sans-serif;` emitted as `--font-family` on `:root`). Canvas renderers must use `ThemeService.getFontFamily()` instead of hardcoding system font stacks like `"Segoe UI"`.
+  - The splash uses the official `assets/design-system/logo/kmd-black-orange.svg` logotype with a left-to-right clip reveal. Numeric readouts use the monospaced face (`$font-family-mono`, emitted as `--font-family-mono`); all other text remains Inter.
 
 ---
 
@@ -20,7 +21,7 @@ This document defines the mandatory UI, architectural, and engineering conventio
 Every KMD visualization app follows a strict three-zone HUD floating over the full-screen visualization:
 
 1. **Top-Left — Brand Logotype & Language Selector (`.header__left`):**
-   - **Brand Pill (`.header__brand.glass-panel`):** Displays the official `KMD` SVG logotype (`assets/design-system/logo/kmd-black-orange.svg` — black wordmark with `#D37400` orange accent dot) separated by a `1px` vertical divider from the application name (e.g., `KMD | El Niño`). On `mobile` (`≤ 640px`), the divider and app name hide so only the `KMD` logotype remains.
+   - **Brand Pill (`.header__brand.glass-panel` / `<app-brand>`):** Displays the official `KMD` SVG logotype (`assets/design-system/logo/kmd-black-orange.svg` — black wordmark with `#D37400` orange accent dot) separated by a `1px` vertical divider from the interactive collaboration callout (`[Handshake] Open to new projects` / `t.about.cta`). On hover (and tap on mobile portrait), the brand pill expands smoothly. Clicking opens the official KMD Labs About modal (`AboutModalComponent` / `AboutService`) featuring team credentials, direct contact button (`hello@kmd-labs.org`), and a link to the main website (`kmd-labs.org`). On `mobile` portrait, it collapses in place to save viewport space.
    - **Language Pill (`.header__settings.glass-panel`):** Contains **only** the compact language `app-dropdown` (`EN`, `PL`, `ES`). No theme buttons or extra settings icons.
 2. **Top-Right — View Switcher (`.header__right`):**
    - **View Pill (`.header__view.glass-panel`):** Contains a single right-aligned `app-dropdown` (`align="right"`) that switches between the app's primary visualization modes/views.
@@ -68,12 +69,19 @@ Shared styles, UI primitives, and core utilities live in the [`kmd-labs/design-s
 
 - **SCSS Design Tokens:** `src/design-system/_variables.scss` (imported via `@use "variables" as *;` configured in `angular.json` `stylePreprocessorOptions.includePaths`).
 - **UI Components (`@kmd/design-system/ui/*`):**
+  - `BrandComponent` (`app-brand`) — standardized KMD brand logotype with interactive "Open to new projects" hover expansion and modal trigger.
   - `ButtonComponent` (`app-button`) — unified `32px` control height (`$control-height`), pill radius.
   - `DropdownComponent` (`app-dropdown`) — accessible floating menu with icon/badge support.
   - `PopupComponent` & `PopupService` (`app-popup`) — modal dialogs for glossaries and deep-dive data.
   - `TooltipComponent`, `TooltipDirective`, & `TooltipService` (`[appTooltip]`).
   - `BadgeComponent` (`app-badge`) — semantic status and phase pills.
+  - `SplashComponent` & `SplashService` (`app-splash`) — full-screen KMD loader with the official SVG logotype, progress bar, and reactive state management.
+  - `AboutModalComponent` & `AboutService` (`app-about-modal`) — shared KMD Labs team and story modal dialog with direct contact and main website links.
   - `TimelineSliderComponent` (`app-timeline-slider`) — interactive range slider with preset markers.
 - **Core Services & Utils (`@kmd/design-system/services/*`, `@kmd/design-system/utils/*`):**
   - `BreakpointService` & `breakpoints.ts`
   - `ThemeService` (stateless CSS `--color-*` token reader for WebGL/Canvas).
+  - `SeoService`, `provisionFavicon()`, & `provideKmdFavicon()` (canonical URL, hreflang alternates, OpenGraph meta tags, Twitter Cards, and automatic orange circle favicon provisioning).
+- **Shared Assets (`@kmd/design-system/assets/*`):**
+  - `favicon.svg` & `favicon.ico` — official KMD orange circle `#D37400` favicon (provisioned automatically at app start).
+  - `og-image.png` (`assets/design-system/og-image.png`) — standardized 1200×630 repository-agnostic social media preview card.

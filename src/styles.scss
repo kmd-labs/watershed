@@ -1,2 +1,55 @@
+@use "sass:color";
 @use "variables" as *;
 @use "base";
+
+// Watershed tokens — derived from the design-system palette only, read at runtime by
+// ThemeService.getTokenColor() (globe) or var(--color-*) (SCSS).
+//
+// Base map look: warm sand catchments over the DS grey land (globe-land-fill), slate rivers,
+// pale-blue sea and lakes. Picking a catchment warms it up and turns its rivers blue.
+$land: palette("neutral-300");
+
+:root {
+  // Water
+  --color-globe-ocean: #{palette("primary-100")};
+  --color-globe-lake: #{palette("primary-200")};
+  --color-globe-sea-label: #{palette("primary-800")};
+
+  // Drainage basin
+  --color-globe-catchment: #{color.mix(palette("warning-200"), $land, 35%)};
+  --color-globe-catchment-active: #{palette("warning-200")};
+  --color-globe-coast: #{color.mix(palette("warning-100"), palette("neutral-200"), 35%)};
+  --color-globe-outline: #{palette("neutral-700")};
+
+  // Rivers
+  --color-globe-river: #{palette("neutral-400")};
+  --color-globe-river-active: #{palette("info-600")};
+
+  // "Sea sub-basins" view: one soft tint per sea the catchment drains to (index = sub-basin id).
+  --color-sub-0: #{color.mix(palette("info-300"), $land, 55%)};
+  --color-sub-1: #{color.mix(palette("primary-300"), $land, 55%)};
+  --color-sub-2: #{color.mix(palette("purple-300"), $land, 55%)};
+  --color-sub-3: #{color.mix(palette("success-300"), $land, 55%)};
+  --color-sub-4: #{color.mix(palette("warning-300"), $land, 55%)};
+  --color-sub-5: #{color.mix(palette("danger-300"), $land, 55%)};
+
+  // "Basin mosaic" view: every river basin's network in its own colour (after the classic
+  // rivers-by-basin maps). Slots are ordered strongest first — the biggest basins take them first —
+  // and assigned so that neighbouring basins never share a colour (BalticDataService).
+  --color-globe-mosaic-ground: #{palette("neutral-0")};
+  --color-mosaic-0: #{palette("primary-500")};
+  --color-mosaic-1: #{palette("danger-500")};
+  --color-mosaic-2: #{palette("success-500")};
+  --color-mosaic-3: #{palette("warning-500")};
+  --color-mosaic-4: #{palette("purple-500")};
+  --color-mosaic-5: #{palette("info-500")};
+  --color-mosaic-6: #{color.mix(palette("danger-400"), palette("purple-400"), 50%)};
+  --color-mosaic-7: #{color.mix(palette("warning-400"), palette("success-400"), 50%)};
+  --color-mosaic-8: #{palette("primary-700")};
+  --color-mosaic-9: #{palette("danger-700")};
+  --color-mosaic-10: #{palette("success-700")};
+  --color-mosaic-11: #{palette("purple-600")};
+
+  // Panels
+  --color-share-bar: #{palette("warning-200")};
+}

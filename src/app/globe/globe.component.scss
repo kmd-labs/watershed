@@ -37,7 +37,7 @@
     font-size: font-size("xs");
     font-style: italic;
     letter-spacing: 0.06em;
-    color: color("primary-800");
+    color: var(--color-globe-sea-label);
   }
 
   &--river {
