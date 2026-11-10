@@ -19,7 +19,7 @@ import { ThemeService } from '@kmd/design-system';
 import { isAtMost } from '@kmd/design-system/utils/breakpoints';
 import { BalticData, Basin, Poly, RaindropPath, RiverClassGeometry } from '../core/data/baltic.model';
 import { cssToHex } from '../core/color';
-import { MapView, MOSAIC_COUNT, MosaicGround, SUB_COUNT, mosaicToken, subToken } from '../core/data/views';
+import { MapView, MOSAIC_COUNT, MosaicGround, STORY_STEPS, SUB_COUNT, mosaicToken, seaToken, subToken } from '../core/data/views';
 
 export interface GlobeHover {
   /** Basin under the pointer. */
@@ -54,8 +54,12 @@ const MOSAIC_HOVER_FADE = 0.4;
 /** Drainage-divide stroke strength, and the smallest ring it outlines (deg², ≈ 600 km²). */
 const OUTLINE_ALPHA = 0.5;
 const MIN_OUTLINE_RING = 0.05;
-/** Width of the per-basin colour lookup texture (≥ number of basins). */
+/** Width of the per-basin lookup texture (≥ number of basins). Row 0: colour; row 1: reveal. */
 const BASIN_TEX = 2048;
+/** "Where the rivers end": seconds for one sea's rivers to draw down to the coast. */
+const STORY_REVEAL_S = 4.5;
+/** Opacity of not-yet-revealed rivers (a grey ghost of the network). */
+const STORY_GHOST = 0.35;
 /** Country border width in CSS pixels. */
 const BORDER_WIDTH = 1.6;
 /** Screen length (px) of one dash unit for borders and the flow animation. */
@@ -74,8 +78,8 @@ const ALT_OUT = 1.15;
 const DRAG_SLOP = 3;
 /** Movement (px) above which a press is no longer a click. */
 const CLICK_SLOP = 6;
-/** Hillshade strength (soft-light blend alpha). */
-const RELIEF_ALPHA = 0.9;
+/** Hillshade strength (soft-light blend, applied in the base-map shader). */
+const RELIEF_STRENGTH = 0.9;
 const VFOV = 40;
 const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
@@ -117,20 +121,64 @@ function sector(box: [number, number, number, number], r: number, wSeg: number, 
  * segment's basin id travels in `instanceColorStart.x`. Hover, selection and view changes then
  * rewrite ~1,600 texels rather than ~200,000 segment colours.
  */
-function patchBasinColours(mat: LineMaterial, tex: THREE.DataTexture) {
+function patchBasinColours(mat: LineMaterial, tex: THREE.DataTexture, ghost: { value: THREE.Color }) {
   mat.onBeforeCompile = shader => {
     shader.uniforms['basinColors'] = { value: tex };
+    shader.uniforms['uGhost'] = ghost;
+    // instanceColorStart = (basin id, distance to the mouth in km, –). A segment is drawn in its
+    // basin's colour once the basin's reveal threshold (row 1) drops below its distance.
     shader.vertexShader = shader.vertexShader
-      .replace('attribute vec3 instanceColorEnd;', 'attribute vec3 instanceColorEnd;\nuniform sampler2D basinColors;\nvarying float vBasinAlpha;')
+      .replace('attribute vec3 instanceColorEnd;', 'attribute vec3 instanceColorEnd;\nuniform sampler2D basinColors;\nuniform vec3 uGhost;\nvarying float vBasinAlpha;')
       .replace(
         'vColor.xyz = ( position.y < 0.5 ) ? instanceColorStart : instanceColorEnd;',
-        `vec4 bc = texture2D( basinColors, vec2( ( instanceColorStart.x + 0.5 ) / ${BASIN_TEX}.0, 0.5 ) );\nvColor.xyz = bc.rgb;\nvBasinAlpha = bc.a;`
+        `float bu = ( instanceColorStart.x + 0.5 ) / ${BASIN_TEX}.0;
+        vec4 bc = texture2D( basinColors, vec2( bu, 0.25 ) );
+        vec4 rv = texture2D( basinColors, vec2( bu, 0.75 ) );
+        bool shown = instanceColorStart.y >= rv.r;
+        vColor.xyz = shown ? bc.rgb : uGhost;
+        vBasinAlpha = shown ? bc.a : rv.g;`
       );
     shader.fragmentShader = shader.fragmentShader
       .replace('uniform float opacity;', 'uniform float opacity;\nvarying float vBasinAlpha;')
       .replace('vec4 diffuseColor = vec4( diffuse, alpha );', 'alpha *= vBasinAlpha;\nvec4 diffuseColor = vec4( diffuse, alpha );');
   };
   mat.customProgramCacheKey = () => 'basin-colours';
+}
+
+/** Uniforms shared by every material that shows the relief (one texture, one switch). */
+interface ReliefUniforms {
+  uRelief: { value: THREE.Texture };
+  uReliefOn: { value: number };
+  uReliefBox: { value: THREE.Vector4 };
+}
+
+/**
+ * Soft-light hillshade in the fragment shader of a base-map material whose texture covers `box`
+ * (lon0, lon1, lat0, lat1). The relief image covers `uReliefBox`; 128 = flat. Doing this on the
+ * GPU means the relief can arrive late or be toggled without redrawing the large map canvas.
+ */
+function patchRelief(mat: THREE.MeshBasicMaterial, box: [number, number, number, number], u: ReliefUniforms) {
+  const patchBox = new THREE.Vector4(...box);
+  mat.onBeforeCompile = shader => {
+    Object.assign(shader.uniforms, u, { uPatchBox: { value: patchBox } });
+    shader.fragmentShader = shader.fragmentShader
+      .replace('#include <common>', '#include <common>\nuniform sampler2D uRelief;\nuniform float uReliefOn;\nuniform vec4 uReliefBox;\nuniform vec4 uPatchBox;')
+      .replace(
+        '#include <map_fragment>',
+        `#include <map_fragment>
+        if ( uReliefOn > 0.0 ) {
+          vec2 ll = vec2( mix( uPatchBox.x, uPatchBox.y, vMapUv.x ), mix( uPatchBox.z, uPatchBox.w, vMapUv.y ) );
+          vec2 ruv = vec2( ( ll.x - uReliefBox.x ) / ( uReliefBox.y - uReliefBox.x ), ( uReliefBox.w - ll.y ) / ( uReliefBox.w - uReliefBox.z ) );
+          float sh = texture2D( uRelief, ruv ).r;
+          vec3 b = pow( max( diffuseColor.rgb, vec3( 0.0 ) ), vec3( 1.0 / 2.2 ) );
+          vec3 lo = b - ( 1.0 - 2.0 * sh ) * b * ( 1.0 - b );
+          vec3 hi = b + ( 2.0 * sh - 1.0 ) * ( sqrt( b ) - b );
+          vec3 sl = sh <= 0.5 ? lo : hi;
+          diffuseColor.rgb = pow( mix( b, sl, uReliefOn ), vec3( 2.2 ) );
+        }`
+      );
+  };
+  mat.customProgramCacheKey = () => 'relief';
 }
 
 interface Label {
@@ -194,6 +242,10 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
   readonly ground = input<MosaicGround>('light');
   readonly selected = input<number>(-1);
   readonly drop = input<RaindropPath | null>(null);
+  /** "Where the rivers end" step: 0 intro, 1–6 one sea each, 7 everything. */
+  readonly storyStep = input(0);
+  /** Per-segment distance to the mouth for a river class (from the river network). */
+  readonly mouthKm = input<((rc: RiverClassGeometry) => Float32Array | null) | null>(null);
   readonly showRivers = input(true);
   readonly showBorders = input(false);
   readonly showLabels = input(true);
@@ -221,13 +273,25 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
   private borderMat?: LineMaterial;
   private basinTex!: THREE.DataTexture;
   /** RGBA (linear) per basin id, backing `basinTex`. */
-  private lut = new Float32Array(BASIN_TEX * 4).fill(1);
+  private lut = new Float32Array(BASIN_TEX * 2 * 4);
+  private readonly ghost = { value: new THREE.Color() };
+  /** Longest distance to a mouth among each sea's rivers (km), for the reveal pace. */
+  private subMaxKm = new Array<number>(SUB_COUNT).fill(1);
+  private seaColors: Record<MosaicGround, THREE.Color[]> = { light: [], dark: [] };
+  private story = { t: 1 };
 
   private contextCanvas = document.createElement('canvas');
   private contextTex?: THREE.CanvasTexture;
   private regionCanvas = document.createElement('canvas');
   private regionCtx!: CanvasRenderingContext2D;
-  private regionTex!: THREE.CanvasTexture;
+  private regionMat!: THREE.MeshBasicMaterial;
+  /** Bumped per redraw so a slow upload never replaces a newer one. */
+  private regionSeq = 0;
+  private readonly relief$: ReliefUniforms = {
+    uRelief: { value: new THREE.DataTexture(new Uint8Array([128, 128, 128, 255]), 1, 1) },
+    uReliefOn: { value: 0 },
+    uReliefBox: { value: new THREE.Vector4() }
+  };
   private RW = 0;
   private RH = 0;
   private selOverlay?: Overlay;
@@ -257,15 +321,20 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
   private subColors: string[] = [];
   private mosaicColors: Record<MosaicGround, THREE.Color[]> = { light: [], dark: [] };
 
-  readonly dark = () => this.view() === 'mosaic' && this.ground() === 'dark';
+  /** Views drawn on plain ground, where the rivers carry the colour. */
+  private plain = () => this.view() === 'mosaic' || this.view() === 'story';
+  readonly dark = () => this.plain() && this.ground() === 'dark';
 
   constructor() {
     effect(() => {
       this.view();
       this.ground();
-      this.showRelief();
-      this.relief();
-      if (this.ready) this.restyle();
+      if (this.ready) void this.restyle();
+    });
+    effect(() => {
+      const img = this.relief();
+      const on = this.showRelief();
+      this.applyRelief(img, on);
     });
     effect(() => {
       this.selected();
@@ -301,6 +370,10 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
     effect(() => {
       const d = this.drop();
       if (this.ready) this.showDrop(d);
+    });
+    effect(() => {
+      const step = this.storyStep();
+      if (this.ready && this.view() === 'story') this.startStoryStep(step);
     });
   }
 
@@ -430,7 +503,10 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
     this.subColors = Array.from({ length: SUB_COUNT }, (_, i) => tok(subToken(i), this.colors['catchment']));
     for (const g of ['light', 'dark'] as MosaicGround[]) {
       this.mosaicColors[g] = Array.from({ length: MOSAIC_COUNT }, (_, i) => new THREE.Color(tok(mosaicToken(i, g), this.colors['river'])));
+      this.seaColors[g] = Array.from({ length: SUB_COUNT }, (_, i) => new THREE.Color(tok(seaToken(i, g), this.colors['river'])));
     }
+    this.colors['ghost'] = tok('globe-story-ghost', '#cfd8e3');
+    this.colors['darkGhost'] = tok('globe-dark-story-ghost', '#1e293b');
   }
 
   private async init() {
@@ -446,17 +522,22 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
     this.scene.background = new THREE.Color(this.colors['bg']);
     this.emitProgress(0.1);
 
-    this.basinTex = new THREE.DataTexture(this.lut, BASIN_TEX, 1, THREE.RGBAFormat, THREE.FloatType);
+    for (let i = 0; i < BASIN_TEX; i++) {
+      this.lut.set([1, 1, 1, 1], i * 4);
+      this.lut.set([-1, 0, 0, 0], (BASIN_TEX + i) * 4);
+    }
+    this.basinTex = new THREE.DataTexture(this.lut, BASIN_TEX, 2, THREE.RGBAFormat, THREE.FloatType);
     this.basinTex.minFilter = this.basinTex.magFilter = THREE.NearestFilter;
     this.basinTex.needsUpdate = true;
 
     await nextFrame();
     this.buildContext(data, mobile ? 1024 : 2048);
+    performance.mark('watershed:ctx');
     this.emitProgress(0.2);
 
     await nextFrame();
     this.buildRegion(data, mobile ? 3072 : tablet ? 4096 : 5120);
-    this.drawRegion();
+    performance.mark('watershed:region');
     this.emitProgress(0.5);
 
     this.scene.add(this.rivers);
@@ -466,6 +547,7 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
       this.emitProgress(0.5 + 0.3 * (rc.cls / 4));
     }
 
+    performance.mark('watershed:rivers');
     await nextFrame();
     this.buildBorders(data);
     this.selOverlay = this.makeOverlay(2048);
@@ -487,13 +569,18 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
     // The smallest streams may have arrived while setup was still running.
     const streams = this.streams();
     if (streams && !this.riverLayers.some(l => l.cls === streams.cls)) this.addRiverLayer(streams);
-    this.restyle();
+    await this.restyle();
     this.updateOverlays();
     this.rivers.visible = this.showRivers();
     this.borders!.visible = this.showBorders();
     this.setFlow(this.showFlow());
     this.showDrop(this.drop());
+    performance.mark('watershed:restyled');
+    // Compile shaders without blocking (parallel compile where the driver supports it).
+    this.placeCamera();
+    await this.renderer.compileAsync(this.scene, this.camera).catch(() => undefined);
     this.frame();
+    performance.mark('watershed:firstframe');
     this.emitProgress(1);
   }
 
@@ -501,15 +588,33 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
     this.zone.run(() => this.progress.emit(p));
   }
 
-  /** Re-applies everything that depends on the view, the mosaic ground or the relief layer. */
-  private restyle() {
+  /** Re-applies everything that depends on the view or the mosaic ground. */
+  private restyle(): Promise<void> {
     this.scene.background = new THREE.Color(this.dark() ? this.colors['darkBg'] : this.colors['bg']);
     this.drawContext();
-    this.drawRegion();
-    this.riverLayers.forEach(l => (l.mat.opacity = (this.view() === 'mosaic' ? MOSAIC_RIVER_OPACITY : RIVER_OPACITY)[l.cls]));
+    const uploaded = this.drawRegion();
+    this.riverLayers.forEach(l => (l.mat.opacity = (this.plain() ? MOSAIC_RIVER_OPACITY : RIVER_OPACITY)[l.cls]));
+    if (this.view() === 'story') this.startStoryStep(this.storyStep());
     if (this.borderMat) this.borderMat.color.set(this.dark() ? this.colors['light'] : this.colors['border']);
     this.updateBasinColours();
     this.updateOverlays();
+    this.invalidate();
+    return uploaded;
+  }
+
+  private applyRelief(img: ImageBitmap | HTMLImageElement | null, on: boolean) {
+    const u = this.relief$;
+    if (img && !(u.uRelief.value.image === img)) {
+      const tex = new THREE.Texture(img as HTMLImageElement);
+      tex.flipY = false; // row 0 = north; the shader maps lat → v itself
+      tex.colorSpace = THREE.NoColorSpace; // shading data, not colour
+      tex.needsUpdate = true;
+      u.uRelief.value.dispose();
+      u.uRelief.value = tex;
+      const [W0, W1, S0, S1] = this.data().worldBox;
+      u.uReliefBox.value.set(W0, W1, S0, S1);
+    }
+    u.uReliefOn.value = img && on ? RELIEF_STRENGTH : 0;
     this.invalidate();
   }
 
@@ -526,10 +631,9 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
     this.contextTex = new THREE.CanvasTexture(this.contextCanvas);
     this.contextTex.colorSpace = THREE.SRGBColorSpace;
     this.drawContext();
-    const mesh = new THREE.Mesh(
-      sector(data.worldBox, R, 128, 96),
-      new THREE.MeshBasicMaterial({ map: this.contextTex, transparent: true, depthWrite: false })
-    );
+    const mat = new THREE.MeshBasicMaterial({ map: this.contextTex, transparent: true, depthWrite: false });
+    patchRelief(mat, data.worldBox, this.relief$);
+    const mesh = new THREE.Mesh(sector(data.worldBox, R, 128, 96), mat);
     mesh.renderOrder = 0;
     this.scene.add(mesh);
   }
@@ -557,7 +661,6 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
       }
       x.fill('evenodd');
     }
-    this.drawRelief(x, 0, 0, W, H, [W0, W1, S0, S1]);
     // Feather: each edge erases with a smooth ramp over most of the margin; corners compound.
     const fx = ((LON0 - W0) / (W1 - W0)) * W * 0.9, fy = ((LAT0 - S0) / (S1 - S0)) * H * 0.9;
     x.globalCompositeOperation = 'destination-out';
@@ -573,23 +676,6 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
     if (this.contextTex) this.contextTex.needsUpdate = true;
   }
 
-  /** Soft-light hillshade over the target rectangle, which covers `box` (lon0, lon1, lat0, lat1). */
-  private drawRelief(x: CanvasRenderingContext2D, dx: number, dy: number, dw: number, dh: number, box: [number, number, number, number]) {
-    const img = this.relief();
-    if (!img || !this.showRelief()) return;
-    const [W0, W1, S0, S1] = this.data().worldBox;
-    const iw = img.width, ih = img.height;
-    const sx = ((box[0] - W0) / (W1 - W0)) * iw, sw = ((box[1] - box[0]) / (W1 - W0)) * iw;
-    const sy = ((S1 - box[3]) / (S1 - S0)) * ih, sh = ((box[3] - box[2]) / (S1 - S0)) * ih;
-    x.save();
-    x.globalCompositeOperation = 'soft-light';
-    x.globalAlpha = RELIEF_ALPHA;
-    x.imageSmoothingEnabled = true;
-    x.imageSmoothingQuality = 'high';
-    x.drawImage(img, sx, sy, sw, sh, dx, dy, dw, dh);
-    x.restore();
-  }
-
   private buildRegion(data: BalticData, width: number) {
     const [LON0, LON1, LAT0, LAT1] = data.bbox;
     this.RW = Math.min(this.renderer.capabilities.maxTextureSize, width);
@@ -597,14 +683,12 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
     this.regionCanvas.width = this.RW;
     this.regionCanvas.height = this.RH;
     this.regionCtx = this.regionCanvas.getContext('2d')!;
-    this.regionTex = new THREE.CanvasTexture(this.regionCanvas);
-    this.regionTex.colorSpace = THREE.SRGBColorSpace;
-    this.regionTex.anisotropy = this.renderer.capabilities.getMaxAnisotropy();
-    const patch = new THREE.Mesh(
-      sector(data.bbox, R * 1.0004, 160, 120),
-      new THREE.MeshBasicMaterial({ map: this.regionTex, polygonOffset: true, polygonOffsetFactor: -1 })
-    );
-    this.scene.add(patch);
+    // Placeholder until the first upload, so the material is compiled with a map from the start.
+    const placeholder = new THREE.DataTexture(new Uint8Array([255, 255, 255, 255]), 1, 1);
+    placeholder.needsUpdate = true;
+    this.regionMat = new THREE.MeshBasicMaterial({ map: placeholder, polygonOffset: true, polygonOffsetFactor: -1 });
+    patchRelief(this.regionMat, data.bbox, this.relief$);
+    this.scene.add(new THREE.Mesh(sector(data.bbox, R * 1.0004, 160, 120), this.regionMat));
   }
 
   /** Lon/lat → pixel in a canvas covering `box`. */
@@ -620,8 +704,11 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
     }
   }
 
-  /** The large base texture: depends on the view, the mosaic ground and the relief only. */
-  private drawRegion() {
+  /**
+   * The large base texture: depends on the view and the mosaic ground only. It is drawn upside
+   * down so it can go to the GPU as an ImageBitmap without a flip.
+   */
+  private drawRegion(): Promise<void> {
     const data = this.data();
     const x = this.regionCtx;
     const view = this.view();
@@ -631,6 +718,7 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
     const box: [number, number, number, number] = [LON0, LON1, LAT0, LAT1];
     const path = (p: Poly) => this.pathPoly(x, p, box, this.RW, this.RH);
 
+    x.setTransform(1, 0, 0, -1, 0, this.RH);
     x.fillStyle = dark ? this.colors['darkOcean'] : this.colors['ocean']; x.fillRect(0, 0, this.RW, this.RH);
     x.fillStyle = dark ? this.colors['darkLand'] : this.colors['land'];
     for (const p of data.land) { path(p); x.fill('evenodd'); }
@@ -638,7 +726,7 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
     data.basins.forEach((b, i) => {
       // In the mosaic the rivers carry the colour; the basin itself is plain ground.
       x.fillStyle =
-        view === 'mosaic' ? (dark ? this.colors['darkGround'] : this.colors['mosaicGround'])
+        view === 'mosaic' || view === 'story' ? (dark ? this.colors['darkGround'] : this.colors['mosaicGround'])
         : view === 'seas' ? this.subColors[b.sub]
         : b.river ? this.colors['catchment'] : this.colors['coast'];
       path(data.basinPolys[i]);
@@ -648,11 +736,9 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
     x.fillStyle = dark ? this.colors['darkLake'] : this.colors['lake'];
     for (const p of data.lakes) { path(p); x.fill('evenodd'); }
 
-    this.drawRelief(x, 0, 0, this.RW, this.RH, box);
-
     // Catchment and sub-basin lines; the mosaic draws its borders with colour alone.
     const soft = this.softOutlines();
-    if (view !== 'mosaic') {
+    if (view !== 'mosaic' && view !== 'story') {
       x.strokeStyle = this.colors['ink']; x.globalAlpha = 0.16; x.lineWidth = 0.9 * s;
       data.basins.forEach((b, i) => { if (b.kind === 'basin') { path(data.basinPolys[i]); x.stroke(); } });
       x.globalAlpha = 0.28; x.lineWidth = 1.3 * s;
@@ -667,7 +753,36 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
     x.lineWidth = 1.4 * s;
     path(soft[6]); x.stroke();
     x.globalAlpha = 1;
-    this.regionTex.needsUpdate = true;
+    x.setTransform(1, 0, 0, 1, 0, 0);
+    return this.uploadRegion();
+  }
+
+  /**
+   * Sends the region canvas to the GPU. A CanvasTexture of this size made Chrome read the
+   * GPU-backed canvas back synchronously (~5 s at 5120 px on desktop, and again on every view
+   * switch); an ImageBitmap snapshot is taken asynchronously and copied GPU-side.
+   */
+  private async uploadRegion() {
+    const seq = ++this.regionSeq;
+    let tex: THREE.Texture;
+    if (typeof createImageBitmap === 'function') {
+      const bmp = await createImageBitmap(this.regionCanvas);
+      if (seq !== this.regionSeq) { bmp.close(); return; }
+      tex = new THREE.Texture(bmp as unknown as HTMLImageElement);
+    } else {
+      tex = new THREE.CanvasTexture(this.regionCanvas);
+    }
+    tex.flipY = false; // the canvas is already drawn south-up
+    tex.colorSpace = THREE.SRGBColorSpace;
+    tex.anisotropy = this.renderer.capabilities.getMaxAnisotropy();
+    tex.needsUpdate = true;
+    const old = this.regionMat.map;
+    this.regionMat.map = tex;
+    if (old) {
+      old.dispose();
+      (old.image as ImageBitmap | undefined)?.close?.();
+    }
+    this.invalidate();
   }
 
   private softCache?: Poly[];
@@ -729,7 +844,7 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
     const dark = this.dark();
     const lw = Math.max(1.5, Math.max(W, H) / 380);
     this.pathPoly(x, data.basinPolys[id], box, W, H);
-    if (view !== 'mosaic') {
+    if (view !== 'mosaic' && view !== 'story') {
       x.globalAlpha = kind === 'sel' ? 1 : 0.55;
       x.fillStyle = this.colors['catchmentActive'];
       x.fill('evenodd');
@@ -764,6 +879,7 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
     for (const n of rc.cnt) total += n - 1;
     const P = new Float32Array(total * 6);
     const C = new Float32Array(total * 6);
+    const mk = this.mouthKm()?.(rc) ?? null;
     const v = new THREE.Vector3(), w = new THREE.Vector3();
     const rr = R * (1.0009 + rc.cls * 0.00012);
     let o = 0, seg = 0, s = 0;
@@ -776,6 +892,11 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
           P[s * 6] = v.x; P[s * 6 + 1] = v.y; P[s * 6 + 2] = v.z;
           P[s * 6 + 3] = w.x; P[s * 6 + 4] = w.y; P[s * 6 + 5] = w.z;
           C[s * 6] = C[s * 6 + 3] = g;
+          if (mk) {
+            C[s * 6 + 1] = C[s * 6 + 4] = mk[seg];
+            const sb = data.basins[g].sub;
+            if (mk[seg] > this.subMaxKm[sb]) this.subMaxKm[sb] = mk[seg];
+          }
           s++;
         }
         v.copy(w);
@@ -788,10 +909,10 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
       vertexColors: true,
       linewidth: RIVER_WIDTH[rc.cls],
       transparent: true,
-      opacity: (this.view() === 'mosaic' ? MOSAIC_RIVER_OPACITY : RIVER_OPACITY)[rc.cls],
+      opacity: (this.plain() ? MOSAIC_RIVER_OPACITY : RIVER_OPACITY)[rc.cls],
       depthWrite: rc.cls > 0
     });
-    patchBasinColours(mat, this.basinTex);
+    patchBasinColours(mat, this.basinTex, this.ghost);
     const el = this.host.nativeElement;
     mat.resolution.set(el.clientWidth || 1, el.clientHeight || 1);
     const line = new LineSegments2(geo, mat);
@@ -813,7 +934,17 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
     const sel = this.selected();
     const hov = this.hovered;
     const tmp = new THREE.Color();
-    if (view === 'mosaic') {
+    const dark = this.dark();
+    this.ghost.value.set(dark ? this.colors['darkGhost'] : this.colors['ghost']);
+    this.writeRevealRows();
+    if (view === 'story') {
+      const pal = this.seaColors[dark ? 'dark' : 'light'];
+      data.basins.forEach((b, i) => {
+        tmp.copy(pal[b.sub]);
+        if (i === hov || i === sel) tmp.offsetHSL(0, 0, dark ? 0.12 : -0.08);
+        lut.set([tmp.r, tmp.g, tmp.b, 1], i * 4);
+      });
+    } else if (view === 'mosaic') {
       const g = this.ground();
       const pal = this.mosaicColors[g];
       const groundC = new THREE.Color(g === 'dark' ? this.colors['darkGround'] : this.colors['mosaicGround']);
@@ -837,6 +968,59 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
     }
     this.basinTex.needsUpdate = true;
     this.invalidate();
+  }
+
+  // ─── "Where the rivers end" ───────────────────────────────────────────────
+
+  /** Starts a story step: the step's sea draws its rivers down to the coast; the camera follows. */
+  private startStoryStep(step: number) {
+    this.story = { t: step >= 1 && step <= SUB_COUNT ? 0 : 1 };
+    const data = this.data();
+    if (step >= 1 && step <= SUB_COUNT) {
+      let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9;
+      for (const b of data.basins) {
+        if (b.sub !== step - 1) continue;
+        x0 = Math.min(x0, b.bb[0]); x1 = Math.max(x1, b.bb[1]); y0 = Math.min(y0, b.bb[2]); y1 = Math.max(y1, b.bb[3]);
+      }
+      this.flyToBox(x0, x1, y0, y1);
+    } else {
+      this.flyTo(this.home);
+    }
+    this.writeRevealRows();
+    this.basinTex.needsUpdate = true;
+    this.invalidate();
+  }
+
+  /**
+   * Row 1 of the lookup texture: per basin, the distance to the mouth above which its rivers are
+   * drawn (−1 = all) and the ghost opacity of the rest. Only the story view reveals progressively.
+   */
+  private writeRevealRows() {
+    const data = this.data();
+    const lut = this.lut;
+    const story = this.view() === 'story';
+    const step = this.storyStep();
+    const t = this.story.t;
+    const e = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+    data.basins.forEach((b, i) => {
+      let km = -1, ghost = 0;
+      if (story && step < STORY_STEPS - 1) {
+        const sea = b.sub + 1; // step that reveals this basin's sea
+        ghost = STORY_GHOST;
+        km = sea < step ? -1 : sea === step ? this.subMaxKm[b.sub] * (1 - e) - 0.001 : 1e9;
+      }
+      lut[(BASIN_TEX + i) * 4] = km;
+      lut[(BASIN_TEX + i) * 4 + 1] = ghost;
+    });
+  }
+
+  /** Advances the story reveal; returns true while it is still running. */
+  private stepStory(dt: number): boolean {
+    if (this.view() !== 'story' || this.story.t >= 1) return false;
+    this.story.t = Math.min(1, this.story.t + dt / STORY_REVEAL_S);
+    this.writeRevealRows();
+    this.basinTex.needsUpdate = true;
+    return true;
   }
 
   /** Flow: rivers become dashes marching downstream (reaches are stored in flow direction). */
@@ -1275,6 +1459,7 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
       animating = true;
     }
     if (this.stepDrop(dt)) animating = true;
+    if (this.stepStory(dt)) animating = true;
     if (!this.dirty && !animating) return;
     this.dirty = false;
 

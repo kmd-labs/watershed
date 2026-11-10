@@ -400,3 +400,126 @@
     color: color("text-note");
   }
 }
+
+// Legend panel folds down to a single pill.
+.dock--legend {
+  position: relative;
+
+  &.dock--folded {
+    flex: 0 0 auto;
+    padding: spacing("xxs");
+    border-radius: radius("pill");
+  }
+}
+
+.legend__fold {
+  position: absolute;
+  top: spacing("xs");
+  right: spacing("xs");
+}
+
+.legend__unfold {
+  display: inline-flex;
+  align-items: center;
+  gap: spacing("xs");
+  height: $control-height;
+  padding: 0 spacing("md");
+  font: inherit;
+  font-size: font-size("sm");
+  font-weight: font-weight("medium");
+  color: color("text-main");
+  background: transparent;
+  border: 0;
+  border-radius: radius("pill");
+  cursor: pointer;
+  transition: background transition("fast");
+
+  &:hover {
+    background: color("btn-hover");
+  }
+}
+
+.legend .legend__items {
+  padding-right: 36px; // room for the fold button
+}
+
+.legend__item--dim {
+  opacity: 0.4;
+}
+
+// "Where the rivers end" step card.
+.story {
+  &__step {
+    font-size: font-size("xxs");
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: color("text-dim");
+  }
+
+  &__title {
+    display: flex;
+    align-items: center;
+    gap: spacing("xs");
+    margin: spacing("xxs") 0 0;
+    font-size: font-size("lg");
+    font-weight: font-weight("semibold");
+    color: color("text-bright");
+  }
+
+  &__swatch {
+    flex: none;
+    width: 18px;
+    height: 4px;
+    border-radius: radius("pill");
+  }
+
+  &__text {
+    margin: spacing("xs") 0 0;
+    font-size: font-size("sm");
+    line-height: 1.5;
+    color: color("text-desc");
+  }
+
+  &__nav {
+    display: flex;
+    align-items: center;
+    gap: spacing("xxs");
+    margin-top: spacing("md");
+  }
+
+  &__dots {
+    display: flex;
+    flex: 1;
+    justify-content: center;
+    gap: 6px;
+  }
+
+  &__dot {
+    width: 8px;
+    height: 8px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: color("line-strong");
+    cursor: pointer;
+    transition: background transition("fast"), transform transition("fast");
+
+    &--done {
+      background: color("text-dim");
+    }
+
+    &--on {
+      background: color("accent");
+      transform: scale(1.3);
+    }
+  }
+}
+
+.legend--empty {
+  display: none;
+}
+
+.legend--empty + .legend__controls,
+.legend--empty + .ground {
+  margin-top: 0;
+}

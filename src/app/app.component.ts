@@ -11,6 +11,11 @@ import {
   Layers,
   Mountain,
   Palette,
+  Pause,
+  Play,
+  Route,
+  ChevronLeft,
+  ChevronRight,
   Waves,
   Wind,
   Map as MapIcon,
@@ -37,16 +42,19 @@ import { I18nService } from './core/i18n/i18n.service';
 import { Lang } from './core/i18n/i18n.types';
 import { BalticDataService } from './core/data/baltic-data.service';
 import { Basin, RaindropPath } from './core/data/baltic.model';
-import { MapView, MosaicGround, mosaicToken, subToken } from './core/data/views';
+import { MapView, MosaicGround, STORY_STEPS, mosaicToken, seaToken } from './core/data/views';
 import { composePoster, PosterLegendItem } from './core/poster';
 import { GlobeComponent, GlobeHover, GlobePick } from './globe/globe.component';
 import { BasinListComponent } from './panels/basin-list.component';
 import { BasinDetailComponent } from './panels/basin-detail.component';
 import { CountryListComponent } from './panels/country-list.component';
+import { SeaListComponent } from './panels/sea-list.component';
 import { MethodComponent } from './panels/method.component';
 
 /** The splash stays up at least this long (it doubles as the brand moment). */
 const MIN_SPLASH_MS = 5000;
+/** "Where the rivers end": time per step while playing (reveal ≈ 4.5 s + reading). */
+const STORY_STEP_MS = 8000;
 /** Typical river flow speed used for the raindrop's travel-time estimate. */
 const FLOW_M_PER_S = 1;
 
@@ -55,6 +63,8 @@ interface LegendItem {
   note: string;
   color: string;
   kind: 'fill' | 'line';
+  /** Not revealed yet (story). */
+  dim?: boolean;
 }
 
 @Component({
@@ -71,7 +81,8 @@ interface LegendItem {
     GlobeComponent,
     BasinListComponent,
     BasinDetailComponent,
-    CountryListComponent
+    CountryListComponent,
+    SeaListComponent
   ],
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss'
@@ -95,26 +106,39 @@ export class AppComponent {
   readonly chevronUpIcon = ChevronUp;
   readonly riversIcon = Waves;
   readonly bordersIcon = MapIcon;
+  readonly seasIcon = Layers;
   readonly labelsIcon = Type;
   readonly posterIcon = ImageDown;
   readonly dropIcon = Droplet;
   readonly closeIcon = X;
+  readonly prevIcon = ChevronLeft;
+  readonly nextIcon = ChevronRight;
+  readonly playIcon = Play;
+  readonly pauseIcon = Pause;
+  readonly storySteps = STORY_STEPS;
 
   readonly view = signal<MapView>('catchments');
   readonly ground = signal<MosaicGround>('light');
   readonly selected = signal<number>(-1);
-  readonly panelOpen = signal<boolean>(!this.bp.mobile());
+  /** The rivers / countries / seas panel starts folded; the map comes first. */
+  readonly panelOpen = signal<boolean>(false);
   readonly showRivers = signal(true);
   readonly showBorders = signal(false);
   readonly showLabels = signal(true);
   readonly showFlow = signal(false);
   readonly showRelief = signal(true);
-  readonly listTab = signal<'rivers' | 'countries'>('rivers');
+  readonly listTab = signal<'rivers' | 'countries' | 'seas'>('rivers');
   readonly drop = signal<RaindropPath | null>(null);
   /** Why the last click produced no raindrop path (outside the basin, river-less strip). */
   readonly dropNote = signal<'outside' | 'coast' | null>(null);
   readonly posterBusy = signal(false);
   readonly globeProgress = signal(0);
+  /** The legend & layers panel can fold down to a single pill. */
+  readonly legendOpen = signal<boolean>(!this.bp.mobile());
+  /** "Where the rivers end" presentation. */
+  readonly storyStep = signal(0);
+  readonly storyPlaying = signal(false);
+  private storyTimer: ReturnType<typeof setTimeout> | null = null;
 
   /** While any popup is open the brand pill shows the KMD call to action and the other pills step back. */
   readonly isPopupOpen = computed(() => this.popup.config() !== null);
@@ -163,7 +187,8 @@ export class AppComponent {
       { value: 'catchments', label: t.viewCatchments, icon: Droplets },
       { value: 'seas', label: t.viewSeas, icon: Layers },
       { value: 'mosaic', label: t.viewMosaic, icon: Palette },
-      { value: 'raindrop', label: t.viewRaindrop, icon: Droplet }
+      { value: 'raindrop', label: t.viewRaindrop, icon: Droplet },
+      { value: 'story', label: t.viewStory, icon: Route }
     ];
   });
 
@@ -173,8 +198,96 @@ export class AppComponent {
     this.view.set(v);
     this.drop.set(null);
     this.dropNote.set(null);
-    if (v === 'raindrop') this.selected.set(-1);
+    if (v === 'raindrop' || v === 'story') this.selected.set(-1);
+    // The sea colour key lives in the panel's Seas tab.
+    if (v === 'seas') {
+      this.listTab.set('seas');
+      if (!this.bp.mobile()) this.panelOpen.set(true);
+    }
+    if (v === 'story') {
+      this.goToStep(0);
+      this.playStory(true);
+    } else {
+      this.playStory(false);
+    }
   }
+
+  // ─── "Where the rivers end" ─────────────────────────────────────────────
+
+  goToStep(step: number) {
+    this.storyStep.set(Math.max(0, Math.min(STORY_STEPS - 1, step)));
+    if (this.storyPlaying()) this.scheduleStory();
+  }
+
+  playStory(on: boolean) {
+    if (this.storyTimer) clearTimeout(this.storyTimer);
+    this.storyTimer = null;
+    // Playing from the finale starts over.
+    if (on && this.storyStep() >= STORY_STEPS - 1) this.storyStep.set(0);
+    this.storyPlaying.set(on);
+    if (on) this.scheduleStory();
+  }
+
+  private scheduleStory() {
+    if (this.storyTimer) clearTimeout(this.storyTimer);
+    this.storyTimer = setTimeout(() => {
+      if (!this.storyPlaying() || this.view() !== 'story') return;
+      const next = this.storyStep() + 1;
+      this.storyStep.set(next);
+      if (next >= STORY_STEPS - 1) this.storyPlaying.set(false);
+      else this.scheduleStory();
+    }, STORY_STEP_MS);
+  }
+
+  /** Text and numbers for the current presentation step. */
+  readonly storyCard = computed(() => {
+    const d = this.store.data();
+    const t = this.i18n.t();
+    const step = this.storyStep();
+    if (!d) return null;
+    const total = d.total;
+    const pct = (v: number, of: number) => `${this.i18n.num((v / of) * 100, v / of < 0.1 ? 1 : 0)}%`;
+    if (step === 0) {
+      return {
+        title: t.storyIntroTitle,
+        color: '',
+        text: t.storyIntroText(this.i18n.area(total.parea), this.i18n.num(total.nout), `${this.i18n.num(total.rkm / 1000)} ${t.thousandKm}`),
+        facts: [] as { k: string; v: string }[]
+      };
+    }
+    if (step >= STORY_STEPS - 1) {
+      const byArea = [...d.subs].sort((a, b) => b.parea - a.parea)[0];
+      const byFlow = [...d.subs].sort((a, b) => b.dis - a.dis)[0];
+      const neva = d.basins.find(b => b.name === 'Newa');
+      return {
+        title: t.storyFinaleTitle,
+        color: '',
+        text:
+          byArea.id === byFlow.id
+            ? t.storyFinaleTextSame(t.subNames[byArea.id], pct(byArea.parea, total.parea), pct(byFlow.dis, total.dis), neva ? pct(neva.dis, total.dis) : '–')
+            : t.storyFinaleText(
+                t.subNames[byArea.id], pct(byArea.parea, total.parea),
+                t.subNames[byFlow.id], pct(byFlow.dis, total.dis),
+                neva ? pct(neva.dis, total.dis) : '–'
+              ),
+        facts: d.subs.map(s => ({ k: t.subNames[s.id], v: `${pct(s.parea, total.parea)} · ${this.i18n.flow(s.dis)}` }))
+      };
+    }
+    const s = d.subs[step - 1];
+    const rivers = s.top.slice(0, 4).map(([n]) => this.i18n.river(n).replace(/ \(.+\)$/, '')).join(', ');
+    const countries = s.ctry.slice(0, 3).map(([c, p]) => `${this.i18n.country(c)} ${this.i18n.num(p)}%`).join(', ');
+    return {
+      title: t.subNames[s.id],
+      color: `var(--color-${seaToken(s.id, this.ground())})`,
+      text: t.storySeaText(this.i18n.area(s.parea), pct(s.parea, total.parea)),
+      facts: [
+        { k: t.storyMouths, v: this.i18n.num(s.nout) },
+        { k: t.storyOutflow, v: `${this.i18n.flow(s.dis)} (${pct(s.dis, total.dis)})` },
+        { k: t.storyTopRivers, v: rivers },
+        { k: t.storyCountries, v: countries }
+      ]
+    };
+  });
 
   /** Headline numbers for the whole drainage basin. */
   readonly stats = computed(() => {
@@ -194,6 +307,19 @@ export class AppComponent {
     const t = this.i18n.t();
     const d = this.store.data();
     const view = this.view();
+    if (view === 'story') {
+      const step = this.storyStep();
+      return {
+        title: t.legendStoryTitle,
+        items: t.subNames.map((name, i) => ({
+          label: name,
+          note: '',
+          color: `var(--color-${seaToken(i, this.ground())})`,
+          kind: 'line' as const,
+          dim: step < STORY_STEPS - 1 && i + 1 > step
+        }))
+      };
+    }
     if (view === 'mosaic') {
       const top = d ? d.basins.filter(b => b.river && b.name).sort((a, b) => b.area - a.area).slice(0, 6) : [];
       return {
@@ -206,17 +332,7 @@ export class AppComponent {
         }))
       };
     }
-    if (view === 'seas') {
-      return {
-        title: t.legendSeasTitle,
-        items: t.subNames.map((name, i) => ({
-          label: name,
-          note: d ? this.i18n.area(d.subs[i].parea) : '',
-          color: `var(--color-${subToken(i)})`,
-          kind: 'fill' as const
-        }))
-      };
-    }
+    if (view === 'seas') return { title: '', items: [] };
     const items: LegendItem[] = [
       { label: t.legendCatchment, note: '', color: 'var(--color-globe-catchment)', kind: 'fill' },
       { label: t.legendCoast, note: '', color: 'var(--color-globe-coast)', kind: 'fill' },
@@ -268,12 +384,25 @@ export class AppComponent {
     };
   });
 
+  /** Frames the land draining into one sea. */
+  flyToSea(sub: number) {
+    const d = this.store.data();
+    if (!d) return;
+    let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9;
+    for (const b of d.basins) {
+      if (b.sub !== sub) continue;
+      x0 = Math.min(x0, b.bb[0]); x1 = Math.max(x1, b.bb[1]); y0 = Math.min(y0, b.bb[2]); y1 = Math.max(y1, b.bb[3]);
+    }
+    this.globe()?.flyToBox(x0, x1, y0, y1);
+  }
+
   select(id: number, fly = false) {
     this.selected.set(id);
     if (fly && id >= 0) this.globe()?.flyToBasin(id);
   }
 
   onPick(p: GlobePick) {
+    if (this.view() === 'story') return;
     if (this.view() !== 'raindrop') {
       this.select(p.id === this.selected() ? -1 : p.id);
       return;
@@ -316,7 +445,7 @@ export class AppComponent {
     try {
       await new Promise(r => setTimeout(r, 30)); // let the busy state paint
       const t = this.i18n.t();
-      const dark = this.view() === 'mosaic' && this.ground() === 'dark';
+      const dark = (this.view() === 'mosaic' || this.view() === 'story') && this.ground() === 'dark';
       const map = globe.renderMapImage(3000, 3300, 2.4);
       const lg = this.legend();
       const view = this.viewOptions().find(o => o.value === this.view())?.label ?? '';

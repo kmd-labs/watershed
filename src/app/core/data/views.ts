@@ -1,5 +1,5 @@
 /** Primary map modes offered by the top-right view switcher. */
-export type MapView = 'catchments' | 'seas' | 'mosaic' | 'raindrop';
+export type MapView = 'catchments' | 'seas' | 'mosaic' | 'raindrop' | 'story';
 
 /** Ground of the "Basin mosaic" view: white (prints, light pages) or black (the classic look). */
 export type MosaicGround = 'light' | 'dark';
@@ -15,3 +15,9 @@ export const MOSAIC_COUNT = 16;
 
 /** Theme token for a mosaic palette slot; the dark ground uses lighter shades of the same hues. */
 export const mosaicToken = (slot: number, ground: MosaicGround = 'light') => (ground === 'dark' ? `mosaic-dark-${slot}` : `mosaic-${slot}`);
+
+/** "Where the rivers end": river colour per sea (`--color-sea-<i>` / `--color-sea-dark-<i>`). */
+export const seaToken = (sub: number, ground: MosaicGround = 'light') => (ground === 'dark' ? `sea-dark-${sub}` : `sea-${sub}`);
+
+/** Steps of the "Where the rivers end" presentation: intro, one per sea, finale. */
+export const STORY_STEPS = SUB_COUNT + 2;

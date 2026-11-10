@@ -15,6 +15,8 @@
         [ground]="ground()"
         [selected]="selected()"
         [drop]="drop()"
+        [storyStep]="storyStep()"
+        [mouthKm]="store.mouthKm"
         [showRivers]="showRivers()"
         [showBorders]="showBorders()"
         [showLabels]="showLabels()"
@@ -98,6 +100,9 @@
             <app-button variant="toggle" [active]="listTab() === 'countries'" (btnClick)="listTab.set('countries')">
               <lucide-icon [img]="bordersIcon" [size]="14"></lucide-icon><span>{{ t.tabCountries }}</span>
             </app-button>
+            <app-button variant="toggle" [active]="listTab() === 'seas'" (btnClick)="listTab.set('seas')">
+              <lucide-icon [img]="seasIcon" [size]="14"></lucide-icon><span>{{ t.tabSeas }}</span>
+            </app-button>
           </div>
           @if (listTab() === 'rivers') {
             <app-basin-list
@@ -107,21 +112,40 @@
               [view]="view()"
               (select)="select($event, true)">
             </app-basin-list>
-          } @else {
+          } @else if (listTab() === 'countries') {
             <app-country-list class="dock__list" [data]="data"></app-country-list>
+          } @else {
+            <app-sea-list class="dock__list" [data]="data" (fly)="flyToSea($event)"></app-sea-list>
           }
         }
       </section>
 
-      <section class="dock dock--legend glass-panel">
+      <section class="dock dock--legend glass-panel" [class.dock--folded]="!legendOpen()">
+        @if (!legendOpen()) {
+          <button type="button" class="legend__unfold" [attr.aria-label]="t.expandLegend" (click)="legendOpen.set(true)">
+            <lucide-icon [img]="currentViewIcon()" [size]="15"></lucide-icon>
+            <span>{{ t.legendPanel }}</span>
+            <lucide-icon [img]="chevronUpIcon" [size]="16"></lucide-icon>
+          </button>
+        } @else {
         @let lg = legend();
-        <div class="legend">
+        <app-button
+          class="legend__fold"
+          variant="ghost"
+          size="sm"
+          [iconOnly]="true"
+          [ariaLabel]="t.collapseLegend"
+          [titleText]="t.collapseLegend"
+          (btnClick)="legendOpen.set(false)">
+          <lucide-icon [img]="chevronDownIcon" [size]="16"></lucide-icon>
+        </app-button>
+        <div class="legend" [class.legend--empty]="!lg.items.length">
           @if (lg.title) {
             <div class="legend__title">{{ lg.title }}</div>
           }
           <ul class="legend__items">
             @for (it of lg.items; track it.label) {
-              <li class="legend__item">
+              <li class="legend__item" [class.legend__item--dim]="it.dim">
                 <i [class.legend__line]="it.kind === 'line'" [style.background]="it.color"></i>
                 <span>{{ it.label }}</span>
                 @if (it.note) {
@@ -131,7 +155,7 @@
             }
           </ul>
         </div>
-        @if (view() === 'mosaic') {
+        @if (view() === 'mosaic' || view() === 'story') {
           <div class="ground" role="radiogroup" [attr.aria-label]="t.groundLabel">
             <span class="ground__label">{{ t.groundLabel }}</span>
             <app-button variant="toggle" size="sm" [active]="ground() === 'light'" (btnClick)="ground.set('light')">
@@ -172,13 +196,51 @@
           </div>
         </div>
         @if (!bp.tablet()) {
-          <p class="legend__hint">{{ view() === 'raindrop' ? t.hintRaindrop : t.hint }}</p>
+          <p class="legend__hint">{{ view() === 'raindrop' ? t.hintRaindrop : view() === 'story' ? t.hintStory : t.hint }}</p>
+        }
         }
       </section>
 
       <!-- Right column: selected catchment, or the raindrop's journey -->
-      <div class="dock-col" [class.dock-col--empty]="view() !== 'raindrop' && !selectedBasin()">
-        @if (view() === 'raindrop') {
+      <div class="dock-col" [class.dock-col--empty]="view() !== 'raindrop' && view() !== 'story' && !selectedBasin()">
+        @if (view() === 'story') {
+          @if (storyCard(); as sc) {
+            <section class="dock dock--detail dock--story glass-panel" aria-live="polite">
+              <div class="story__step">{{ t.storyStepOf(storyStep() + 1, storySteps) }}</div>
+              <h2 class="story__title">
+                @if (sc.color) {
+                  <i class="story__swatch" [style.background]="sc.color" aria-hidden="true"></i>
+                }
+                {{ sc.title }}
+              </h2>
+              <p class="story__text">{{ sc.text }}</p>
+              @if (sc.facts.length) {
+                <dl class="drop__facts">
+                  @for (f of sc.facts; track f.k) {
+                    <dt>{{ f.k }}</dt>
+                    <dd>{{ f.v }}</dd>
+                  }
+                </dl>
+              }
+              <div class="story__nav">
+                <app-button variant="ghost" [iconOnly]="true" [disabled]="storyStep() === 0" [ariaLabel]="t.storyPrev" (btnClick)="goToStep(storyStep() - 1)">
+                  <lucide-icon [img]="prevIcon" [size]="16"></lucide-icon>
+                </app-button>
+                <div class="story__dots" aria-hidden="true">
+                  @for (i of [0, 1, 2, 3, 4, 5, 6, 7]; track i) {
+                    <button type="button" class="story__dot" [class.story__dot--on]="i === storyStep()" [class.story__dot--done]="i < storyStep()" (click)="goToStep(i)"></button>
+                  }
+                </div>
+                <app-button variant="toggle" [iconOnly]="true" [active]="storyPlaying()" [ariaLabel]="storyPlaying() ? t.storyPause : t.storyPlay" (btnClick)="playStory(!storyPlaying())">
+                  <lucide-icon [img]="storyPlaying() ? pauseIcon : playIcon" [size]="15"></lucide-icon>
+                </app-button>
+                <app-button variant="ghost" [iconOnly]="true" [disabled]="storyStep() >= storySteps - 1" [ariaLabel]="t.storyNext" (btnClick)="goToStep(storyStep() + 1)">
+                  <lucide-icon [img]="nextIcon" [size]="16"></lucide-icon>
+                </app-button>
+              </div>
+            </section>
+          }
+        } @else if (view() === 'raindrop') {
           <section class="dock dock--detail dock--drop glass-panel" aria-live="polite">
             <header class="drop__head">
               <div>

@@ -50,6 +50,60 @@ export class RiverNetwork {
     }
   }
 
+  private len: number[] = [];
+  private downKm: number[] = [];
+
+  /** Length of a reach in km. */
+  private reachKm(id: number): number {
+    if (this.len[id] !== undefined) return this.len[id];
+    const c = this.classes[this.cls[id]];
+    let km = 0;
+    for (let k = 1; k < this.cnt[id]; k++) km += this.segKm(c, this.off[id] + k - 1);
+    return (this.len[id] = km);
+  }
+
+  private segKm(c: RiverClassGeometry, v: number): number {
+    const a = v * 2, b = a + 2;
+    const la = (this.qy(c.xy[a + 1]) + this.qy(c.xy[b + 1])) / 2;
+    return Math.hypot((this.qx(c.xy[b]) - this.qx(c.xy[a])) * Math.cos(la * DEG), this.qy(c.xy[b + 1]) - this.qy(c.xy[a + 1])) * KM_PER_DEG;
+  }
+
+  /** Distance (km) from the end of a reach to its basin's mouth, along the network. */
+  private toMouth(id: number): number {
+    if (this.downKm[id] !== undefined) return this.downKm[id];
+    // Walk down to the first reach with a known distance, then unwind (no recursion: chains are long).
+    const chain: number[] = [];
+    let cur = id;
+    while (cur >= 0 && this.downKm[cur] === undefined) { chain.push(cur); cur = this.next[cur]; }
+    let acc = cur >= 0 ? this.downKm[cur] + this.reachKm(cur) : 0;
+    for (let i = chain.length - 1; i >= 0; i--) {
+      this.downKm[chain[i]] = acc;
+      acc += this.reachKm(chain[i]);
+    }
+    return this.downKm[id];
+  }
+
+  /**
+   * Distance to the mouth (km) at the upstream end of every segment of a river class, in segment
+   * order (n − 1 per reach). Drives the "rivers flow to the sea" reveal.
+   */
+  mouthKm(rc: RiverClassGeometry): Float32Array {
+    const ci = this.classes.indexOf(rc);
+    let nseg = 0;
+    for (const n of rc.cnt) nseg += n - 1;
+    const out = new Float32Array(nseg);
+    if (ci < 0) return out;
+    for (let id = 0; id < this.cls.length; id++) {
+      if (this.cls[id] !== ci) continue;
+      let km = this.toMouth(id) + this.reachKm(id);
+      for (let k = 1; k < this.cnt[id]; k++) {
+        out[this.seg[id] + k - 1] = km;
+        km -= this.segKm(rc, this.off[id] + k - 1);
+      }
+    }
+    return out;
+  }
+
   /**
    * Traces a raindrop falling at lon/lat inside `basin`: straight over land to the nearest river
    * vertex of that basin, then downstream reach by reach to the mouth.

@@ -80,6 +80,23 @@ $land: palette("neutral-300");
   --color-globe-dark-lake: #{color.mix(palette("primary-800"), palette("neutral-950"), 45%)};
   --color-globe-dark-outline: #{palette("neutral-600")};
 
+  // "Where the rivers end": rivers coloured by the sea they flow into (index = sub-basin id).
+  // The largest, the Baltic Proper, takes the KMD accent.
+  --color-sea-0: #{palette("info-500")};
+  --color-sea-1: #{palette("primary-600")};
+  --color-sea-2: #{palette("purple-500")};
+  --color-sea-3: #{palette("success-500")};
+  --color-sea-4: #{palette("warning-500")};
+  --color-sea-5: #{palette("danger-500")};
+  --color-sea-dark-0: #{palette("info-300")};
+  --color-sea-dark-1: #{palette("primary-400")};
+  --color-sea-dark-2: #{palette("purple-400")};
+  --color-sea-dark-3: #{palette("success-400")};
+  --color-sea-dark-4: #{palette("warning-400")};
+  --color-sea-dark-5: #{palette("danger-400")};
+  --color-globe-story-ghost: #{palette("neutral-300")};
+  --color-globe-dark-story-ghost: #{palette("neutral-700")};
+
   // Raindrop view: the traced path
   --color-globe-drop: #{palette("warning-500")};
   --color-globe-drop-halo: #{palette("neutral-0")};

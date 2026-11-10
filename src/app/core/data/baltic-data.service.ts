@@ -105,6 +105,9 @@ export class BalticDataService {
     this.load();
   }
 
+  /** Per-segment distance to the mouth (km) for a loaded river class. */
+  readonly mouthKm = (rc: RiverClassGeometry): Float32Array | null => this.network?.mouthKm(rc) ?? null;
+
   /** Raindrop path from lon/lat inside `basin` down to the sea, or null for river-less strips. */
   trace(lon: number, lat: number, basin: number): RaindropPath | null {
     return this.network?.trace(lon, lat, basin) ?? null;
