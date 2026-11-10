@@ -16,6 +16,8 @@
         [selected]="selected()"
         [drop]="drop()"
         [storyStep]="storyStep()"
+        [topOrder]="topOrder()"
+        [topStep]="topActive() ? storyStep() : -1"
         [mouthKm]="store.mouthKm"
         [showRivers]="showRivers()"
         [showBorders]="showBorders()"
@@ -183,6 +185,12 @@
             }
           </div>
           <div class="legend__actions">
+            @if (view() === 'catchments' && !topActive()) {
+              <app-button variant="ghost" [titleText]="t.topHint" (btnClick)="startTop()">
+                <lucide-icon [img]="topIcon" [size]="15"></lucide-icon>
+                <span>{{ t.topButton }}</span>
+              </app-button>
+            }
             <app-button variant="ghost" [disabled]="posterBusy()" [titleText]="t.posterHint" (btnClick)="downloadPoster()">
               <lucide-icon [img]="posterIcon" [size]="15"></lucide-icon>
               <span>{{ posterBusy() ? t.posterBusy : t.poster }}</span>
@@ -196,17 +204,24 @@
           </div>
         </div>
         @if (!bp.tablet()) {
-          <p class="legend__hint">{{ view() === 'raindrop' ? t.hintRaindrop : view() === 'story' ? t.hintStory : t.hint }}</p>
+          <p class="legend__hint">{{ view() === 'raindrop' ? t.hintRaindrop : presKind() === 'top' ? t.hintTop : presKind() ? t.hintStory : t.hint }}</p>
         }
         }
       </section>
 
       <!-- Right column: selected catchment, or the raindrop's journey -->
-      <div class="dock-col" [class.dock-col--empty]="view() !== 'raindrop' && view() !== 'story' && !selectedBasin()">
-        @if (view() === 'story') {
+      <div class="dock-col" [class.dock-col--empty]="view() !== 'raindrop' && !presKind() && !selectedBasin()">
+        @if (presKind()) {
           @if (storyCard(); as sc) {
             <section class="dock dock--detail dock--story glass-panel" aria-live="polite">
-              <div class="story__step">{{ t.storyStepOf(storyStep() + 1, storySteps) }}</div>
+              <div class="story__head">
+                <div class="story__step">{{ t.storyStepOf(storyStep() + 1, presSteps()) }}</div>
+                @if (presKind() === 'top') {
+                  <app-button variant="ghost" size="sm" [iconOnly]="true" [ariaLabel]="t.topClose" (btnClick)="stopTop()">
+                    <lucide-icon [img]="closeIcon" [size]="15"></lucide-icon>
+                  </app-button>
+                }
+              </div>
               <h2 class="story__title">
                 @if (sc.color) {
                   <i class="story__swatch" [style.background]="sc.color" aria-hidden="true"></i>
@@ -226,15 +241,15 @@
                 <app-button variant="ghost" [iconOnly]="true" [disabled]="storyStep() === 0" [ariaLabel]="t.storyPrev" (btnClick)="goToStep(storyStep() - 1)">
                   <lucide-icon [img]="prevIcon" [size]="16"></lucide-icon>
                 </app-button>
-                <div class="story__dots" aria-hidden="true">
-                  @for (i of [0, 1, 2, 3, 4, 5, 6, 7]; track i) {
+                <div class="story__dots" [class.story__dots--many]="presSteps() > 10" aria-hidden="true">
+                  @for (i of presDots(); track i) {
                     <button type="button" class="story__dot" [class.story__dot--on]="i === storyStep()" [class.story__dot--done]="i < storyStep()" (click)="goToStep(i)"></button>
                   }
                 </div>
                 <app-button variant="toggle" [iconOnly]="true" [active]="storyPlaying()" [ariaLabel]="storyPlaying() ? t.storyPause : t.storyPlay" (btnClick)="playStory(!storyPlaying())">
                   <lucide-icon [img]="storyPlaying() ? pauseIcon : playIcon" [size]="15"></lucide-icon>
                 </app-button>
-                <app-button variant="ghost" [iconOnly]="true" [disabled]="storyStep() >= storySteps - 1" [ariaLabel]="t.storyNext" (btnClick)="goToStep(storyStep() + 1)">
+                <app-button variant="ghost" [iconOnly]="true" [disabled]="storyStep() >= presSteps() - 1" [ariaLabel]="t.storyNext" (btnClick)="goToStep(storyStep() + 1)">
                   <lucide-icon [img]="nextIcon" [size]="16"></lucide-icon>
                 </app-button>
               </div>

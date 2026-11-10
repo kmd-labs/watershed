@@ -523,3 +523,20 @@
 .legend--empty + .ground {
   margin-top: 0;
 }
+
+.story__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 24px;
+}
+
+// 22 steps of the top-rivers countdown: smaller, tighter dots.
+.story__dots--many {
+  gap: 3px;
+
+  .story__dot {
+    width: 6px;
+    height: 6px;
+  }
+}

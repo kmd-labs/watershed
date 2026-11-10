@@ -75,6 +75,18 @@ export const EN: Dict = {
     `The ${sa} collects the most land (${pa} of the basin), while the ${sf} receives the most river water (${pf}). The Neva alone brings ${neva} of everything the rivers deliver to the Baltic.`,
   storyFinaleTextSame: (sea, pa, pf, neva) =>
     `The ${sea} both collects the most land (${pa} of the basin) and receives the most river water (${pf}). The Neva alone brings ${neva} of everything the rivers deliver to the Baltic.`,
+  topButton: 'Top 20',
+  hintTop: 'Step through the rivers with the arrows, or press play · drag to move · scroll to zoom',
+  topHint: 'Count down the 20 largest river basins, one by one',
+  topClose: 'End the countdown',
+  topLegend: n => `Top ${n} river basins, shown so far`,
+  topIntroTitle: n => `The ${n} largest river basins`,
+  topIntroText: (n, area, share) =>
+    `Of 1,568 rivers, just ${n} drain ${area} — ${share} of all the land around the Baltic. Let’s count them down, from number ${n} to number one.`,
+  topRiverText: (area, share, sea) => `Drains ${area} (${share} of the Baltic basin) into the ${sea}.`,
+  topFinaleTitle: n => `${n} rivers, most of the Baltic`,
+  topFinaleText: (n, sa, sf, rest) =>
+    `Together the ${n} largest rivers drain ${sa} of the basin and carry ${sf} of all river water to the sea. The other ${rest} rivers and the coastal strips share the rest.`,
   storyPrev: 'Previous step',
   storyNext: 'Next step',
   storyPlay: 'Play the presentation',

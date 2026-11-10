@@ -11,6 +11,7 @@ import {
   Layers,
   Mountain,
   Palette,
+  Trophy,
   Pause,
   Play,
   Route,
@@ -55,6 +56,9 @@ import { MethodComponent } from './panels/method.component';
 const MIN_SPLASH_MS = 5000;
 /** "Where the rivers end": time per step while playing (reveal ≈ 4.5 s + reading). */
 const STORY_STEP_MS = 8000;
+/** Top-rivers countdown: how many rivers, and time per step while playing (reveal ≈ 3.2 s). */
+const TOP_N = 20;
+const TOP_STEP_MS = 6000;
 /** Typical river flow speed used for the raindrop's travel-time estimate. */
 const FLOW_M_PER_S = 1;
 
@@ -115,7 +119,7 @@ export class AppComponent {
   readonly nextIcon = ChevronRight;
   readonly playIcon = Play;
   readonly pauseIcon = Pause;
-  readonly storySteps = STORY_STEPS;
+  readonly topIcon = Trophy;
 
   readonly view = signal<MapView>('catchments');
   readonly ground = signal<MosaicGround>('light');
@@ -139,6 +143,21 @@ export class AppComponent {
   readonly storyStep = signal(0);
   readonly storyPlaying = signal(false);
   private storyTimer: ReturnType<typeof setTimeout> | null = null;
+  /** Top-rivers countdown running in the catchments view (shares the step & play state). */
+  readonly topActive = signal(false);
+  /** Which presentation is running, if any. */
+  readonly presKind = computed<'seas' | 'top' | null>(() =>
+    this.view() === 'story' ? 'seas' : this.view() === 'catchments' && this.topActive() ? 'top' : null
+  );
+  readonly presSteps = computed(() => (this.presKind() === 'top' ? TOP_N + 2 : STORY_STEPS));
+  readonly presDots = computed(() => Array.from({ length: this.presSteps() }, (_, i) => i));
+
+  /** The TOP_N largest river basins, in countdown order (#TOP_N first, #1 last). */
+  readonly topOrder = computed(() => {
+    const d = this.store.data();
+    if (!d) return [];
+    return d.basins.filter(b => b.river).sort((a, b) => b.area - a.area).slice(0, TOP_N).map(b => b.id).reverse();
+  });
 
   /** While any popup is open the brand pill shows the KMD call to action and the other pills step back. */
   readonly isPopupOpen = computed(() => this.popup.config() !== null);
@@ -198,6 +217,7 @@ export class AppComponent {
     this.view.set(v);
     this.drop.set(null);
     this.dropNote.set(null);
+    this.topActive.set(false);
     if (v === 'raindrop' || v === 'story') this.selected.set(-1);
     // The sea colour key lives in the panel's Seas tab.
     if (v === 'seas') {
@@ -215,28 +235,42 @@ export class AppComponent {
   // ─── "Where the rivers end" ─────────────────────────────────────────────
 
   goToStep(step: number) {
-    this.storyStep.set(Math.max(0, Math.min(STORY_STEPS - 1, step)));
+    this.storyStep.set(Math.max(0, Math.min(this.presSteps() - 1, step)));
     if (this.storyPlaying()) this.scheduleStory();
+  }
+
+  /** Starts the top-rivers countdown in the catchments view. */
+  startTop() {
+    this.selected.set(-1);
+    this.topActive.set(true);
+    this.goToStep(0);
+    this.playStory(true);
+  }
+
+  stopTop() {
+    this.playStory(false);
+    this.topActive.set(false);
   }
 
   playStory(on: boolean) {
     if (this.storyTimer) clearTimeout(this.storyTimer);
     this.storyTimer = null;
     // Playing from the finale starts over.
-    if (on && this.storyStep() >= STORY_STEPS - 1) this.storyStep.set(0);
+    if (on && this.storyStep() >= this.presSteps() - 1) this.storyStep.set(0);
     this.storyPlaying.set(on);
     if (on) this.scheduleStory();
   }
 
   private scheduleStory() {
     if (this.storyTimer) clearTimeout(this.storyTimer);
+    const kind = this.presKind();
     this.storyTimer = setTimeout(() => {
-      if (!this.storyPlaying() || this.view() !== 'story') return;
+      if (!this.storyPlaying() || !this.presKind()) return;
       const next = this.storyStep() + 1;
       this.storyStep.set(next);
-      if (next >= STORY_STEPS - 1) this.storyPlaying.set(false);
+      if (next >= this.presSteps() - 1) this.storyPlaying.set(false);
       else this.scheduleStory();
-    }, STORY_STEP_MS);
+    }, kind === 'top' ? TOP_STEP_MS : STORY_STEP_MS);
   }
 
   /** Text and numbers for the current presentation step. */
@@ -247,6 +281,37 @@ export class AppComponent {
     if (!d) return null;
     const total = d.total;
     const pct = (v: number, of: number) => `${this.i18n.num((v / of) * 100, v / of < 0.1 ? 1 : 0)}%`;
+    if (this.presKind() === 'top') {
+      const order = this.topOrder();
+      const top = order.map(id => d.basins[id]);
+      const area = top.reduce((a, b) => a + b.area, 0);
+      if (step === 0) {
+        return { title: t.topIntroTitle(TOP_N), color: '', text: t.topIntroText(TOP_N, this.i18n.area(area), pct(area, total.parea)), facts: [] as { k: string; v: string }[] };
+      }
+      if (step > order.length) {
+        const flow = top.reduce((a, b) => a + b.dis, 0);
+        const rest = d.basins.filter(b => b.river).length - TOP_N;
+        return {
+          title: t.topFinaleTitle(TOP_N),
+          color: '',
+          text: t.topFinaleText(TOP_N, pct(area, total.parea), pct(flow, total.dis), this.i18n.num(rest)),
+          facts: [] as { k: string; v: string }[]
+        };
+      }
+      const b = d.basins[order[step - 1]];
+      const rank = TOP_N - step + 1;
+      return {
+        title: `${rank}. ${b.name ? this.i18n.river(b.name) : t.unnamed}`,
+        color: `var(--color-${mosaicToken(b.mosaic, 'light')})`,
+        text: t.topRiverText(this.i18n.area(b.area), pct(b.area, total.parea), t.subNames[b.sub]),
+        facts: [
+          { k: t.meanFlow, v: `${this.i18n.flow(b.dis)} (${pct(b.dis, total.dis)})` },
+          ...(b.len ? [{ k: t.mainRiver, v: `${this.i18n.num(b.len)} ${t.km}` }] : []),
+          { k: t.riverNetwork, v: `${this.i18n.num(b.rkm)} ${t.km}` },
+          { k: t.storyCountries, v: b.ctry.slice(0, 3).map(([c, p]) => `${this.i18n.country(c)} ${this.i18n.num(p)}%`).join(', ') }
+        ]
+      };
+    }
     if (step === 0) {
       return {
         title: t.storyIntroTitle,
@@ -318,6 +383,22 @@ export class AppComponent {
           kind: 'line' as const,
           dim: step < STORY_STEPS - 1 && i + 1 > step
         }))
+      };
+    }
+    if (this.presKind() === 'top' && d) {
+      const step = this.storyStep();
+      const shown = this.topOrder().slice(0, Math.max(0, step));
+      return {
+        title: t.topLegend(TOP_N),
+        items: shown.reverse().map(id => {
+          const b = d.basins[id];
+          return {
+            label: b.name ? this.i18n.river(b.name).replace(/ \(.+\)$/, '') : t.unnamed,
+            note: '',
+            color: `var(--color-${mosaicToken(b.mosaic, 'light')})`,
+            kind: 'line' as const
+          };
+        })
       };
     }
     if (view === 'mosaic') {
@@ -403,6 +484,7 @@ export class AppComponent {
 
   onPick(p: GlobePick) {
     if (this.view() === 'story') return;
+    if (this.topActive()) this.stopTop();
     if (this.view() !== 'raindrop') {
       this.select(p.id === this.selected() ? -1 : p.id);
       return;

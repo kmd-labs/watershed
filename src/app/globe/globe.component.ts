@@ -58,6 +58,8 @@ const MIN_OUTLINE_RING = 0.05;
 const BASIN_TEX = 2048;
 /** "Where the rivers end": seconds for one sea's rivers to draw down to the coast. */
 const STORY_REVEAL_S = 4.5;
+/** Top-20 countdown: seconds for one river's network to draw down to its mouth. */
+const TOP_REVEAL_S = 3.2;
 /** Opacity of not-yet-revealed rivers (a grey ghost of the network). */
 const STORY_GHOST = 0.35;
 /** Country border width in CSS pixels. */
@@ -244,6 +246,10 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
   readonly drop = input<RaindropPath | null>(null);
   /** "Where the rivers end" step: 0 intro, 1–6 one sea each, 7 everything. */
   readonly storyStep = input(0);
+  /** Top-rivers countdown in the catchments view: basins in reveal order, and the step (−1 = off;
+   * 0 intro, 1…n one river each, n + 1 all). */
+  readonly topOrder = input<number[]>([]);
+  readonly topStep = input(-1);
   /** Per-segment distance to the mouth for a river class (from the river network). */
   readonly mouthKm = input<((rc: RiverClassGeometry) => Float32Array | null) | null>(null);
   readonly showRivers = input(true);
@@ -277,6 +283,8 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
   private readonly ghost = { value: new THREE.Color() };
   /** Longest distance to a mouth among each sea's rivers (km), for the reveal pace. */
   private subMaxKm = new Array<number>(SUB_COUNT).fill(1);
+  /** Longest distance to the mouth within each basin (km). */
+  private basinMaxKm = new Float32Array(0);
   private seaColors: Record<MosaicGround, THREE.Color[]> = { light: [], dark: [] };
   private story = { t: 1 };
 
@@ -323,6 +331,13 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
 
   /** Views drawn on plain ground, where the rivers carry the colour. */
   private plain = () => this.view() === 'mosaic' || this.view() === 'story';
+  /** The top-rivers countdown is running in the catchments view. */
+  private topActive = () => this.view() === 'catchments' && this.topStep() >= 0;
+  /** Basin highlighted by the countdown's current step, or −1. */
+  private topCurrent = () => {
+    const step = this.topStep(), order = this.topOrder();
+    return this.topActive() && step >= 1 && step <= order.length ? order[step - 1] : -1;
+  };
   readonly dark = () => this.plain() && this.ground() === 'dark';
 
   constructor() {
@@ -374,6 +389,11 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
     effect(() => {
       const step = this.storyStep();
       if (this.ready && this.view() === 'story') this.startStoryStep(step);
+    });
+    effect(() => {
+      const step = this.topStep();
+      this.topOrder();
+      if (this.ready && this.view() === 'catchments') this.startTopStep(step);
     });
   }
 
@@ -593,7 +613,7 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
     this.scene.background = new THREE.Color(this.dark() ? this.colors['darkBg'] : this.colors['bg']);
     this.drawContext();
     const uploaded = this.drawRegion();
-    this.riverLayers.forEach(l => (l.mat.opacity = (this.plain() ? MOSAIC_RIVER_OPACITY : RIVER_OPACITY)[l.cls]));
+    this.setRiverOpacity();
     if (this.view() === 'story') this.startStoryStep(this.storyStep());
     if (this.borderMat) this.borderMat.color.set(this.dark() ? this.colors['light'] : this.colors['border']);
     this.updateBasinColours();
@@ -818,7 +838,8 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
 
   private updateOverlays() {
     if (!this.selOverlay || !this.hovOverlay) return;
-    const sel = this.selected();
+    const top = this.topCurrent();
+    const sel = top >= 0 ? top : this.topActive() ? -1 : this.selected();
     this.paintOverlay(this.selOverlay, sel, 'sel');
     this.paintOverlay(this.hovOverlay, this.hovered !== sel ? this.hovered : -1, 'hov');
   }
@@ -880,6 +901,7 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
     const P = new Float32Array(total * 6);
     const C = new Float32Array(total * 6);
     const mk = this.mouthKm()?.(rc) ?? null;
+    if (this.basinMaxKm.length !== data.basins.length) this.basinMaxKm = new Float32Array(data.basins.length);
     const v = new THREE.Vector3(), w = new THREE.Vector3();
     const rr = R * (1.0009 + rc.cls * 0.00012);
     let o = 0, seg = 0, s = 0;
@@ -896,6 +918,7 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
             C[s * 6 + 1] = C[s * 6 + 4] = mk[seg];
             const sb = data.basins[g].sub;
             if (mk[seg] > this.subMaxKm[sb]) this.subMaxKm[sb] = mk[seg];
+            if (mk[seg] > this.basinMaxKm[g]) this.basinMaxKm[g] = mk[seg];
           }
           s++;
         }
@@ -909,7 +932,7 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
       vertexColors: true,
       linewidth: RIVER_WIDTH[rc.cls],
       transparent: true,
-      opacity: (this.plain() ? MOSAIC_RIVER_OPACITY : RIVER_OPACITY)[rc.cls],
+      opacity: (this.plain() || this.topActive() ? MOSAIC_RIVER_OPACITY : RIVER_OPACITY)[rc.cls],
       depthWrite: rc.cls > 0
     });
     patchBasinColours(mat, this.basinTex, this.ghost);
@@ -937,7 +960,15 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
     const dark = this.dark();
     this.ghost.value.set(dark ? this.colors['darkGhost'] : this.colors['ghost']);
     this.writeRevealRows();
-    if (view === 'story') {
+    if (this.topActive()) {
+      const pal = this.mosaicColors.light;
+      const inTop = new Set(this.topOrder());
+      const base = new THREE.Color(this.colors['river']);
+      data.basins.forEach((b, i) => {
+        tmp.copy(inTop.has(i) ? pal[b.mosaic] : base);
+        lut.set([tmp.r, tmp.g, tmp.b, 1], i * 4);
+      });
+    } else if (view === 'story') {
       const pal = this.seaColors[dark ? 'dark' : 'light'];
       data.basins.forEach((b, i) => {
         tmp.copy(pal[b.sub]);
@@ -991,9 +1022,30 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
     this.invalidate();
   }
 
+  /** Starts a countdown step: the step's river draws its network down to the mouth. */
+  private startTopStep(step: number) {
+    const order = this.topOrder();
+    const active = step >= 0;
+    this.story = { t: active && step >= 1 && step <= order.length ? 0 : 1 };
+    if (active) {
+      const id = this.topCurrent();
+      if (id >= 0) this.flyToBasin(id);
+      else this.flyTo(this.home);
+    }
+    this.setRiverOpacity();
+    this.updateBasinColours();
+    this.updateOverlays();
+    this.invalidate();
+  }
+
+  private setRiverOpacity() {
+    const full = this.plain() || this.topActive();
+    this.riverLayers.forEach(l => (l.mat.opacity = (full ? MOSAIC_RIVER_OPACITY : RIVER_OPACITY)[l.cls]));
+  }
+
   /**
    * Row 1 of the lookup texture: per basin, the distance to the mouth above which its rivers are
-   * drawn (−1 = all) and the ghost opacity of the rest. Only the story view reveals progressively.
+   * drawn (−1 = all) and the ghost opacity of the rest. The two presentations reveal progressively.
    */
   private writeRevealRows() {
     const data = this.data();
@@ -1002,9 +1054,21 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
     const step = this.storyStep();
     const t = this.story.t;
     const e = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+    const top = this.topActive();
+    const order = this.topOrder();
+    const topStep = this.topStep();
+    const pos = new Map(order.map((id, k) => [id, k + 1]));
     data.basins.forEach((b, i) => {
       let km = -1, ghost = 0;
-      if (story && step < STORY_STEPS - 1) {
+      if (top && topStep <= order.length) {
+        const s = pos.get(i) ?? Infinity; // step that reveals this basin (never, outside the top)
+        ghost = STORY_GHOST;
+        km = s < topStep ? -1 : s === topStep ? (this.basinMaxKm[i] || 1) * (1 - e) - 0.001 : 1e9;
+      } else if (top) {
+        // Finale: the top rivers in full, everything else stays a ghost.
+        ghost = STORY_GHOST;
+        km = pos.has(i) ? -1 : 1e9;
+      } else if (story && step < STORY_STEPS - 1) {
         const sea = b.sub + 1; // step that reveals this basin's sea
         ghost = STORY_GHOST;
         km = sea < step ? -1 : sea === step ? this.subMaxKm[b.sub] * (1 - e) - 0.001 : 1e9;
@@ -1016,8 +1080,9 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
 
   /** Advances the story reveal; returns true while it is still running. */
   private stepStory(dt: number): boolean {
-    if (this.view() !== 'story' || this.story.t >= 1) return false;
-    this.story.t = Math.min(1, this.story.t + dt / STORY_REVEAL_S);
+    const top = this.topActive();
+    if ((this.view() !== 'story' && !top) || this.story.t >= 1) return false;
+    this.story.t = Math.min(1, this.story.t + dt / (top ? TOP_REVEAL_S : STORY_REVEAL_S));
     this.writeRevealRows();
     this.basinTex.needsUpdate = true;
     return true;

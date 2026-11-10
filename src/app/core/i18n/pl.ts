@@ -75,6 +75,18 @@ export const PL: Dict = {
     `Najwięcej lądu zbiera ${sa} (${pa} zlewiska), a najwięcej wody rzecznej przyjmuje ${sf} (${pf}). Sama Newa dostarcza ${neva} całej wody, jaką rzeki wnoszą do Bałtyku.`,
   storyFinaleTextSame: (sea, pa, pf, neva) =>
     `${sea} zbiera zarówno najwięcej lądu (${pa} zlewiska), jak i najwięcej wody rzecznej (${pf}). Sama Newa dostarcza ${neva} całej wody, jaką rzeki wnoszą do Bałtyku.`,
+  topButton: 'Top 20',
+  hintTop: 'Przechodź między rzekami strzałkami albo naciśnij odtwarzanie · przeciągnij, aby przesunąć · przewiń, aby przybliżyć',
+  topHint: 'Odlicz 20 największych dorzeczy, jedno po drugim',
+  topClose: 'Zakończ odliczanie',
+  topLegend: n => `Top ${n} dorzeczy, pokazane dotąd`,
+  topIntroTitle: n => `${n} największych dorzeczy`,
+  topIntroText: (n, area, share) =>
+    `Spośród 1568 rzek zaledwie ${n} odwadnia ${area}, czyli ${share} całego lądu wokół Bałtyku. Odliczmy je od miejsca ${n}. do pierwszego.`,
+  topRiverText: (area, share, sea) => `Odwadnia ${area} (${share} zlewiska Bałtyku) i uchodzi do akwenu: ${sea}.`,
+  topFinaleTitle: n => `${n} rzek, większość Bałtyku`,
+  topFinaleText: (n, sa, sf, rest) =>
+    `Razem ${n} największych rzek odwadnia ${sa} zlewiska i niesie ${sf} całej wody rzecznej do morza. Pozostałe ${rest} rzek i pasy wybrzeża dzielą się resztą.`,
   storyPrev: 'Poprzedni krok',
   storyNext: 'Następny krok',
   storyPlay: 'Odtwórz prezentację',
