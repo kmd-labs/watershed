@@ -102,6 +102,16 @@ export interface Dict {
   posterHint: string;
   posterStats: (area: string, mouths: string, rivers: string) => string;
   posterCredits: string;
+  factsHeading: string;
+  factRivers: string;
+  factPeopleValue: string;
+  factPeople: string;
+  factRenewalValue: string;
+  factRenewal: string;
+  factBrackishValue: string;
+  factBrackish: string;
+  factRatio: string;
+  factsNote: string;
   legendDrop: string;
   hintRaindrop: string;
   dropTitle: string;

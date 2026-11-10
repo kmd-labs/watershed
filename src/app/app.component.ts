@@ -59,6 +59,8 @@ const STORY_STEP_MS = 8000;
 /** Top-rivers countdown: how many rivers, and time per step while playing (reveal ≈ 3.2 s). */
 const TOP_N = 20;
 const TOP_STEP_MS = 6000;
+/** Baltic Sea area incl. the Kattegat (km², HELCOM), for the basin-to-sea ratio. */
+const BALTIC_SEA_KM2 = 415_000;
 /** Typical river flow speed used for the raindrop's travel-time estimate. */
 const FLOW_M_PER_S = 1;
 
@@ -545,7 +547,19 @@ export class AppComponent {
         subtitle: [view, lg.title].filter(Boolean).join(' · '),
         legend: items,
         stats: t.posterStats(this.i18n.area(d.total.parea), this.i18n.num(d.total.nout), `${this.i18n.num(d.total.rkm / 1000)} ${t.thousandKm}`),
-        credits: t.posterCredits
+        credits: t.posterCredits,
+        accent: this.theme.getTokenColor('accent', '#d37400'),
+        facts: {
+          heading: t.factsHeading,
+          items: [
+            { value: this.i18n.num(d.total.nout), caption: t.factRivers },
+            { value: t.factPeopleValue, caption: t.factPeople },
+            { value: t.factRenewalValue, caption: t.factRenewal },
+            { value: t.factBrackishValue, caption: t.factBrackish },
+            { value: `${this.i18n.num(d.total.parea / BALTIC_SEA_KM2, 1)} ×`, caption: t.factRatio }
+          ],
+          note: t.factsNote
+        }
       });
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
