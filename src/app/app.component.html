@@ -9,18 +9,25 @@
     @if (data) {
       <app-globe
         [data]="data"
+        [streams]="store.streams()"
+        [relief]="store.relief()"
         [view]="view()"
+        [ground]="ground()"
         [selected]="selected()"
+        [drop]="drop()"
         [showRivers]="showRivers()"
         [showBorders]="showBorders()"
         [showLabels]="showLabels()"
+        [showFlow]="showFlow()"
+        [showRelief]="showRelief()"
         [basinLabel]="basinLabel()"
         [subNames]="t.subNames"
-        (pick)="select($event === selected() ? -1 : $event)"
-        (hover)="onHover($event)">
+        (pick)="onPick($event)"
+        (hover)="onHover($event)"
+        (progress)="globeProgress.set($event)">
       </app-globe>
-    } @else {
-      <div class="stage__status">{{ store.error() ? t.loadError : t.loading }}</div>
+    } @else if (store.error()) {
+      <div class="stage__status">{{ t.loadError }}</div>
     }
   </section>
 
@@ -55,13 +62,13 @@
           [value]="view()"
           [icon]="currentViewIcon()"
           [ariaLabel]="t.chooseView"
-          (valueChange)="view.set($event)">
+          (valueChange)="setView($event)">
         </app-dropdown>
       </div>
     </div>
   </header>
 
-  <!-- Bottom Dock: rivers & countries, legend & layers, selected catchment -->
+  <!-- Bottom Dock: rivers & countries, legend & layers, selected catchment / raindrop -->
   @if (data) {
     <footer class="dock-wrap">
       <section class="dock dock--list glass-panel" [class.dock--collapsed]="!panelOpen()">
@@ -124,6 +131,17 @@
             }
           </ul>
         </div>
+        @if (view() === 'mosaic') {
+          <div class="ground" role="radiogroup" [attr.aria-label]="t.groundLabel">
+            <span class="ground__label">{{ t.groundLabel }}</span>
+            <app-button variant="toggle" size="sm" [active]="ground() === 'light'" (btnClick)="ground.set('light')">
+              <i class="ground__swatch ground__swatch--light" aria-hidden="true"></i><span>{{ t.groundWhite }}</span>
+            </app-button>
+            <app-button variant="toggle" size="sm" [active]="ground() === 'dark'" (btnClick)="ground.set('dark')">
+              <i class="ground__swatch ground__swatch--dark" aria-hidden="true"></i><span>{{ t.groundBlack }}</span>
+            </app-button>
+          </div>
+        }
         <div class="legend__controls">
           <div class="layers" role="group" [attr.aria-label]="t.layers">
             @for (l of layers(); track l.label) {
@@ -134,25 +152,68 @@
                 [titleText]="l.label"
                 (btnClick)="l.on.set(!l.on())">
                 <lucide-icon [img]="l.icon" [size]="14"></lucide-icon>
-                @if (!bp.mobile()) {
+                @if (!bp.tablet()) {
                   <span>{{ l.label }}</span>
                 }
               </app-button>
             }
           </div>
-          <app-button variant="ghost" (btnClick)="openGlossary()">
-            <lucide-icon [img]="bookOpenIcon" [size]="15"></lucide-icon>
-            <span>{{ t.glossary }}</span>
-          </app-button>
+          <div class="legend__actions">
+            <app-button variant="ghost" [disabled]="posterBusy()" [titleText]="t.posterHint" (btnClick)="downloadPoster()">
+              <lucide-icon [img]="posterIcon" [size]="15"></lucide-icon>
+              <span>{{ posterBusy() ? t.posterBusy : t.poster }}</span>
+            </app-button>
+            <app-button variant="ghost" (btnClick)="openGlossary()">
+              <lucide-icon [img]="bookOpenIcon" [size]="15"></lucide-icon>
+              @if (!bp.mobile()) {
+                <span>{{ t.glossary }}</span>
+              }
+            </app-button>
+          </div>
         </div>
         @if (!bp.tablet()) {
-          <p class="legend__hint">{{ t.hint }}</p>
+          <p class="legend__hint">{{ view() === 'raindrop' ? t.hintRaindrop : t.hint }}</p>
         }
       </section>
 
-      <!-- Right column: selected catchment -->
-      <div class="dock-col" [class.dock-col--empty]="!selectedBasin()">
-        @if (selectedBasin(); as b) {
+      <!-- Right column: selected catchment, or the raindrop's journey -->
+      <div class="dock-col" [class.dock-col--empty]="view() !== 'raindrop' && !selectedBasin()">
+        @if (view() === 'raindrop') {
+          <section class="dock dock--detail dock--drop glass-panel" aria-live="polite">
+            <header class="drop__head">
+              <div>
+                <h2 class="drop__title">
+                  <lucide-icon [img]="dropIcon" [size]="16"></lucide-icon>{{ t.dropTitle }}
+                </h2>
+                @if (dropInfo(); as di) {
+                  <p class="drop__km">{{ t.dropToSea(di.km) }}</p>
+                }
+              </div>
+              @if (drop()) {
+                <app-button variant="ghost" [iconOnly]="true" [ariaLabel]="t.dropClear" (btnClick)="drop.set(null)">
+                  <lucide-icon [img]="closeIcon" [size]="16"></lucide-icon>
+                </app-button>
+              }
+            </header>
+            @if (dropInfo(); as di) {
+              <dl class="drop__facts">
+                <dt>{{ t.dropReaches }}</dt>
+                <dd>{{ di.reaches }}</dd>
+                <dt>{{ t.dropOverland }}</dt>
+                <dd>{{ di.overland }}</dd>
+                <dt>{{ t.dropLakes }}</dt>
+                <dd>{{ di.lakes }}</dd>
+                <dt>{{ t.dropTime }}</dt>
+                <dd>{{ di.time }}</dd>
+              </dl>
+              <p class="drop__note">{{ t.dropTimeNote }}</p>
+            } @else {
+              <p class="drop__note">
+                {{ dropNote() === 'outside' ? t.dropOutside : dropNote() === 'coast' ? t.dropCoast : t.dropHint }}
+              </p>
+            }
+          </section>
+        } @else if (selectedBasin(); as b) {
           <section class="dock dock--detail glass-panel" aria-live="polite">
             <app-basin-detail [data]="data" [basin]="b" (close)="select(-1)"></app-basin-detail>
           </section>

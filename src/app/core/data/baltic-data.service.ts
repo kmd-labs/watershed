@@ -1,74 +1,24 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { ThemeService } from '@kmd/design-system';
 import { cssToHex, hexToRgb } from '../color';
-import { BalticData, Basin, CountryArea, PackedPolys, Poly, RawBaltic, SubBasin } from './baltic.model';
+import {
+  BalticData,
+  Basin,
+  CountryArea,
+  PackedPolys,
+  Poly,
+  RaindropPath,
+  RawBaltic,
+  RawRiverClass,
+  RawStreams,
+  RiverClassGeometry,
+  SubBasin
+} from './baltic.model';
+import { RiverNetwork } from './river-network';
 import { MOSAIC_COUNT, mosaicToken } from './views';
-
-/** Share of a hole's vertices that must lie on a lake for the hole to count as a lake artefact. */
-const LAKE_HOLE_SHARE = 0.8;
-
-function ringArea(r: Float32Array): number {
-  let a = 0;
-  for (let i = 0, j = r.length - 2; i < r.length; j = i, i += 2) a += r[j] * r[i + 1] - r[i] * r[j + 1];
-  return a / 2;
-}
-
-/**
- * Rasterises the lakes once into a bbox-wide 1-bit mask and returns a point-in-lake test.
- * ~540 m per pixel: enough to tell lake interiors from the shore, while the transient RGBA
- * buffer stays around 50 MB and the retained mask under 2 MB.
- */
-function lakeTester(lakes: Poly[], bbox: [number, number, number, number]): (lon: number, lat: number) => boolean {
-  const [LON0, LON1, LAT0, LAT1] = bbox;
-  const W = 3072;
-  const H = Math.round((W * (LAT1 - LAT0)) / (LON1 - LON0) / Math.cos(59 * (Math.PI / 180)));
-  const canvas = document.createElement('canvas');
-  canvas.width = W;
-  canvas.height = H;
-  const x = canvas.getContext('2d', { willReadFrequently: true })!;
-  x.fillStyle = '#000';
-  for (const poly of lakes) {
-    x.beginPath();
-    for (const ring of poly) {
-      for (let k = 0; k < ring.length; k += 2) {
-        const px = ((ring[k] - LON0) / (LON1 - LON0)) * W, py = ((LAT1 - ring[k + 1]) / (LAT1 - LAT0)) * H;
-        k ? x.lineTo(px, py) : x.moveTo(px, py);
-      }
-      x.closePath();
-    }
-    x.fill('evenodd');
-  }
-  const alpha = x.getImageData(0, 0, W, H).data;
-  const bits = new Uint8Array(Math.ceil((W * H) / 8));
-  for (let p = 0; p < W * H; p++) if (alpha[p * 4 + 3] > 127) bits[p >> 3] |= 1 << (p & 7);
-  canvas.width = canvas.height = 0;
-  return (lon, lat) => {
-    const i = Math.floor(((LAT1 - lat) / (LAT1 - LAT0)) * H), j = Math.floor(((lon - LON0) / (LON1 - LON0)) * W);
-    if (i < 0 || i >= H || j < 0 || j >= W) return false;
-    const p = i * W + j;
-    return (bits[p >> 3] & (1 << (p & 7))) !== 0;
-  };
-}
-
-/**
- * HydroBASINS leaves holes inside the biggest lakes (Ladoga, Peipus); drawn as outlines they read
- * as stray jagged shapes in the middle of the water. Drops hole rings that lie on a lake.
- */
-function dropLakeHoles(poly: Poly, inLake: (lon: number, lat: number) => boolean): Poly {
-  if (poly.length < 2) return poly;
-  const areas = poly.map(ringArea);
-  const outer = Math.sign(areas.reduce((a, b) => (Math.abs(b) > Math.abs(a) ? b : a), 0));
-  return poly.filter((ring, i) => {
-    if (Math.sign(areas[i]) === outer) return true;
-    let wet = 0;
-    for (let k = 0; k < ring.length; k += 2) if (inLake(ring[k], ring[k + 1])) wet++;
-    return wet / (ring.length / 2) < LAKE_HOLE_SHARE;
-  });
-}
 
 /** Margin (degrees) by which bounding boxes are grown when looking for neighbouring basins. */
 const NEIGHBOUR_MARGIN = 0.05;
-
 /** Minimum RGB distance between a basin's colour and its neighbours' (blue vs cyan ≈ 58). */
 const DISTINCT_RGB = 110;
 
@@ -79,10 +29,13 @@ const DISTINCT_RGB = 110;
  * cyan); failing that, the most different free slot. Neighbours = bounding boxes overlapping after
  * a small margin, a cheap and slightly over-cautious stand-in for shared borders.
  */
-function assignMosaic(basins: Basin[], palette: [number, number, number][]): void {
+function assignMosaic(basins: Basin[], palettes: [number, number, number][][]): void {
   const m = NEIGHBOUR_MARGIN;
-  const slots = palette.length;
-  const dist = palette.map(a => palette.map(b => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2])));
+  const slots = palettes[0].length;
+  // Two slots count as similar if they look alike on either ground.
+  const dist = palettes[0].map((_, i) =>
+    palettes[0].map((_, j) => Math.min(...palettes.map(p => Math.hypot(p[i][0] - p[j][0], p[i][1] - p[j][1], p[i][2] - p[j][2]))))
+  );
   const order = [...basins].sort((a, b) => b.parea - a.parea);
   const used = new Array<number>(slots).fill(0);
   const done: Basin[] = [];
@@ -91,7 +44,11 @@ function assignMosaic(basins: Basin[], palette: [number, number, number][]): voi
     for (const o of done) {
       if (o.bb[0] - m <= b.bb[1] && b.bb[0] - m <= o.bb[1] && o.bb[2] - m <= b.bb[3] && b.bb[2] - m <= o.bb[3]) taken.add(o.mosaic);
     }
-    const sep = (s: number) => (taken.size ? Math.min(...[...taken].map(t => dist[s][t])) : Infinity);
+    const sep = (s: number) => {
+      let d = Infinity;
+      for (const t of taken) d = Math.min(d, dist[s][t]);
+      return d;
+    };
     let best = -1, bestFallback = -1;
     for (let s = 0; s < slots; s++) {
       if (taken.has(s)) continue;
@@ -105,36 +62,109 @@ function assignMosaic(basins: Basin[], palette: [number, number, number][]): voi
   }
 }
 
-function decode<T>(b64: string, Ctor: new (buf: ArrayBuffer) => T): T {
+function bytes(b64: string | null): Uint8Array {
+  if (!b64) return new Uint8Array(0);
   const s = atob(b64);
   const u = new Uint8Array(s.length);
   for (let i = 0; i < s.length; i++) u[i] = s.charCodeAt(i);
-  return new Ctor(u.buffer);
+  return u;
 }
 
+const u16 = (b64: string | null) => new Uint16Array(bytes(b64).buffer);
+
+/** Reverses the per-axis wrapping delta encoding of scripts/build-data.mjs. */
+function undelta(b64: string | null): Uint16Array {
+  const d = u16(b64);
+  for (let i = 2; i < d.length; i++) d[i] = (d[i] + d[i - 2]) & 0xffff;
+  return d;
+}
+
+/** Yields to the browser (a task boundary; rAF would pause in background tabs). */
+const frame = () => new Promise<void>(r => setTimeout(r, 0));
+
 /**
- * Loads the packed HydroSHEDS / Natural Earth Baltic dataset (`assets/data/baltic.json`),
- * decodes quantized geometry, removes lake artefacts and aggregates the basin by country.
+ * Loads the Baltic dataset in two steps: `baltic.json` (everything the first frame needs) and,
+ * once that is on screen, `streams.json` (the smallest streams) and the relief shading.
  */
 @Injectable({ providedIn: 'root' })
 export class BalticDataService {
+  private readonly theme = inject(ThemeService);
+
   readonly data = signal<BalticData | null>(null);
   readonly error = signal<boolean>(false);
-  private readonly theme = inject(ThemeService);
+  /** 0–1 while the core data downloads and decodes (feeds the splash). */
+  readonly progress = signal(0);
+  /** Smallest streams (river class 0), arriving after the core data. */
+  readonly streams = signal<RiverClassGeometry | null>(null);
+  /** Greyscale hillshade over `worldBox` (128 = flat). */
+  readonly relief = signal<ImageBitmap | HTMLImageElement | null>(null);
+
+  private network?: RiverNetwork;
 
   constructor() {
     this.load();
   }
 
+  /** Raindrop path from lon/lat inside `basin` down to the sea, or null for river-less strips. */
+  trace(lon: number, lat: number, basin: number): RaindropPath | null {
+    return this.network?.trace(lon, lat, basin) ?? null;
+  }
+
   private async load() {
     try {
+      this.progress.set(0.05);
       const res = await fetch('assets/data/baltic.json');
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      this.data.set(this.build(await res.json()));
+      const raw = (await res.json()) as RawBaltic;
+      this.progress.set(0.6);
+      // Start the deferred downloads now; they are not needed for the first frame.
+      const streams = fetch('assets/data/streams.json').then(r => (r.ok ? (r.json() as Promise<RawStreams>) : null));
+      const relief = this.loadImage('assets/data/relief.webp');
+      await frame();
+      const data = this.build(raw);
+      this.progress.set(1);
+      performance.mark('watershed:data');
+      this.data.set(data);
+      this.loadLater(data, streams, relief);
     } catch (err) {
       console.error(err);
       this.error.set(true);
     }
+  }
+
+  private async loadLater(data: BalticData, streams: Promise<RawStreams | null>, relief: Promise<ImageBitmap | HTMLImageElement | null>) {
+    relief.then(img => img && this.relief.set(img)).catch(() => undefined);
+    try {
+      const s = await streams;
+      if (!s?.rivers[0]) return;
+      await frame();
+      const rc = this.riverClass(s.rivers[0]);
+      this.network?.add(rc);
+      this.streams.set(rc);
+      performance.mark('watershed:streams');
+    } catch (err) {
+      // The map is complete without the smallest streams; keep going.
+      console.warn('streams.json', err);
+    }
+  }
+
+  private async loadImage(url: string): Promise<ImageBitmap | HTMLImageElement | null> {
+    try {
+      const res = await fetch(url);
+      if (!res.ok) return null;
+      const blob = await res.blob();
+      if (typeof createImageBitmap === 'function') return await createImageBitmap(blob);
+      const img = new Image();
+      img.src = URL.createObjectURL(blob);
+      await img.decode();
+      return img;
+    } catch {
+      return null;
+    }
+  }
+
+  private riverClass(r: RawRiverClass): RiverClassGeometry {
+    return { cls: r.cls, cnt: u16(r.cnt), xy: undelta(r.xy), g: u16(r.g), wet: bytes(r.wet) };
   }
 
   private build(B: RawBaltic): BalticData {
@@ -143,7 +173,7 @@ export class BalticDataService {
     const qy = (v: number) => LAT0 + ((LAT1 - LAT0) * v) / 65535;
 
     const polys = ([lens, buf]: PackedPolys, global = false): Poly[] => {
-      const xy = buf ? decode(buf, Uint16Array) : new Uint16Array(0);
+      const xy = undelta(buf);
       let o = 0;
       return lens.map(rl =>
         rl.map(n => {
@@ -157,9 +187,7 @@ export class BalticDataService {
       );
     };
 
-    const lakes = polys(B.lakes).filter(p => p.length > 0);
-    const inLake = lakeTester(lakes, B.bbox);
-    const basinPolys = polys([B.basinRings, B.basinXY]).map(p => dropLakeHoles(p, inLake));
+    const basinPolys = polys([B.basinRings, B.basinXY]);
 
     const basins: Basin[] = B.groups.map((g, id) => {
       let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9, sx = 0, sy = 0, n = 0;
@@ -181,8 +209,9 @@ export class BalticDataService {
       };
     });
 
-    const palette = Array.from({ length: MOSAIC_COUNT }, (_, i) => hexToRgb(cssToHex(this.theme.getTokenColor(mosaicToken(i), '#888888'))));
-    assignMosaic(basins, palette);
+    const palette = (ground: 'light' | 'dark') =>
+      Array.from({ length: MOSAIC_COUNT }, (_, i) => hexToRgb(cssToHex(this.theme.getTokenColor(mosaicToken(i, ground), '#888888'))));
+    assignMosaic(basins, [palette('light'), palette('dark')]);
 
     const subs: SubBasin[] = B.subs.map((s, id) => ({ ...s, id }));
 
@@ -195,7 +224,7 @@ export class BalticDataService {
       rivers: riversIn.get(name) ?? 0
     }));
 
-    const borderXY = decode(B.borders[1], Uint16Array);
+    const borderXY = undelta(B.borders[1]);
     let bo = 0;
     const borders = B.borders[0].map(n => {
       const a = new Float32Array(n * 2);
@@ -203,11 +232,9 @@ export class BalticDataService {
       return a;
     });
 
-    const rivers = B.rivers.map(rc => ({
-      cnt: decode(rc.cnt, Uint16Array),
-      xy: decode(rc.xy, Uint16Array),
-      g: decode(rc.g, Uint16Array)
-    }));
+    const rivers = B.rivers.map(r => this.riverClass(r));
+    this.network = new RiverNetwork(qx, qy);
+    for (const rc of rivers) this.network.add(rc);
 
     return {
       bbox: B.bbox,
@@ -216,11 +243,11 @@ export class BalticDataService {
       countries,
       total: B.total,
       basinPolys,
-      outlines: polys(B.outlines).map(p => dropLakeHoles(p, inLake)),
+      outlines: polys(B.outlines),
       land: polys(B.land),
-      lakes,
-      inLake,
+      lakes: polys(B.lakes),
       world: polys(B.world, true),
+      worldBox: B.worldBox,
       borders,
       rivers,
       qx,

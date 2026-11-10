@@ -12,6 +12,10 @@ const SOURCES = [
     url: 'https://doi.org/10.1016/S0022-1694(02)00283-4'
   },
   {
+    label: 'NOAA National Geophysical Data Center (2009). ETOPO1 1 Arc-Minute Global Relief Model.',
+    url: 'https://doi.org/10.7289/V5C8276M'
+  },
+  {
     label: 'Natural Earth — land, lakes & country borders.',
     url: 'https://www.naturalearthdata.com/'
   }
@@ -28,6 +32,10 @@ const SOURCES = [
     <p>{{ t.methodData }}</p>
     <h3>{{ t.methodLakesTitle }}</h3>
     <p>{{ t.methodLakes }}</p>
+    <h3>{{ t.methodRaindropTitle }}</h3>
+    <p>{{ t.methodRaindrop }}</p>
+    <h3>{{ t.methodReliefTitle }}</h3>
+    <p>{{ t.methodRelief }}</p>
     <h3>{{ t.methodTermsTitle }}</h3>
     <dl>
       @for (term of t.terms; track term.term) {

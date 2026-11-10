@@ -35,7 +35,7 @@ $land: palette("neutral-300");
 
   // "Basin mosaic" view: every river basin's network in its own colour (after the classic
   // rivers-by-basin maps). Slots are ordered strongest first — the biggest basins take them first —
-  // and assigned so that neighbouring basins never share a colour (BalticDataService).
+  // and assigned so that neighbouring basins differ on both grounds (BalticDataService).
   --color-globe-mosaic-ground: #{palette("neutral-0")};
   --color-mosaic-0: #{palette("primary-500")};
   --color-mosaic-1: #{palette("danger-500")};
@@ -49,6 +49,40 @@ $land: palette("neutral-300");
   --color-mosaic-9: #{palette("danger-700")};
   --color-mosaic-10: #{palette("success-700")};
   --color-mosaic-11: #{palette("purple-600")};
+  --color-mosaic-12: #{color.mix(palette("success-500"), palette("info-600"), 50%)};
+  --color-mosaic-13: #{color.mix(palette("danger-500"), palette("purple-600"), 55%)};
+  --color-mosaic-14: #{color.mix(palette("danger-400"), palette("warning-400"), 50%)};
+  --color-mosaic-15: #{palette("warning-800")};
+
+  // Black ground: same slots, shades that glow on black.
+  --color-mosaic-dark-0: #{palette("primary-400")};
+  --color-mosaic-dark-1: #{palette("danger-400")};
+  --color-mosaic-dark-2: #{palette("success-400")};
+  --color-mosaic-dark-3: #{palette("warning-400")};
+  --color-mosaic-dark-4: #{palette("purple-400")};
+  --color-mosaic-dark-5: #{palette("info-300")};
+  --color-mosaic-dark-6: #{color.mix(palette("danger-300"), palette("purple-300"), 50%)};
+  --color-mosaic-dark-7: #{color.mix(palette("warning-300"), palette("success-300"), 50%)};
+  --color-mosaic-dark-8: #{palette("neutral-200")};
+  --color-mosaic-dark-9: #{palette("warning-200")};
+  --color-mosaic-dark-10: #{palette("success-200")};
+  --color-mosaic-dark-11: #{color.mix(palette("primary-400"), palette("purple-400"), 50%)};
+  --color-mosaic-dark-12: #{color.mix(palette("success-300"), palette("info-300"), 50%)};
+  --color-mosaic-dark-13: #{color.mix(palette("danger-400"), palette("purple-500"), 55%)};
+  --color-mosaic-dark-14: #{color.mix(palette("danger-300"), palette("warning-300"), 50%)};
+  --color-mosaic-dark-15: #{palette("warning-300")};
+
+  // Black-ground map (mosaic only — the HUD stays on the single light theme).
+  --color-globe-dark-bg: #{palette("neutral-950")};
+  --color-globe-dark-ground: #{palette("neutral-950")};
+  --color-globe-dark-land: #{palette("neutral-900")};
+  --color-globe-dark-ocean: #{color.mix(palette("primary-900"), palette("neutral-950"), 35%)};
+  --color-globe-dark-lake: #{color.mix(palette("primary-800"), palette("neutral-950"), 45%)};
+  --color-globe-dark-outline: #{palette("neutral-600")};
+
+  // Raindrop view: the traced path
+  --color-globe-drop: #{palette("warning-500")};
+  --color-globe-drop-halo: #{palette("neutral-0")};
 
   // Panels
   --color-share-bar: #{palette("warning-200")};

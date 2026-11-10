@@ -1,4 +1,9 @@
-/** Packed polygon set: ring lengths per polygon + base64 Uint16 quantized lon/lat pairs. */
+/**
+ * Data format v2, written by scripts/build-data.mjs. Coordinate streams are base64 uint16 lon/lat
+ * pairs quantised over `bbox` (world: over the globe), delta-encoded per axis with wrap-around.
+ */
+
+/** Packed polygon set: ring lengths per polygon + delta-encoded coordinate stream. */
 export type PackedPolys = [number[][], string | null];
 
 export interface RawGroup {
@@ -32,13 +37,21 @@ export interface RawSub {
 }
 
 export interface RawRiverClass {
+  /** River size class 0 (smallest streams) … 4 (largest rivers). */
+  cls: number;
   n: number;
+  /** Vertex count per reach (uint16, plain base64). */
   cnt: string;
+  /** Delta-encoded coordinates. */
   xy: string;
+  /** Basin id per reach (uint16, plain base64). */
   g: string;
+  /** Bitset over segments: 1 = the segment lies on a lake. */
+  wet: string;
 }
 
 export interface RawBaltic {
+  v: 2;
   bbox: [number, number, number, number];
   rivers: RawRiverClass[];
   groups: RawGroup[];
@@ -51,6 +64,13 @@ export interface RawBaltic {
   lakes: PackedPolys;
   borders: [number[], string];
   world: PackedPolys;
+  /** Cut-out box the world land was clipped to: [lon0, lon1, lat0, lat1]. */
+  worldBox: [number, number, number, number];
+}
+
+export interface RawStreams {
+  v: 2;
+  rivers: RawRiverClass[];
 }
 
 /** A polygon = list of rings, each ring a flat [lon, lat, lon, lat, …] array. */
@@ -83,13 +103,17 @@ export interface CountryArea {
   rivers: number;
 }
 
+/** One river size class. Reaches are oriented downstream; each reach ends where the next begins. */
 export interface RiverClassGeometry {
-  /** Vertex count per polyline. */
+  cls: number;
+  /** Vertex count per reach. */
   cnt: Uint16Array;
-  /** Quantized lon/lat pairs. */
+  /** Quantised lon/lat pairs. */
   xy: Uint16Array;
-  /** Basin id per polyline. */
+  /** Basin id per reach. */
   g: Uint16Array;
+  /** Bitset over segments: set = the segment lies on a lake. */
+  wet: Uint8Array;
 }
 
 export interface BalticData {
@@ -102,11 +126,28 @@ export interface BalticData {
   outlines: Poly[];
   land: Poly[];
   lakes: Poly[];
-  /** True where the point lies on one of `lakes` (rasterised, ~0.005° resolution). */
-  inLake: (lon: number, lat: number) => boolean;
   world: Poly[];
+  worldBox: [number, number, number, number];
   borders: Float32Array[];
+  /** River classes 1–4; class 0 arrives later (BalticDataService.streams). */
   rivers: RiverClassGeometry[];
   qx: (v: number) => number;
   qy: (v: number) => number;
+}
+
+/** A traced raindrop: from where it fell, over land to the nearest stream, then down to the sea. */
+export interface RaindropPath {
+  /** lon/lat pairs; the first segment is the overland part. */
+  points: Float32Array;
+  /** Index of the point where the drop enters the river network (1 unless it fell on a river). */
+  riverStart: number;
+  /** Cumulative distance (km) at every point. */
+  km: Float32Array;
+  totalKm: number;
+  overlandKm: number;
+  lakeKm: number;
+  /** Separate stretches through lakes. */
+  lakes: number;
+  basin: number;
+  start: [number, number];
 }

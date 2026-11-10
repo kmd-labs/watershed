@@ -304,3 +304,99 @@
   gap: spacing("xxs");
   flex-wrap: wrap;
 }
+
+.legend__actions {
+  display: flex;
+  align-items: center;
+  gap: spacing("xxs");
+}
+
+// Mosaic ground: white or black.
+.ground {
+  display: flex;
+  align-items: center;
+  gap: spacing("xxs");
+  margin-top: spacing("md");
+
+  &__label {
+    margin-right: spacing("xxs");
+    font-size: font-size("xs");
+    font-weight: font-weight("semibold");
+    color: color("text-main");
+  }
+
+  &__swatch {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    margin-right: 6px;
+    border-radius: 50%;
+    box-shadow: inset 0 0 0 1px color("line-strong");
+
+    &--light {
+      background: color("neutral-0");
+    }
+
+    &--dark {
+      background: color("neutral-950");
+    }
+  }
+}
+
+// Raindrop card.
+.drop {
+  &__head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: spacing("xs");
+  }
+
+  &__title {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 2px 0;
+    font-size: font-size("md");
+    font-weight: font-weight("semibold");
+    color: color("text-bright");
+
+    lucide-icon {
+      color: var(--color-globe-drop);
+    }
+  }
+
+  &__km {
+    margin: spacing("xxs") 0 0;
+    font-size: font-size("xl");
+    font-weight: font-weight("bold");
+    font-variant-numeric: tabular-nums;
+    color: color("text-bright");
+  }
+
+  &__facts {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+    gap: 5px 12px;
+    margin: spacing("md") 0 0;
+    font-size: font-size("xs");
+    line-height: 1.4;
+
+    dt {
+      color: color("text-dim");
+    }
+
+    dd {
+      margin: 0;
+      font-variant-numeric: tabular-nums;
+      color: color("text-main");
+    }
+  }
+
+  &__note {
+    margin: spacing("sm") 0 0;
+    font-size: font-size("xs");
+    line-height: 1.5;
+    color: color("text-note");
+  }
+}

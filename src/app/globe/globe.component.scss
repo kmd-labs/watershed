@@ -50,3 +50,40 @@
     font-weight: font-weight("bold");
   }
 }
+
+// Black-ground mosaic: light labels with a dark halo.
+.globe--dark .globe-label {
+  color: color("neutral-100");
+  text-shadow:
+    0 0 3px color("neutral-950"),
+    0 0 6px color("neutral-950"),
+    0 0 10px color("neutral-950");
+
+  &--sea {
+    color: color("primary-200");
+  }
+}
+
+// Head of the raindrop as it travels to the sea (positioned via transform; the drop shape is
+// rotated on a pseudo-element so the rotation does not disturb the positioning).
+.globe-drop {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 16px;
+  height: 16px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity transition("fast");
+
+  &::before {
+    content: "";
+    position: absolute;
+    inset: 1px;
+    border-radius: 50% 0 50% 50%;
+    transform: rotate(-45deg);
+    background: var(--color-globe-drop);
+    border: 2px solid color("neutral-0");
+    box-shadow: 0 2px 8px color("shadow-heavy");
+  }
+}

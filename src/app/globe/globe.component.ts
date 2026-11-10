@@ -16,15 +16,23 @@ import { LineSegments2 } from 'three/examples/jsm/lines/LineSegments2.js';
 import { LineSegmentsGeometry } from 'three/examples/jsm/lines/LineSegmentsGeometry.js';
 import { LineMaterial } from 'three/examples/jsm/lines/LineMaterial.js';
 import { ThemeService } from '@kmd/design-system';
-import { BalticData, Basin, Poly } from '../core/data/baltic.model';
+import { isAtMost } from '@kmd/design-system/utils/breakpoints';
+import { BalticData, Basin, Poly, RaindropPath, RiverClassGeometry } from '../core/data/baltic.model';
 import { cssToHex } from '../core/color';
-import { MapView, MOSAIC_COUNT, SUB_COUNT, mosaicToken, subToken } from '../core/data/views';
+import { MapView, MOSAIC_COUNT, MosaicGround, SUB_COUNT, mosaicToken, subToken } from '../core/data/views';
 
 export interface GlobeHover {
   /** Basin under the pointer. */
   id: number;
   x: number;
   y: number;
+}
+
+export interface GlobePick {
+  /** Basin under the pointer, or -1 off the basin. */
+  id: number;
+  lon: number;
+  lat: number;
 }
 
 /** Camera state: the point the view is centred on, and the altitude above the surface. */
@@ -40,25 +48,40 @@ const RIVER_WIDTH = [0.5, 0.85, 1.4, 2.2, 3.2];
 const RIVER_OPACITY = [0.3, 0.5, 0.75, 0.9, 0.95];
 /** In the mosaic the rivers are the colour, so even the smallest streams stay legible. */
 const MOSAIC_RIVER_OPACITY = [0.6, 0.75, 0.9, 1, 1];
-/** How far rivers of other basins fade toward the ground while one basin is selected. */
+/** How far other basins' rivers fade toward the ground: with a selection, and on hover alone. */
 const MOSAIC_FADE = 0.8;
-/** Country border width in CSS pixels; dash length stays ~6 px on screen at any zoom. */
+const MOSAIC_HOVER_FADE = 0.4;
+/** Drainage-divide stroke strength, and the smallest ring it outlines (deg², ≈ 600 km²). */
+const OUTLINE_ALPHA = 0.5;
+const MIN_OUTLINE_RING = 0.05;
+/** Width of the per-basin colour lookup texture (≥ number of basins). */
+const BASIN_TEX = 2048;
+/** Country border width in CSS pixels. */
 const BORDER_WIDTH = 1.6;
-const BORDER_DASH_PER_ALT = 0.005;
+/** Screen length (px) of one dash unit for borders and the flow animation. */
+const BORDER_DASH_PX = 5;
+const FLOW_DASH_PX = 7;
+/** Flow: gap length (in dash units) and speed (dash units per second, downstream). */
+const FLOW_GAP = 0.7;
+const FLOW_SPEED = 1.6;
 /** The camera looks this far north of its nadir (× altitude), giving a gentle ~14° oblique view. */
 const PITCH = 0.25;
 /** Closest zoom (altitude above the surface, in globe units; R = 5 ≈ 6371 km). */
 const ALT_MIN = 0.08;
 /** How far beyond the starting view the user may zoom out. */
 const ALT_OUT = 1.15;
-/** Context ring drawn around the data box (lon°, lat°); it fades into the page background. */
-const CONTEXT_MARGIN: [number, number] = [7, 3.5];
 /** Pixels the pointer must travel before a press turns into a drag (keeps clicks steady). */
 const DRAG_SLOP = 3;
 /** Movement (px) above which a press is no longer a click. */
 const CLICK_SLOP = 6;
+/** Hillshade strength (soft-light blend alpha). */
+const RELIEF_ALPHA = 0.9;
+const VFOV = 40;
 const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
+/** Yields to the browser between setup stages (a task boundary, so the splash can paint). Not rAF:
+ * that pauses in background tabs and would stall setup. */
+const nextFrame = () => new Promise<void>(r => setTimeout(r, 0));
 
 function lonLatToVec(lon: number, lat: number, r = R, out = new THREE.Vector3()) {
   const phi = ((lon + 180) / 360) * Math.PI * 2;
@@ -83,31 +106,68 @@ function inRing(r: Float32Array, x: number, y: number) {
   return c;
 }
 
+/** Sphere sector over a lon/lat box. */
+function sector(box: [number, number, number, number], r: number, wSeg: number, hSeg: number) {
+  const [w, e, s, n] = box;
+  return new THREE.SphereGeometry(r, wSeg, hSeg, (w + 180) * DEG, (e - w) * DEG, (90 - n) * DEG, (n - s) * DEG);
+}
+
+/**
+ * Rivers read their colour from a per-basin lookup texture instead of per-segment colours: the
+ * segment's basin id travels in `instanceColorStart.x`. Hover, selection and view changes then
+ * rewrite ~1,600 texels rather than ~200,000 segment colours.
+ */
+function patchBasinColours(mat: LineMaterial, tex: THREE.DataTexture) {
+  mat.onBeforeCompile = shader => {
+    shader.uniforms['basinColors'] = { value: tex };
+    shader.vertexShader = shader.vertexShader
+      .replace('attribute vec3 instanceColorEnd;', 'attribute vec3 instanceColorEnd;\nuniform sampler2D basinColors;\nvarying float vBasinAlpha;')
+      .replace(
+        'vColor.xyz = ( position.y < 0.5 ) ? instanceColorStart : instanceColorEnd;',
+        `vec4 bc = texture2D( basinColors, vec2( ( instanceColorStart.x + 0.5 ) / ${BASIN_TEX}.0, 0.5 ) );\nvColor.xyz = bc.rgb;\nvBasinAlpha = bc.a;`
+      );
+    shader.fragmentShader = shader.fragmentShader
+      .replace('uniform float opacity;', 'uniform float opacity;\nvarying float vBasinAlpha;')
+      .replace('vec4 diffuseColor = vec4( diffuse, alpha );', 'alpha *= vBasinAlpha;\nvec4 diffuseColor = vec4( diffuse, alpha );');
+  };
+  mat.customProgramCacheKey = () => 'basin-colours';
+}
+
 interface Label {
   el: HTMLDivElement;
   p: THREE.Vector3;
   maxDist: number;
   w: number;
   h: number;
+  text: string;
+  kind: 'sea' | 'river' | 'big';
 }
 
 interface RiverLayer {
-  geo: LineSegmentsGeometry;
+  cls: number;
+  line: LineSegments2;
   mat: LineMaterial;
-  segBasin: Uint16Array;
-  col: Float32Array;
-  nseg: number;
+  distances: boolean;
+}
+
+/** A small texture-mapped sector over one basin, used for the selection and hover highlights. */
+interface Overlay {
+  mesh: THREE.Mesh<THREE.SphereGeometry, THREE.MeshBasicMaterial>;
+  canvas: HTMLCanvasElement;
+  tex: THREE.CanvasTexture;
+  id: number;
 }
 
 /**
  * Cut-out of the globe over the Baltic drainage basin (the kmd-labs/baltic look): only a curved
- * slice of the sphere is drawn, fading into the page background. It shows river catchments
- * (plain, tinted by sea, or as a river-colour mosaic), the HydroRIVERS network, lakes, country
- * borders and labels.
+ * slice of the sphere is drawn, fading into the page background.
  *
  * Navigation is map-like and exact: dragging keeps the grabbed point under the pointer, the wheel
- * and pinch zoom about the pointer, the view stays north-up and inside the basin, and nothing
- * coasts on after release.
+ * and pinch zoom about the pointer, the view stays north-up and inside the basin.
+ *
+ * Performance: frames are rendered on demand (camera moves, hover, animations); river colours
+ * come from a lookup texture; selection and hover draw into small overlays instead of redrawing
+ * the large region texture; setup runs in stages so the splash keeps animating.
  */
 @Component({
   selector: 'app-globe',
@@ -115,10 +175,11 @@ interface RiverLayer {
   template: `
     <canvas #canvas class="globe__canvas"></canvas>
     <div #labels class="globe__labels" aria-hidden="true"></div>
+    <div #drop class="globe-drop" aria-hidden="true"></div>
   `,
   styleUrl: './globe.component.scss',
   encapsulation: ViewEncapsulation.None,
-  host: { class: 'globe' }
+  host: { class: 'globe', '[class.globe--dark]': 'dark()' }
 })
 export class GlobeComponent implements AfterViewInit, OnDestroy {
   private readonly zone = inject(NgZone);
@@ -126,70 +187,120 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
 
   readonly data = input.required<BalticData>();
+  /** River class 0 (smallest streams), added when it arrives. */
+  readonly streams = input<RiverClassGeometry | null>(null);
+  readonly relief = input<ImageBitmap | HTMLImageElement | null>(null);
   readonly view = input<MapView>('catchments');
+  readonly ground = input<MosaicGround>('light');
   readonly selected = input<number>(-1);
+  readonly drop = input<RaindropPath | null>(null);
   readonly showRivers = input(true);
   readonly showBorders = input(false);
   readonly showLabels = input(true);
+  readonly showFlow = input(false);
+  readonly showRelief = input(true);
   /** Localized label for a river basin (dataset names are Polish). */
   readonly basinLabel = input<(b: Basin) => string>(b => b.name ?? '');
   readonly subNames = input<string[]>([]);
 
-  readonly pick = output<number>();
+  readonly pick = output<GlobePick>();
   readonly hover = output<GlobeHover | null>();
+  /** Setup progress 0–1; 1 once the first frame is on screen. */
+  readonly progress = output<number>();
 
   private readonly canvasRef = viewChild.required<ElementRef<HTMLCanvasElement>>('canvas');
   private readonly labelsRef = viewChild.required<ElementRef<HTMLDivElement>>('labels');
+  private readonly dropRef = viewChild.required<ElementRef<HTMLDivElement>>('drop');
 
   private renderer!: THREE.WebGLRenderer;
   private scene = new THREE.Scene();
-  private camera = new THREE.PerspectiveCamera(40, 1, 0.005, 400);
+  private camera = new THREE.PerspectiveCamera(VFOV, 1, 0.005, 400);
   private rivers = new THREE.Group();
   private riverLayers: RiverLayer[] = [];
   private borders?: LineSegments2;
   private borderMat?: LineMaterial;
+  private basinTex!: THREE.DataTexture;
+  /** RGBA (linear) per basin id, backing `basinTex`. */
+  private lut = new Float32Array(BASIN_TEX * 4).fill(1);
 
+  private contextCanvas = document.createElement('canvas');
+  private contextTex?: THREE.CanvasTexture;
   private regionCanvas = document.createElement('canvas');
   private regionCtx!: CanvasRenderingContext2D;
   private regionTex!: THREE.CanvasTexture;
   private RW = 0;
   private RH = 0;
+  private selOverlay?: Overlay;
+  private hovOverlay?: Overlay;
+
+  private dropLine?: LineSegments2;
+  private dropHalo?: LineSegments2;
+  private dropReveal: { t: number; dur: number; path: RaindropPath } | null = null;
+  private dropHead: [number, number] | null = null;
 
   /** Current camera state, the starting one, and the zoom-out limit. */
   private cam: View = { lon: 20, lat: 59, alt: 3.2 };
   private home: View = { lon: 20, lat: 59, alt: 3.2 };
   private altMax = 3.7;
   private fly: { from: View; to: View; t: number } | null = null;
+  private flowOffset = 0;
 
   private labels: Label[] = [];
   private raf = 0;
   private clock = new THREE.Clock();
   private resizeObs?: ResizeObserver;
   private ready = false;
+  private dirty = true;
+  private hovered = -1;
+  private pendingHover: { x: number; y: number } | null = null;
   private colors: Record<string, string> = {};
   private subColors: string[] = [];
-  private mosaicColors: THREE.Color[] = [];
+  private mosaicColors: Record<MosaicGround, THREE.Color[]> = { light: [], dark: [] };
+
+  readonly dark = () => this.view() === 'mosaic' && this.ground() === 'dark';
 
   constructor() {
     effect(() => {
       this.view();
+      this.ground();
+      this.showRelief();
+      this.relief();
+      if (this.ready) this.restyle();
+    });
+    effect(() => {
       this.selected();
+      this.drop();
       if (!this.ready) return;
-      this.drawRegion();
-      this.colorRivers();
+      this.updateBasinColours();
+      this.updateOverlays();
+      this.invalidate();
     });
     effect(() => {
       const v = this.showRivers();
       this.rivers.visible = v;
+      this.invalidate();
     });
     effect(() => {
       const v = this.showBorders();
       if (this.borders) this.borders.visible = v;
+      this.invalidate();
+    });
+    effect(() => {
+      const on = this.showFlow();
+      if (this.ready) this.setFlow(on);
     });
     effect(() => {
       this.basinLabel();
       this.subNames();
-      if (this.ready) this.buildLabels();
+      if (this.ready) { this.buildLabels(); this.invalidate(); }
+    });
+    effect(() => {
+      const s = this.streams();
+      if (this.ready && s && !this.riverLayers.some(l => l.cls === s.cls)) this.addRiverLayer(s);
+    });
+    effect(() => {
+      const d = this.drop();
+      if (this.ready) this.showDrop(d);
     });
   }
 
@@ -209,7 +320,22 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
     if (!b) return;
     const alt = clamp(0.4 + Math.sqrt(b.kind === 'basin' ? b.area : 400) / 260, 0.6, Math.min(3.4, this.altMax));
     const [lon, lat] = b.mouth ? [lerp(b.cen[0], b.mouth[0], 0.35), lerp(b.cen[1], b.mouth[1], 0.35)] : b.cen;
-    this.fly = { from: { ...this.cam }, to: this.clampView({ lon, lat, alt }), t: 0 };
+    this.flyTo({ lon, lat, alt });
+  }
+
+  /** Smoothly frames a lon/lat box. */
+  flyToBox(lon0: number, lon1: number, lat0: number, lat1: number) {
+    const el = this.host.nativeElement;
+    const aspect = el.clientWidth / Math.max(1, el.clientHeight);
+    const lat = (lat0 + lat1) / 2;
+    // Visible latitude span ≈ 2·alt·tan(fov/2) / R radians.
+    const perAlt = (2 * Math.tan((VFOV / 2) * DEG)) / R / DEG;
+    const alt = Math.max(((lat1 - lat0) * 1.7) / perAlt, ((lon1 - lon0) * Math.cos(lat * DEG) * 1.7) / (perAlt * aspect), 0.25);
+    this.flyTo({ lon: (lon0 + lon1) / 2, lat, alt });
+  }
+
+  private flyTo(to: View) {
+    this.fly = { from: { ...this.cam }, to: this.clampView(to), t: 0 };
   }
 
   // ─── camera ───────────────────────────────────────────────────────────────
@@ -251,10 +377,11 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
     for (let k = 0; k < 2; k++) {
       this.placeCamera();
       const at = this.lonLatAt(x, y);
-      if (!at) return;
+      if (!at) break;
       this.cam = this.clampView({ lon: this.cam.lon + grab[0] - at[0], lat: this.cam.lat + grab[1] - at[1], alt: this.cam.alt });
     }
     this.placeCamera();
+    this.invalidate();
   }
 
   /** Zooms by `factor` (< 1 = in) about the screen point (x, y). */
@@ -263,7 +390,11 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
     const grab = this.lonLatAt(x, y);
     this.cam = this.clampView({ ...this.cam, alt: this.cam.alt * factor });
     if (grab) this.pinTo(grab, x, y);
-    else this.placeCamera();
+    else { this.placeCamera(); this.invalidate(); }
+  }
+
+  private invalidate() {
+    this.dirty = true;
   }
 
   // ─── setup ────────────────────────────────────────────────────────────────
@@ -284,62 +415,137 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
       river: tok('globe-river', '#94a3b8'),
       riverActive: tok('globe-river-active', '#0284c7'),
       ink: tok('text-bright', '#0f172a'),
-      border: tok('text-note', '#475569')
+      border: tok('text-note', '#475569'),
+      mosaicGround: tok('globe-mosaic-ground', '#ffffff'),
+      darkBg: tok('globe-dark-bg', '#040812'),
+      darkGround: tok('globe-dark-ground', '#040812'),
+      darkLand: tok('globe-dark-land', '#0f172a'),
+      darkOcean: tok('globe-dark-ocean', '#0b1530'),
+      darkLake: tok('globe-dark-lake', '#132650'),
+      darkOutline: tok('globe-dark-outline', '#475569'),
+      drop: tok('globe-drop', '#d37400'),
+      dropHalo: tok('globe-drop-halo', '#ffffff'),
+      light: tok('neutral-200', '#e2e8f0')
     };
     this.subColors = Array.from({ length: SUB_COUNT }, (_, i) => tok(subToken(i), this.colors['catchment']));
-    this.colors['mosaicGround'] = tok('globe-mosaic-ground', '#ffffff');
-    this.mosaicColors = Array.from({ length: MOSAIC_COUNT }, (_, i) => new THREE.Color(tok(mosaicToken(i), this.colors['river'])));
+    for (const g of ['light', 'dark'] as MosaicGround[]) {
+      this.mosaicColors[g] = Array.from({ length: MOSAIC_COUNT }, (_, i) => new THREE.Color(tok(mosaicToken(i, g), this.colors['river'])));
+    }
   }
 
-  private init() {
+  private async init() {
     const data = this.data();
     const canvas = this.canvasRef().nativeElement;
+    const mobile = isAtMost('mobile');
+    const tablet = isAtMost('tablet');
     this.readColors();
 
-    this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-    this.renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    this.renderer = new THREE.WebGLRenderer({ canvas, antialias: !mobile, powerPreference: 'high-performance' });
+    // 1.5 looks nearly as crisp as 2–3 on HiDPI screens at a fraction of the fragment cost.
+    this.renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 1.5));
     this.scene.background = new THREE.Color(this.colors['bg']);
+    this.emitProgress(0.1);
 
-    this.buildContext(data);
-    this.buildRegion(data);
-    this.buildRivers(data);
-    this.buildBorders(data);
+    this.basinTex = new THREE.DataTexture(this.lut, BASIN_TEX, 1, THREE.RGBAFormat, THREE.FloatType);
+    this.basinTex.minFilter = this.basinTex.magFilter = THREE.NearestFilter;
+    this.basinTex.needsUpdate = true;
 
-    this.ready = true;
+    await nextFrame();
+    this.buildContext(data, mobile ? 1024 : 2048);
+    this.emitProgress(0.2);
+
+    await nextFrame();
+    this.buildRegion(data, mobile ? 3072 : tablet ? 4096 : 5120);
     this.drawRegion();
-    this.colorRivers();
-    this.rivers.visible = this.showRivers();
-    this.borders!.visible = this.showBorders();
+    this.emitProgress(0.5);
+
+    this.scene.add(this.rivers);
+    for (const rc of data.rivers) {
+      await nextFrame();
+      this.addRiverLayer(rc);
+      this.emitProgress(0.5 + 0.3 * (rc.cls / 4));
+    }
+
+    await nextFrame();
+    this.buildBorders(data);
+    this.selOverlay = this.makeOverlay(2048);
+    this.hovOverlay = this.makeOverlay(1024);
     this.buildLabels();
+    this.emitProgress(0.9);
 
     const w = this.host.nativeElement.clientWidth, h = this.host.nativeElement.clientHeight;
     this.home = { lon: 20, lat: 59, alt: w / Math.max(h, 1) < 0.9 ? 4.6 : 3.2 };
     this.altMax = this.home.alt * ALT_OUT;
     this.cam = { ...this.home };
 
-    this.resizeObs = new ResizeObserver(() => this.resize());
+    this.resizeObs = new ResizeObserver(() => { this.resize(); this.invalidate(); });
     this.resizeObs.observe(this.host.nativeElement);
     this.resize();
-
     this.bindPointer(canvas);
+
+    this.ready = true;
+    // The smallest streams may have arrived while setup was still running.
+    const streams = this.streams();
+    if (streams && !this.riverLayers.some(l => l.cls === streams.cls)) this.addRiverLayer(streams);
+    this.restyle();
+    this.updateOverlays();
+    this.rivers.visible = this.showRivers();
+    this.borders!.visible = this.showBorders();
+    this.setFlow(this.showFlow());
+    this.showDrop(this.drop());
     this.frame();
+    this.emitProgress(1);
   }
+
+  private emitProgress(p: number) {
+    this.zone.run(() => this.progress.emit(p));
+  }
+
+  /** Re-applies everything that depends on the view, the mosaic ground or the relief layer. */
+  private restyle() {
+    this.scene.background = new THREE.Color(this.dark() ? this.colors['darkBg'] : this.colors['bg']);
+    this.drawContext();
+    this.drawRegion();
+    this.riverLayers.forEach(l => (l.mat.opacity = (this.view() === 'mosaic' ? MOSAIC_RIVER_OPACITY : RIVER_OPACITY)[l.cls]));
+    if (this.borderMat) this.borderMat.color.set(this.dark() ? this.colors['light'] : this.colors['border']);
+    this.updateBasinColours();
+    this.updateOverlays();
+    this.invalidate();
+  }
+
+  // ─── base map ─────────────────────────────────────────────────────────────
 
   /**
    * Coarse land and sea in a ring around the data box, fading to transparent at its outer edge so
    * the cut-out melts into the page. The detailed region patch sits on top of its inner part.
    */
-  private buildContext(data: BalticData) {
-    const [LON0, LON1, LAT0, LAT1] = data.bbox;
-    const [mx, my] = CONTEXT_MARGIN;
-    const W0 = LON0 - mx, W1 = LON1 + mx, S0 = LAT0 - my, S1 = LAT1 + my;
-    const W = 2048;
-    const H = Math.round((W * (S1 - S0)) / (W1 - W0) / Math.cos(59 * DEG));
-    const cv = document.createElement('canvas');
-    cv.width = W; cv.height = H;
+  private buildContext(data: BalticData, width: number) {
+    const [W0, W1, S0, S1] = data.worldBox;
+    this.contextCanvas.width = width;
+    this.contextCanvas.height = Math.round((width * (S1 - S0)) / (W1 - W0) / Math.cos(59 * DEG));
+    this.contextTex = new THREE.CanvasTexture(this.contextCanvas);
+    this.contextTex.colorSpace = THREE.SRGBColorSpace;
+    this.drawContext();
+    const mesh = new THREE.Mesh(
+      sector(data.worldBox, R, 128, 96),
+      new THREE.MeshBasicMaterial({ map: this.contextTex, transparent: true, depthWrite: false })
+    );
+    mesh.renderOrder = 0;
+    this.scene.add(mesh);
+  }
+
+  private drawContext() {
+    const data = this.data();
+    const [W0, W1, S0, S1] = data.worldBox;
+    const [LON0, , LAT0] = data.bbox;
+    const cv = this.contextCanvas, W = cv.width, H = cv.height;
     const x = cv.getContext('2d')!;
-    x.fillStyle = this.colors['ocean']; x.fillRect(0, 0, W, H);
-    x.fillStyle = this.colors['land'];
+    const dark = this.dark();
+    x.globalCompositeOperation = 'source-over';
+    x.globalAlpha = 1;
+    x.fillStyle = dark ? this.colors['darkOcean'] : this.colors['ocean'];
+    x.fillRect(0, 0, W, H);
+    x.fillStyle = dark ? this.colors['darkLand'] : this.colors['land'];
     for (const poly of data.world) {
       x.beginPath();
       for (const ring of poly) {
@@ -351,8 +557,9 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
       }
       x.fill('evenodd');
     }
+    this.drawRelief(x, 0, 0, W, H, [W0, W1, S0, S1]);
     // Feather: each edge erases with a smooth ramp over most of the margin; corners compound.
-    const fx = (mx / (W1 - W0)) * W * 0.9, fy = (my / (S1 - S0)) * H * 0.9;
+    const fx = ((LON0 - W0) / (W1 - W0)) * W * 0.9, fy = ((LAT0 - S0) / (S1 - S0)) * H * 0.9;
     x.globalCompositeOperation = 'destination-out';
     const ramp = (g: CanvasGradient) => {
       [[0, 1], [0.3, 0.72], [0.6, 0.3], [0.85, 0.07], [1, 0]].forEach(([o, a]) => g.addColorStop(o, `rgba(0,0,0,${a})`));
@@ -363,21 +570,29 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
     x.fillStyle = ramp(x.createLinearGradient(0, 0, 0, fy)); x.fillRect(0, 0, W, fy);
     x.fillStyle = ramp(x.createLinearGradient(0, H, 0, H - fy)); x.fillRect(0, H - fy, W, fy);
     x.globalCompositeOperation = 'source-over';
-
-    const tex = new THREE.CanvasTexture(cv);
-    tex.colorSpace = THREE.SRGBColorSpace;
-    tex.anisotropy = this.renderer.capabilities.getMaxAnisotropy();
-    const mesh = new THREE.Mesh(
-      new THREE.SphereGeometry(R, 128, 96, (W0 + 180) * DEG, (W1 - W0) * DEG, (90 - S1) * DEG, (S1 - S0) * DEG),
-      new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false })
-    );
-    mesh.renderOrder = 0;
-    this.scene.add(mesh);
+    if (this.contextTex) this.contextTex.needsUpdate = true;
   }
 
-  private buildRegion(data: BalticData) {
+  /** Soft-light hillshade over the target rectangle, which covers `box` (lon0, lon1, lat0, lat1). */
+  private drawRelief(x: CanvasRenderingContext2D, dx: number, dy: number, dw: number, dh: number, box: [number, number, number, number]) {
+    const img = this.relief();
+    if (!img || !this.showRelief()) return;
+    const [W0, W1, S0, S1] = this.data().worldBox;
+    const iw = img.width, ih = img.height;
+    const sx = ((box[0] - W0) / (W1 - W0)) * iw, sw = ((box[1] - box[0]) / (W1 - W0)) * iw;
+    const sy = ((S1 - box[3]) / (S1 - S0)) * ih, sh = ((box[3] - box[2]) / (S1 - S0)) * ih;
+    x.save();
+    x.globalCompositeOperation = 'soft-light';
+    x.globalAlpha = RELIEF_ALPHA;
+    x.imageSmoothingEnabled = true;
+    x.imageSmoothingQuality = 'high';
+    x.drawImage(img, sx, sy, sw, sh, dx, dy, dw, dh);
+    x.restore();
+  }
+
+  private buildRegion(data: BalticData, width: number) {
     const [LON0, LON1, LAT0, LAT1] = data.bbox;
-    this.RW = Math.min(this.renderer.capabilities.maxTextureSize, 6144);
+    this.RW = Math.min(this.renderer.capabilities.maxTextureSize, width);
     this.RH = Math.round(((this.RW * (LAT1 - LAT0)) / (LON1 - LON0) / Math.cos(59 * DEG)) * 0.62);
     this.regionCanvas.width = this.RW;
     this.regionCanvas.height = this.RH;
@@ -386,11 +601,256 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
     this.regionTex.colorSpace = THREE.SRGBColorSpace;
     this.regionTex.anisotropy = this.renderer.capabilities.getMaxAnisotropy();
     const patch = new THREE.Mesh(
-      new THREE.SphereGeometry(R * 1.0004, 160, 120, (LON0 + 180) * DEG, (LON1 - LON0) * DEG, (90 - LAT1) * DEG, (LAT1 - LAT0) * DEG),
+      sector(data.bbox, R * 1.0004, 160, 120),
       new THREE.MeshBasicMaterial({ map: this.regionTex, polygonOffset: true, polygonOffsetFactor: -1 })
     );
     this.scene.add(patch);
   }
+
+  /** Lon/lat → pixel in a canvas covering `box`. */
+  private pathPoly(x: CanvasRenderingContext2D, poly: Poly, box: [number, number, number, number], W: number, H: number) {
+    const [w, e, s, n] = box;
+    x.beginPath();
+    for (const ring of poly) {
+      for (let k = 0; k < ring.length; k += 2) {
+        const px = ((ring[k] - w) / (e - w)) * W, py = ((n - ring[k + 1]) / (n - s)) * H;
+        k ? x.lineTo(px, py) : x.moveTo(px, py);
+      }
+      x.closePath();
+    }
+  }
+
+  /** The large base texture: depends on the view, the mosaic ground and the relief only. */
+  private drawRegion() {
+    const data = this.data();
+    const x = this.regionCtx;
+    const view = this.view();
+    const dark = this.dark();
+    const s = this.RW / 4096;
+    const [LON0, LON1, LAT0, LAT1] = data.bbox;
+    const box: [number, number, number, number] = [LON0, LON1, LAT0, LAT1];
+    const path = (p: Poly) => this.pathPoly(x, p, box, this.RW, this.RH);
+
+    x.fillStyle = dark ? this.colors['darkOcean'] : this.colors['ocean']; x.fillRect(0, 0, this.RW, this.RH);
+    x.fillStyle = dark ? this.colors['darkLand'] : this.colors['land'];
+    for (const p of data.land) { path(p); x.fill('evenodd'); }
+
+    data.basins.forEach((b, i) => {
+      // In the mosaic the rivers carry the colour; the basin itself is plain ground.
+      x.fillStyle =
+        view === 'mosaic' ? (dark ? this.colors['darkGround'] : this.colors['mosaicGround'])
+        : view === 'seas' ? this.subColors[b.sub]
+        : b.river ? this.colors['catchment'] : this.colors['coast'];
+      path(data.basinPolys[i]);
+      x.fill('evenodd');
+    });
+
+    x.fillStyle = dark ? this.colors['darkLake'] : this.colors['lake'];
+    for (const p of data.lakes) { path(p); x.fill('evenodd'); }
+
+    this.drawRelief(x, 0, 0, this.RW, this.RH, box);
+
+    // Catchment and sub-basin lines; the mosaic draws its borders with colour alone.
+    const soft = this.softOutlines();
+    if (view !== 'mosaic') {
+      x.strokeStyle = this.colors['ink']; x.globalAlpha = 0.16; x.lineWidth = 0.9 * s;
+      data.basins.forEach((b, i) => { if (b.kind === 'basin') { path(data.basinPolys[i]); x.stroke(); } });
+      x.globalAlpha = 0.28; x.lineWidth = 1.3 * s;
+      for (let k = 0; k < 6; k++) { path(soft[k]); x.stroke(); }
+    }
+
+    // Drainage divide (it also traces the coast): soft and light, so skerries do not turn into
+    // dark scribbles — land against water already reads from the fills.
+    x.lineJoin = 'round';
+    x.strokeStyle = dark ? this.colors['darkOutline'] : this.colors['outline'];
+    x.globalAlpha = OUTLINE_ALPHA;
+    x.lineWidth = 1.4 * s;
+    path(soft[6]); x.stroke();
+    x.globalAlpha = 1;
+    this.regionTex.needsUpdate = true;
+  }
+
+  private softCache?: Poly[];
+
+  /** Outlines without the rings of small islands (skerries), cached. */
+  private softOutlines(): Poly[] {
+    if (this.softCache) return this.softCache;
+    const area = (r: Float32Array) => {
+      let a = 0;
+      for (let i = 0, j = r.length - 2; i < r.length; j = i, i += 2) a += r[j] * r[i + 1] - r[i] * r[j + 1];
+      return Math.abs(a / 2) * Math.cos(((r[1] ?? 59) * Math.PI) / 180);
+    };
+    return (this.softCache = this.data().outlines.map(p => p.filter(r => area(r) >= MIN_OUTLINE_RING)));
+  }
+
+  // ─── selection & hover overlays ───────────────────────────────────────────
+
+  private makeOverlay(maxSide: number): Overlay {
+    const canvas = document.createElement('canvas');
+    canvas.width = canvas.height = 2;
+    (canvas as HTMLCanvasElement & { maxSide?: number }).maxSide = maxSide;
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    const mesh = new THREE.Mesh(
+      new THREE.SphereGeometry(R, 2, 2),
+      new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 })
+    );
+    mesh.renderOrder = 1;
+    mesh.visible = false;
+    this.scene.add(mesh);
+    return { mesh, canvas, tex, id: -1 };
+  }
+
+  private updateOverlays() {
+    if (!this.selOverlay || !this.hovOverlay) return;
+    const sel = this.selected();
+    this.paintOverlay(this.selOverlay, sel, 'sel');
+    this.paintOverlay(this.hovOverlay, this.hovered !== sel ? this.hovered : -1, 'hov');
+  }
+
+  /**
+   * Fills (catchment views) and/or outlines (all views) one basin into its own small texture on
+   * a sphere sector just above the base map.
+   */
+  private paintOverlay(o: Overlay, id: number, kind: 'sel' | 'hov') {
+    const data = this.data();
+    const b = id >= 0 ? data.basins[id] : null;
+    if (!b) { o.mesh.visible = false; o.id = -1; return; }
+    const m = 0.03;
+    const box: [number, number, number, number] = [b.bb[0] - m, b.bb[1] + m, b.bb[2] - m, b.bb[3] + m];
+    const maxSide = (o.canvas as HTMLCanvasElement & { maxSide?: number }).maxSide ?? 1024;
+    const aspect = ((box[1] - box[0]) * Math.cos(((box[2] + box[3]) / 2) * DEG)) / (box[3] - box[2]);
+    const W = Math.max(8, Math.round(aspect >= 1 ? maxSide : maxSide * aspect));
+    const H = Math.max(8, Math.round(aspect >= 1 ? maxSide / aspect : maxSide));
+    o.canvas.width = W; o.canvas.height = H;
+    const x = o.canvas.getContext('2d')!;
+    x.clearRect(0, 0, W, H);
+    const view = this.view();
+    const dark = this.dark();
+    const lw = Math.max(1.5, Math.max(W, H) / 380);
+    this.pathPoly(x, data.basinPolys[id], box, W, H);
+    if (view !== 'mosaic') {
+      x.globalAlpha = kind === 'sel' ? 1 : 0.55;
+      x.fillStyle = this.colors['catchmentActive'];
+      x.fill('evenodd');
+    }
+    x.globalAlpha = kind === 'sel' ? 1 : 0.6;
+    x.strokeStyle = dark ? this.colors['light'] : this.colors['ink'];
+    x.lineWidth = kind === 'sel' ? lw * 1.6 : lw;
+    x.lineJoin = 'round';
+    x.stroke();
+    x.globalAlpha = 1;
+    o.tex.dispose();
+    o.tex = new THREE.CanvasTexture(o.canvas);
+    o.tex.colorSpace = THREE.SRGBColorSpace;
+    o.tex.anisotropy = this.renderer.capabilities.getMaxAnisotropy();
+    o.mesh.material.map = o.tex;
+    o.mesh.material.needsUpdate = true;
+    o.mesh.geometry.dispose();
+    o.mesh.geometry = sector(box, R * 1.0006, Math.max(8, Math.ceil((box[1] - box[0]) * 4)), Math.max(8, Math.ceil((box[3] - box[2]) * 4)));
+    o.mesh.visible = true;
+    o.id = id;
+  }
+
+  // ─── rivers ───────────────────────────────────────────────────────────────
+
+  /**
+   * One LineSegments2 per river class. Segments lying on a lake (flagged at build time) are
+   * skipped: HydroRIVERS routes flow through lakes as straight connector reaches.
+   */
+  private addRiverLayer(rc: RiverClassGeometry) {
+    const data = this.data();
+    let total = 0;
+    for (const n of rc.cnt) total += n - 1;
+    const P = new Float32Array(total * 6);
+    const C = new Float32Array(total * 6);
+    const v = new THREE.Vector3(), w = new THREE.Vector3();
+    const rr = R * (1.0009 + rc.cls * 0.00012);
+    let o = 0, seg = 0, s = 0;
+    for (let i = 0; i < rc.cnt.length; i++) {
+      const g = rc.g[i];
+      lonLatToVec(data.qx(rc.xy[o * 2]), data.qy(rc.xy[o * 2 + 1]), rr, v); o++;
+      for (let k = 1; k < rc.cnt[i]; k++, o++, seg++) {
+        lonLatToVec(data.qx(rc.xy[o * 2]), data.qy(rc.xy[o * 2 + 1]), rr, w);
+        if (!(rc.wet[seg >> 3] & (1 << (seg & 7)))) {
+          P[s * 6] = v.x; P[s * 6 + 1] = v.y; P[s * 6 + 2] = v.z;
+          P[s * 6 + 3] = w.x; P[s * 6 + 4] = w.y; P[s * 6 + 5] = w.z;
+          C[s * 6] = C[s * 6 + 3] = g;
+          s++;
+        }
+        v.copy(w);
+      }
+    }
+    const geo = new LineSegmentsGeometry();
+    geo.setPositions(P.subarray(0, s * 6));
+    geo.setColors(C.subarray(0, s * 6));
+    const mat = new LineMaterial({
+      vertexColors: true,
+      linewidth: RIVER_WIDTH[rc.cls],
+      transparent: true,
+      opacity: (this.view() === 'mosaic' ? MOSAIC_RIVER_OPACITY : RIVER_OPACITY)[rc.cls],
+      depthWrite: rc.cls > 0
+    });
+    patchBasinColours(mat, this.basinTex);
+    const el = this.host.nativeElement;
+    mat.resolution.set(el.clientWidth || 1, el.clientHeight || 1);
+    const line = new LineSegments2(geo, mat);
+    line.frustumCulled = false;
+    line.renderOrder = 2 + rc.cls;
+    this.rivers.add(line);
+    const layer: RiverLayer = { cls: rc.cls, line, mat, distances: false };
+    this.riverLayers.push(layer);
+    if (this.ready && this.showFlow()) this.setFlow(true);
+    this.invalidate();
+  }
+
+  /** Writes every basin's river colour (and alpha) into the lookup texture. */
+  private updateBasinColours() {
+    if (!this.basinTex) return;
+    const data = this.data();
+    const lut = this.lut;
+    const view = this.view();
+    const sel = this.selected();
+    const hov = this.hovered;
+    const tmp = new THREE.Color();
+    if (view === 'mosaic') {
+      const g = this.ground();
+      const pal = this.mosaicColors[g];
+      const groundC = new THREE.Color(g === 'dark' ? this.colors['darkGround'] : this.colors['mosaicGround']);
+      const fade = sel >= 0 ? MOSAIC_FADE : hov >= 0 ? MOSAIC_HOVER_FADE : 0;
+      data.basins.forEach((b, i) => {
+        tmp.copy(pal[b.mosaic]);
+        if (fade && i !== sel && i !== hov) tmp.lerp(groundC, fade);
+        lut.set([tmp.r, tmp.g, tmp.b, 1], i * 4);
+      });
+    } else {
+      const base = new THREE.Color(this.colors['river']);
+      const active = new THREE.Color(this.colors['riverActive']);
+      const dropBasin = view === 'raindrop' ? (this.drop()?.basin ?? -1) : -1;
+      data.basins.forEach((_, i) => {
+        if (i === sel) tmp.copy(active);
+        else if (i === hov) tmp.copy(base).lerp(active, 0.65);
+        else if (i === dropBasin) tmp.copy(base).lerp(active, 0.5);
+        else tmp.copy(base);
+        lut.set([tmp.r, tmp.g, tmp.b, 1], i * 4);
+      });
+    }
+    this.basinTex.needsUpdate = true;
+    this.invalidate();
+  }
+
+  /** Flow: rivers become dashes marching downstream (reaches are stored in flow direction). */
+  private setFlow(on: boolean) {
+    for (const l of this.riverLayers) {
+      if (on && !l.distances) { l.line.computeLineDistances(); l.distances = true; }
+      l.mat.dashed = on;
+      l.mat.dashSize = 1;
+      l.mat.gapSize = FLOW_GAP;
+    }
+    this.invalidate();
+  }
+
+  // ─── borders ──────────────────────────────────────────────────────────────
 
   /**
    * Country borders as screen-space dashed lines drawn above the rivers. Baking them into the
@@ -430,135 +890,75 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
     this.scene.add(this.borders);
   }
 
-  /**
-   * HydroRIVERS routes flow through lakes as straight synthetic reaches (hundreds of parallel lines
-   * across Ladoga and Onega). Segments whose midpoint lies on a lake are skipped; rivers still
-   * meet the shore, and the lake fill carries the water.
-   */
-  private buildRivers(data: BalticData) {
-    this.scene.add(this.rivers);
-    this.riverLayers = data.rivers.map((rc, ci) => {
-      let total = 0;
-      for (const n of rc.cnt) total += n - 1;
-      const P = new Float32Array(total * 6);
-      const segBasin = new Uint16Array(total);
-      const v = new THREE.Vector3(), w = new THREE.Vector3();
-      const rr = R * (1.0009 + ci * 0.00012);
-      let o = 0, s = 0;
-      for (let i = 0; i < rc.cnt.length; i++) {
-        let lon = data.qx(rc.xy[o * 2]), lat = data.qy(rc.xy[o * 2 + 1]);
-        lonLatToVec(lon, lat, rr, v); o++;
-        for (let k = 1; k < rc.cnt[i]; k++, o++) {
-          const lon2 = data.qx(rc.xy[o * 2]), lat2 = data.qy(rc.xy[o * 2 + 1]);
-          lonLatToVec(lon2, lat2, rr, w);
-          if (!data.inLake((lon + lon2) / 2, (lat + lat2) / 2)) {
-            P.set([v.x, v.y, v.z, w.x, w.y, w.z], s * 6);
-            segBasin[s++] = rc.g[i];
-          }
-          v.copy(w);
-          lon = lon2; lat = lat2;
-        }
-      }
-      const nseg = s;
+  // ─── raindrop ─────────────────────────────────────────────────────────────
+
+  /** Draws the path of a raindrop and animates it from where it fell to the sea. */
+  private showDrop(path: RaindropPath | null) {
+    for (const l of [this.dropLine, this.dropHalo]) {
+      if (!l) continue;
+      this.scene.remove(l);
+      l.geometry.dispose();
+      (l.material as LineMaterial).dispose();
+    }
+    this.dropLine = this.dropHalo = undefined;
+    this.dropReveal = null;
+    this.dropHead = null;
+    this.dropRef().nativeElement.style.opacity = '0';
+    if (!path || this.view() !== 'raindrop') { this.invalidate(); return; }
+
+    const n = path.points.length / 2;
+    const P = new Float32Array((n - 1) * 6);
+    const v = new THREE.Vector3(), w = new THREE.Vector3();
+    lonLatToVec(path.points[0], path.points[1], R * 1.0018, v);
+    for (let i = 1; i < n; i++) {
+      lonLatToVec(path.points[i * 2], path.points[i * 2 + 1], R * 1.0018, w);
+      P.set([v.x, v.y, v.z, w.x, w.y, w.z], (i - 1) * 6);
+      v.copy(w);
+    }
+    const el = this.host.nativeElement;
+    const make = (color: string, width: number, order: number, opacity: number) => {
       const geo = new LineSegmentsGeometry();
-      geo.setPositions(P.slice(0, nseg * 6));
-      const col = new Float32Array(nseg * 6);
-      geo.setColors(col);
-      const mat = new LineMaterial({ vertexColors: true, linewidth: RIVER_WIDTH[ci], transparent: true, opacity: RIVER_OPACITY[ci], depthWrite: ci > 0 });
+      geo.setPositions(P);
+      const mat = new LineMaterial({ color: new THREE.Color(color).getHex(), linewidth: width, transparent: true, opacity, depthWrite: false });
+      mat.resolution.set(el.clientWidth || 1, el.clientHeight || 1);
       const line = new LineSegments2(geo, mat);
       line.frustumCulled = false;
-      line.renderOrder = 2 + ci;
-      this.rivers.add(line);
-      return { geo, mat, segBasin: segBasin.slice(0, nseg), col, nseg };
-    });
+      line.renderOrder = order;
+      geo.instanceCount = 0;
+      this.scene.add(line);
+      return line;
+    };
+    this.dropHalo = make(this.colors['dropHalo'], 7, 11, 0.85);
+    this.dropLine = make(this.colors['drop'], 3.5, 12, 1);
+    this.dropReveal = { t: 0, dur: clamp(1.8 + path.totalKm / 500, 2, 5), path };
+
+    let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9;
+    for (let i = 0; i < n; i++) {
+      x0 = Math.min(x0, path.points[i * 2]); x1 = Math.max(x1, path.points[i * 2]);
+      y0 = Math.min(y0, path.points[i * 2 + 1]); y1 = Math.max(y1, path.points[i * 2 + 1]);
+    }
+    this.flyToBox(x0, x1, y0, y1);
+    this.invalidate();
   }
 
-  // ─── styling (re-run on view / selection change) ─────────────────────────
-
-  private pathPoly(poly: Poly) {
-    const data = this.data();
-    const [LON0, LON1, LAT0, LAT1] = data.bbox;
-    const x = this.regionCtx;
-    x.beginPath();
-    for (const ring of poly) {
-      for (let k = 0; k < ring.length; k += 2) {
-        const px = ((ring[k] - LON0) / (LON1 - LON0)) * this.RW;
-        const py = ((LAT1 - ring[k + 1]) / (LAT1 - LAT0)) * this.RH;
-        k ? x.lineTo(px, py) : x.moveTo(px, py);
-      }
-      x.closePath();
-    }
-  }
-
-  private drawRegion() {
-    const data = this.data();
-    const x = this.regionCtx;
-    const view = this.view();
-    const sel = this.selected();
-    const s = this.RW / 4096;
-
-    x.fillStyle = this.colors['ocean']; x.fillRect(0, 0, this.RW, this.RH);
-    x.fillStyle = this.colors['land'];
-    for (const p of data.land) { this.pathPoly(p); x.fill('evenodd'); }
-
-    data.basins.forEach((b, i) => {
-      // In the mosaic the rivers carry the colour; the basin itself is plain ground.
-      x.fillStyle =
-        view === 'mosaic' ? this.colors['mosaicGround']
-        : i === sel ? this.colors['catchmentActive']
-        : view === 'seas' ? this.subColors[b.sub]
-        : b.river ? this.colors['catchment'] : this.colors['coast'];
-      this.pathPoly(data.basinPolys[i]);
-      x.fill('evenodd');
-    });
-
-    x.fillStyle = this.colors['lake'];
-    for (const p of data.lakes) { this.pathPoly(p); x.fill('evenodd'); }
-
-    // Catchment and sub-basin lines; the mosaic draws its borders with colour alone.
-    if (view !== 'mosaic') {
-      x.strokeStyle = this.colors['ink']; x.globalAlpha = 0.16; x.lineWidth = 0.9 * s;
-      data.basins.forEach((b, i) => { if (b.kind === 'basin') { this.pathPoly(data.basinPolys[i]); x.stroke(); } });
-      x.globalAlpha = 0.35; x.lineWidth = 1.6 * s;
-      for (let k = 0; k < 6; k++) { this.pathPoly(data.outlines[k]); x.stroke(); }
-      x.globalAlpha = 1;
-    }
-
-    x.strokeStyle = this.colors['outline']; x.lineWidth = 2.6 * s;
-    this.pathPoly(data.outlines[6]); x.stroke();
-
-    if (sel >= 0) {
-      x.strokeStyle = this.colors['ink']; x.lineWidth = 3.4 * s;
-      this.pathPoly(data.basinPolys[sel]); x.stroke();
-    }
-    this.regionTex.needsUpdate = true;
-  }
-
-  private colorRivers() {
-    const sel = this.selected();
-    const basins = this.data().basins;
-    const mosaic = this.view() === 'mosaic';
-    const base = new THREE.Color(this.colors['river']);
-    const active = new THREE.Color(this.colors['riverActive']);
-    const ground = new THREE.Color(this.colors['mosaicGround']);
-    // Mosaic: each basin in its own colour; a selection fades every other basin toward the ground.
-    const tint = this.mosaicColors.map(c => (sel < 0 ? c : c.clone().lerp(ground, MOSAIC_FADE)));
-    this.riverLayers.forEach((layer, ci) => {
-      layer.mat.opacity = (mosaic ? MOSAIC_RIVER_OPACITY : RIVER_OPACITY)[ci];
-      for (let s = 0; s < layer.nseg; s++) {
-        const id = layer.segBasin[s];
-        const c = mosaic
-          ? id === sel ? this.mosaicColors[basins[id].mosaic] : tint[basins[id].mosaic]
-          : id === sel ? active : base;
-        const o = s * 6;
-        layer.col[o] = layer.col[o + 3] = c.r;
-        layer.col[o + 1] = layer.col[o + 4] = c.g;
-        layer.col[o + 2] = layer.col[o + 5] = c.b;
-      }
-      const attr = layer.geo.attributes['instanceColorStart'] as THREE.InterleavedBufferAttribute;
-      (attr.data.array as Float32Array).set(layer.col);
-      attr.data.needsUpdate = true;
-    });
+  /** Advances the raindrop reveal; returns true while it is still running. */
+  private stepDrop(dt: number): boolean {
+    const r = this.dropReveal;
+    if (!r || !this.dropLine || !this.dropHalo) return false;
+    r.t = Math.min(1, r.t + dt / r.dur);
+    const e = r.t < 0.5 ? 2 * r.t * r.t : 1 - Math.pow(-2 * r.t + 2, 2) / 2;
+    const target = e * r.path.totalKm;
+    const km = r.path.km;
+    let i = 1;
+    while (i < km.length && km[i] < target) i++;
+    const segs = Math.min(km.length - 1, i);
+    this.dropLine.geometry.instanceCount = segs;
+    this.dropHalo.geometry.instanceCount = segs;
+    const p = r.path.points;
+    const k = Math.min(segs, km.length - 1);
+    this.dropHead = [p[k * 2], p[k * 2 + 1]];
+    if (r.t >= 1) this.dropReveal = null;
+    return true;
   }
 
   // ─── labels ───────────────────────────────────────────────────────────────
@@ -569,44 +969,53 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
     root.textContent = '';
     this.labels = [];
     const label = this.basinLabel();
-    const mk = (text: string, cls: string, lon: number, lat: number, maxDist: number) => {
+    const mk = (text: string, kind: Label['kind'], lon: number, lat: number, maxDist: number) => {
       const el = document.createElement('div');
-      el.className = 'globe-label ' + cls;
+      el.className = 'globe-label ' + (kind === 'sea' ? 'globe-label--sea' : 'globe-label--river' + (kind === 'big' ? ' globe-label--big' : ''));
       el.textContent = text;
       root.appendChild(el);
-      this.labels.push({ el, p: lonLatToVec(lon, lat, R * 1.002), maxDist, w: 0, h: 16 });
+      this.labels.push({ el, p: lonLatToVec(lon, lat, R * 1.002), maxDist, w: 0, h: 16, text, kind });
     };
-    this.subNames().forEach((name, i) => mk(name, 'globe-label--sea', data.subs[i].lbl[0], data.subs[i].lbl[1], 99));
+    this.subNames().forEach((name, i) => mk(name, 'sea', data.subs[i].lbl[0], data.subs[i].lbl[1], 99));
     data.basins
       .filter(b => b.kind === 'basin' && b.name && b.lbl)
       .sort((a, b) => b.area - a.area)
       .forEach(b => {
         const big = b.area > 40000;
-        mk(label(b).replace(/ \(.+\)$/, ''), 'globe-label--river' + (big ? ' globe-label--big' : ''), b.lbl![0], b.lbl![1], big ? 99 : b.area > 15000 ? R + 5 : R + 2.6);
+        mk(label(b).replace(/ \(.+\)$/, ''), big ? 'big' : 'river', b.lbl![0], b.lbl![1], big ? 99 : b.area > 15000 ? R + 5 : R + 2.6);
       });
-    for (const L of this.labels) L.w = L.el.offsetWidth || L.el.textContent!.length * 7;
+    for (const L of this.labels) L.w = L.el.offsetWidth || L.text.length * 7;
+  }
+
+  private readonly tv = new THREE.Vector3();
+
+  /** Screen position of a world point, or null when it is behind the globe / off screen. */
+  private toScreen(p: THREE.Vector3, w: number, h: number): [number, number] | null {
+    const camDir = this.look.copy(this.camera.position).normalize();
+    if (this.tv.copy(p).normalize().dot(camDir) < 0.25) return null;
+    this.tv.copy(p).project(this.camera);
+    const x = ((this.tv.x + 1) / 2) * w, y = ((1 - this.tv.y) / 2) * h;
+    return x < 0 || x > w || y < 0 || y > h ? null : [x, y];
   }
 
   private updateLabels(w: number, h: number) {
     const show = this.showLabels();
     const dist = this.camera.position.length();
-    const camDir = this.camera.position.clone().normalize();
-    const tv = new THREE.Vector3();
     const placed: number[][] = [];
     for (const L of this.labels) {
-      const f = tv.copy(L.p).normalize().dot(camDir);
-      if (!show || dist > L.maxDist || f < 0.25) { L.el.style.opacity = '0'; continue; }
-      tv.copy(L.p).project(this.camera);
-      const x = ((tv.x + 1) / 2) * w, y = ((1 - tv.y) / 2) * h;
+      const at = show && dist <= L.maxDist ? this.toScreen(L.p, w, h) : null;
+      if (!at) { L.el.style.opacity = '0'; continue; }
+      const [x, y] = at;
       const bx = [x - L.w / 2 - 3, x + L.w / 2 + 3, y - L.h / 2 - 2, y + L.h / 2 + 2];
-      if (x < 0 || x > w || y < 0 || y > h || placed.some(p => p[0] < bx[1] && bx[0] < p[1] && p[2] < bx[3] && bx[2] < p[3])) {
-        L.el.style.opacity = '0';
-        continue;
-      }
+      if (placed.some(p => p[0] < bx[1] && bx[0] < p[1] && p[2] < bx[3] && bx[2] < p[3])) { L.el.style.opacity = '0'; continue; }
       placed.push(bx);
       L.el.style.opacity = '1';
       L.el.style.transform = `translate(${x}px,${y}px) translate(-50%,-50%)`;
     }
+    const drop = this.dropRef().nativeElement;
+    const at = this.dropHead ? this.toScreen(lonLatToVec(this.dropHead[0], this.dropHead[1], R * 1.002), w, h) : null;
+    drop.style.opacity = at ? '1' : '0';
+    if (at) drop.style.transform = `translate(${at[0]}px,${at[1]}px) translate(-50%,-50%)`;
   }
 
   // ─── picking ──────────────────────────────────────────────────────────────
@@ -680,12 +1089,8 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
     canvas.addEventListener('pointermove', e => {
       const p = this.pointers.get(e.pointerId);
       if (!p) {
-        // Plain hover (mouse, no button held).
-        if (e.pointerType !== 'mouse') return;
-        const at = this.lonLatAt(e.clientX, e.clientY);
-        const id = at ? this.basinAt(at[0], at[1]) : -1;
-        canvas.style.cursor = id >= 0 ? 'pointer' : 'grab';
-        this.emitHover(id >= 0 ? { id, x: e.clientX, y: e.clientY } : null);
+        // Plain hover (mouse, no button held): resolved once per frame in the render loop.
+        if (e.pointerType === 'mouse') this.pendingHover = { x: e.clientX, y: e.clientY };
         return;
       }
       p.x = e.clientX; p.y = e.clientY;
@@ -697,9 +1102,9 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
         if (this.grab) this.pinTo(this.grab, m.x, m.y);
         this.dragging = true;
       } else if (this.grab && (this.dragging || (this.press?.moved ?? 0) > DRAG_SLOP)) {
+        if (!this.dragging) this.setHover(-1, null);
         this.dragging = true;
         canvas.style.cursor = 'grabbing';
-        this.emitHover(null);
         this.pinTo(this.grab, e.clientX, e.clientY);
       }
     });
@@ -714,12 +1119,16 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
       canvas.style.cursor = 'grab';
       if (e.type !== 'pointerup' || !press || press.multi || press.moved > CLICK_SLOP) return;
       const at = this.lonLatAt(e.clientX, e.clientY);
-      const id = at ? this.basinAt(at[0], at[1]) : -1;
-      this.zone.run(() => this.pick.emit(id));
+      if (!at) return;
+      const id = this.basinAt(at[0], at[1]);
+      this.zone.run(() => this.pick.emit({ id, lon: at[0], lat: at[1] }));
     };
     canvas.addEventListener('pointerup', release);
     canvas.addEventListener('pointercancel', release);
-    canvas.addEventListener('pointerleave', () => { if (!this.pointers.size) this.emitHover(null); });
+    canvas.addEventListener('pointerleave', () => {
+      this.pendingHover = null;
+      if (!this.pointers.size) this.setHover(-1, null);
+    });
 
     canvas.addEventListener(
       'wheel',
@@ -735,12 +1144,92 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
     canvas.style.cursor = 'grab';
   }
 
-  private hoverIdle = true;
+  /** Hover preview: highlights the basin under the pointer and reports it for the tooltip. */
+  private setHover(id: number, at: { x: number; y: number } | null) {
+    const changed = id !== this.hovered;
+    if (changed) {
+      this.hovered = id;
+      this.updateBasinColours();
+      if (this.hovOverlay) this.paintOverlay(this.hovOverlay, id !== this.selected() ? id : -1, 'hov');
+      this.invalidate();
+      this.canvasRef().nativeElement.style.cursor = id >= 0 ? 'pointer' : 'grab';
+    }
+    if (changed || id >= 0) this.zone.run(() => this.hover.emit(id >= 0 && at ? { id, x: at.x, y: at.y } : null));
+  }
 
-  private emitHover(h: GlobeHover | null) {
-    if (!h && this.hoverIdle) return;
-    this.hoverIdle = !h;
-    this.zone.run(() => this.hover.emit(h));
+  // ─── poster ───────────────────────────────────────────────────────────────
+
+  /**
+   * Renders the whole basin, north up, into a new canvas of the given size (labels included) —
+   * without touching the on-screen view, which is restored before returning.
+   */
+  renderMapImage(width: number, height: number, widthScale: number): HTMLCanvasElement {
+    const gl = this.renderer.getContext();
+    const maxDim = Math.min(...(gl.getParameter(gl.MAX_VIEWPORT_DIMS) as number[]), this.renderer.capabilities.maxTextureSize);
+    const k = Math.min(1, maxDim / Math.max(width, height));
+    const W = Math.floor(width * k), H = Math.floor(height * k);
+
+    const saved = { cam: { ...this.cam }, pr: this.renderer.getPixelRatio(), aspect: this.camera.aspect, view: this.camera.view ? { ...this.camera.view } : null };
+    this.renderer.setPixelRatio(1);
+    this.renderer.setSize(W, H, false);
+    this.camera.aspect = W / H;
+    this.camera.clearViewOffset();
+    this.camera.updateProjectionMatrix();
+
+    // Frame the basin: smallest altitude at which its box corners all fit with a margin.
+    const [LON0, LON1, LAT0, LAT1] = this.data().bbox;
+    const corners = [[LON0, LAT0], [LON1, LAT0], [LON0, LAT1], [LON1, LAT1], [(LON0 + LON1) / 2, LAT0], [(LON0 + LON1) / 2, LAT1]];
+    this.cam = { lon: (LON0 + LON1) / 2, lat: (LAT0 + LAT1) / 2, alt: 1 };
+    for (let alt = 1; alt < 8; alt += 0.05) {
+      this.cam.alt = alt;
+      this.placeCamera();
+      const fits = corners.every(([lo, la]) => {
+        const p = lonLatToVec(lo, la, R).project(this.camera);
+        return Math.abs(p.x) < 0.94 && Math.abs(p.y) < 0.94;
+      });
+      if (fits) break;
+    }
+    this.placeCamera();
+    const res = [...this.riverLayers.map(l => l.mat), this.borderMat, this.dropLine?.material, this.dropHalo?.material].filter(Boolean) as LineMaterial[];
+    res.forEach(m => m.resolution.set(W, H));
+    this.riverLayers.forEach(l => (l.mat.linewidth = RIVER_WIDTH[l.cls] * widthScale * k));
+    this.renderer.render(this.scene, this.camera);
+
+    const out = document.createElement('canvas');
+    out.width = W; out.height = H;
+    const x = out.getContext('2d')!;
+    x.drawImage(this.renderer.domElement, 0, 0, W, H);
+
+    // Labels: seas and the large rivers, with a soft halo like on screen.
+    if (this.showLabels()) {
+      const font = this.theme.getFontFamily();
+      const dark = this.dark();
+      x.textAlign = 'center';
+      x.textBaseline = 'middle';
+      x.lineJoin = 'round';
+      for (const L of this.labels) {
+        if (L.kind === 'river') continue;
+        const p = L.p.clone().project(this.camera);
+        const px = ((p.x + 1) / 2) * W, py = ((1 - p.y) / 2) * H;
+        const size = (L.kind === 'sea' ? 0.0105 : 0.0115) * W;
+        x.font = `${L.kind === 'sea' ? 'italic 500' : '700'} ${size}px ${font}`;
+        x.lineWidth = size * 0.35;
+        x.strokeStyle = dark ? 'rgba(4,8,18,0.85)' : 'rgba(255,255,255,0.9)';
+        x.strokeText(L.text, px, py);
+        x.fillStyle = L.kind === 'sea' ? this.theme.getTokenColor('globe-sea-label', '#1e40af') : dark ? '#f5f7fb' : this.colors['ink'];
+        if (dark && L.kind === 'sea') x.fillStyle = this.colors['light'];
+        x.fillText(L.text, px, py);
+      }
+    }
+
+    // Restore the on-screen view.
+    this.cam = saved.cam;
+    this.renderer.setPixelRatio(saved.pr);
+    this.camera.aspect = saved.aspect;
+    if (saved.view) this.camera.setViewOffset(saved.view.fullWidth, saved.view.fullHeight, saved.view.offsetX, saved.view.offsetY, saved.view.width, saved.view.height);
+    this.resize();
+    this.invalidate();
+    return out;
   }
 
   // ─── loop ─────────────────────────────────────────────────────────────────
@@ -758,29 +1247,52 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
     this.camera.updateProjectionMatrix();
     for (const l of this.riverLayers) l.mat.resolution.set(w, h);
     this.borderMat?.resolution.set(w, h);
+    for (const l of [this.dropLine, this.dropHalo]) (l?.material as LineMaterial | undefined)?.resolution.set(w, h);
   }
 
   private frame = () => {
-    const rawDt = this.clock.getDelta();
+    this.raf = requestAnimationFrame(this.frame);
+    const dt = Math.min(this.clock.getDelta(), 0.1);
+    let animating = false;
+
+    if (this.pendingHover && !this.dragging) {
+      const { x, y } = this.pendingHover;
+      this.pendingHover = null;
+      const at = this.lonLatAt(x, y);
+      this.setHover(at ? this.basinAt(at[0], at[1]) : -1, { x, y });
+    }
     if (this.fly) {
-      this.fly.t = Math.min(1, this.fly.t + Math.min(rawDt, 0.25) / 1.1);
+      this.fly.t = Math.min(1, this.fly.t + dt / 1.1);
       const e = 1 - Math.pow(1 - this.fly.t, 3);
       const { from, to } = this.fly;
       // Altitude eases geometrically so zooming in and out feel equally paced.
       this.cam = { lon: lerp(from.lon, to.lon, e), lat: lerp(from.lat, to.lat, e), alt: from.alt * Math.pow(to.alt / from.alt, e) };
       if (this.fly.t >= 1) this.fly = null;
+      animating = true;
     }
+    if (this.showFlow() && this.showRivers()) {
+      this.flowOffset -= dt * FLOW_SPEED;
+      animating = true;
+    }
+    if (this.stepDrop(dt)) animating = true;
+    if (!this.dirty && !animating) return;
+    this.dirty = false;
+
     this.placeCamera();
+    const el = this.host.nativeElement;
     const alt = this.cam.alt;
     this.camera.near = clamp(alt * 0.02, 0.002, 0.5);
     this.camera.updateProjectionMatrix();
     const wf = clamp(Math.sqrt(5.6 / alt), 0.75, 3.2);
-    this.riverLayers.forEach((l, i) => (l.mat.linewidth = RIVER_WIDTH[i] * wf));
-    if (this.borderMat) this.borderMat.dashScale = 1 / (alt * BORDER_DASH_PER_ALT);
+    // World length of one screen pixel at the surface → dash patterns of constant screen size.
+    const pxWorld = (alt * 2 * Math.tan((VFOV / 2) * DEG)) / Math.max(1, el.clientHeight);
+    for (const l of this.riverLayers) {
+      l.mat.linewidth = RIVER_WIDTH[l.cls] * wf;
+      if (l.mat.dashed) { l.mat.dashScale = 1 / (pxWorld * FLOW_DASH_PX); l.mat.dashOffset = this.flowOffset; }
+    }
+    if (this.borderMat) this.borderMat.dashScale = 1 / (pxWorld * BORDER_DASH_PX);
 
     this.renderer.render(this.scene, this.camera);
-    const el = this.host.nativeElement;
     this.updateLabels(el.clientWidth, el.clientHeight);
-    this.raf = requestAnimationFrame(this.frame);
   };
 }

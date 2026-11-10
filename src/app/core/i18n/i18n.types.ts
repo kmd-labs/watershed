@@ -20,6 +20,7 @@ export interface Dict {
   stageAriaLabel: string;
   loading: string;
   loadError: string;
+  splashBuilding: string;
 
   // Bottom Dock & Glossary
   glossary: string;
@@ -54,6 +55,37 @@ export interface Dict {
   viewSeas: string;
   viewMosaic: string;
   legendMosaicTitle: string;
+  viewRaindrop: string;
+  layerFlow: string;
+  layerRelief: string;
+  groundLabel: string;
+  groundWhite: string;
+  groundBlack: string;
+  poster: string;
+  posterBusy: string;
+  posterHint: string;
+  posterStats: (area: string, mouths: string, rivers: string) => string;
+  posterCredits: string;
+  legendDrop: string;
+  hintRaindrop: string;
+  dropTitle: string;
+  dropToSea: (km: string) => string;
+  dropReaches: string;
+  dropOverland: string;
+  dropLakes: string;
+  dropNoLakes: string;
+  dropLakesValue: (count: string, km: string) => string;
+  dropTime: string;
+  dropTimeValue: (days: string) => string;
+  dropTimeNote: string;
+  dropHint: string;
+  dropOutside: string;
+  dropCoast: string;
+  dropClear: string;
+  methodReliefTitle: string;
+  methodRelief: string;
+  methodRaindropTitle: string;
+  methodRaindrop: string;
   legendCatchment: string;
   legendCoast: string;
   legendLake: string;
