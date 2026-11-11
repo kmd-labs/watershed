@@ -127,7 +127,12 @@ export interface Dict {
   factBrackishValue: string;
   factBrackish: string;
   factRatio: string;
-  factsNote: string;
+  /** Numbered sources under the poster figures, in the order of the figures. */
+  factRiversNote: string;
+  factPeopleNote: string;
+  factRenewalNote: string;
+  factBrackishNote: string;
+  factRatioNote: (basinArea: string) => string;
   legendDrop: string;
   hintRaindrop: string;
   dropTitle: string;

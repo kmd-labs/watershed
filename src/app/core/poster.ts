@@ -25,7 +25,8 @@ export interface A2PosterOptions {
   coords: string;
   /** One quiet italic line explaining the colours (optional). */
   line?: string;
-  facts: { value: string; caption: string }[];
+  /** Figures; each `note` becomes a numbered source under the row, marked on its figure. */
+  facts: { value: string; caption: string; note?: string }[];
   credits: string;
 }
 
@@ -127,8 +128,10 @@ export async function composeA2Poster(map: HTMLCanvasElement, o: A2PosterOptions
   }
 
   // Figures: one quiet row, hairline separators, light numerals over spaced captions.
-  const rowTop = px(536);
+  // A figure with a source gets a small hanging reference number (the numeral stays centred).
+  const rowTop = px(534);
   const n = o.facts.length;
+  const notes: string[] = [];
   const colW = px(A2_MAP.w) / n;
   x.fillStyle = o.ink;
   x.globalAlpha = 0.18;
@@ -138,8 +141,17 @@ export async function composeA2Poster(map: HTMLCanvasElement, o: A2PosterOptions
   o.facts.forEach((f, i) => {
     const fx = M.x + colW * (i + 0.5);
     x.fillStyle = o.ink;
-    x.font = `300 ${px(8.5)}px ${o.font}`;
-    centred(x, f.value, fx, rowTop + px(8), -px(8.5) * 0.01);
+    const valueSize = px(8.5);
+    x.font = `300 ${valueSize}px ${o.font}`;
+    centred(x, f.value, fx, rowTop + px(8), -valueSize * 0.01);
+    if (f.note) {
+      notes.push(f.note);
+      const vw = spacedWidth(x, f.value, -valueSize * 0.01);
+      x.fillStyle = o.accent;
+      x.font = `500 ${px(2.6)}px ${o.font}`;
+      x.textAlign = 'left';
+      x.fillText(String(notes.length), fx + vw / 2 + px(0.9), rowTop + px(8) - valueSize * 0.52);
+    }
     x.fillStyle = o.inkSoft;
     const cap = px(2.25);
     x.font = `400 ${cap}px ${o.font}`;
@@ -149,13 +161,46 @@ export async function composeA2Poster(map: HTMLCanvasElement, o: A2PosterOptions
     lines.forEach((ln, k) => centred(x, ln, fx, rowTop + px(14.5) + k * px(3.6), cap * 0.14));
   });
 
-  // Foot: sources left, logotype right — small, on the bottom margin line.
+  // Foot: the numbered sources in two balanced columns under a short book-style rule, then the
+  // data credits on the bottom margin line, logotype right.
   const footY = px(A2_MM.h - 14);
-  x.fillStyle = o.inkSoft;
-  x.globalAlpha = 0.85;
-  x.font = `400 ${px(2.1)}px ${o.font}`;
+  const noteSize = px(1.95), noteLead = px(2.75), indent = px(3);
+  const colGap = px(10), notesW = M.w - px(26);
+  const noteColW = (notesW - colGap) / 2;
+  x.font = `400 ${noteSize}px ${o.font}`;
+  const wrapped = notes.map(nt => wrap(x, nt, noteColW - indent));
+  const total = wrapped.reduce((s, l) => s + l.length, 0);
+  let split = 0;
+  for (let acc = 0; split < wrapped.length && acc + wrapped[split].length <= Math.ceil(total / 2); split++) acc += wrapped[split].length;
+  split = Math.max(1, Math.min(split, wrapped.length - 1));
+  const columns = [wrapped.slice(0, split), wrapped.slice(split)];
+  const rows = Math.max(...columns.map(c => c.reduce((s, l) => s + l.length, 0)));
+  const notesTop = footY - px(5.5) - (rows - 1) * noteLead;
+  if (notes.length) {
+    x.fillStyle = o.ink;
+    x.globalAlpha = 0.25;
+    x.fillRect(M.x, notesTop - px(4.2), px(16), Math.max(1, px(0.2)));
+  }
   x.textAlign = 'left';
-  wrap(x, o.credits, px(250)).slice(0, 2).forEach((ln, k, all) => x.fillText(ln, M.x, footY - (all.length - 1 - k) * px(3)));
+  columns.forEach((col, c) => {
+    let ly = notesTop;
+    const lx = M.x + c * (noteColW + colGap);
+    col.forEach((lines, k) => {
+      const num = (c === 0 ? 0 : split) + k + 1;
+      x.globalAlpha = 1;
+      x.fillStyle = o.accent;
+      x.font = `500 ${noteSize}px ${o.font}`;
+      x.fillText(String(num), lx, ly);
+      x.fillStyle = o.inkSoft;
+      x.globalAlpha = 0.9;
+      x.font = `400 ${noteSize}px ${o.font}`;
+      lines.forEach(ln => { x.fillText(ln, lx + indent, ly); ly += noteLead; });
+    });
+  });
+  x.globalAlpha = 0.85;
+  x.fillStyle = o.inkSoft;
+  x.font = `400 ${px(2.1)}px ${o.font}`;
+  x.fillText(wrap(x, o.credits, px(300))[0] ?? '', M.x, footY);
   x.globalAlpha = 1;
   const logo = await loadImage(o.logo);
   if (logo) {

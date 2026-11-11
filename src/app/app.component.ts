@@ -63,8 +63,8 @@ const STORY_STEP_MS = 8000;
 /** Top-rivers countdown: how many rivers, and time per step while playing (reveal ≈ 3.2 s). */
 const TOP_N = 20;
 const TOP_STEP_MS = 6000;
-/** Baltic Sea area incl. the Kattegat (km², HELCOM), for the basin-to-sea ratio. */
-const BALTIC_SEA_KM2 = 415_000;
+/** Surface of the Baltic Sea (HELCOM). */
+const BALTIC_SEA_KM2 = 415_266;
 /** Typical river flow speed used for the raindrop's travel-time estimate. */
 const FLOW_M_PER_S = 1;
 
@@ -699,13 +699,17 @@ export class AppComponent {
         coords: this.basinCoords(),
         line: rivers === 'mosaic' ? t.posterLineMosaic : rivers === 'sea' ? t.posterLineSea : t.posterLineInk,
         facts: [
-          { value: this.i18n.num(d.total.nout), caption: t.factRivers },
-          { value: t.factPeopleValue, caption: t.factPeople },
-          { value: t.factRenewalValue, caption: t.factRenewal },
-          { value: t.factBrackishValue, caption: t.factBrackish },
-          { value: `${this.i18n.num(d.total.parea / BALTIC_SEA_KM2, 1)} ×`, caption: t.factRatio }
+          { value: this.i18n.num(d.total.nout), caption: t.factRivers, note: t.factRiversNote },
+          { value: t.factPeopleValue, caption: t.factPeople, note: t.factPeopleNote },
+          { value: t.factRenewalValue, caption: t.factRenewal, note: t.factRenewalNote },
+          { value: t.factBrackishValue, caption: t.factBrackish, note: t.factBrackishNote },
+          {
+            value: `${this.i18n.num(d.total.parea / BALTIC_SEA_KM2, 1)} ×`,
+            caption: t.factRatio,
+            note: t.factRatioNote(this.i18n.area(d.total.parea))
+          }
         ],
-        credits: `${t.posterCredits} · ${t.factsNote}`
+        credits: t.posterCredits
       });
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
@@ -717,3 +721,4 @@ export class AppComponent {
     }
   }
 }
+        // Each figure carries a footnote number; the sources are listed under the row.
