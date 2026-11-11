@@ -2,22 +2,24 @@ import { MapView, MosaicGround } from './data/views';
 
 export const APP_CANONICAL_URL = 'https://kmd-labs.github.io/watershed/';
 
-const VIEWS: MapView[] = ['catchments', 'seas', 'mosaic', 'raindrop', 'story'];
+/** The view a plain link opens: the top-20 tour over the catchments map. */
+export const START_VIEW: MapView = 'top';
+
+const VIEWS: MapView[] = ['top', 'catchments', 'story', 'seas', 'mosaic', 'raindrop'];
 
 /**
- * Everything a link can carry: `?view=mosaic&ground=dark`, `?basin=412`, `?view=story&step=3`,
- * `?top=5` (top-20 step), `?top=off` (catchments without the top-20 card),
- * `?view=raindrop&drop=22.6,50.2`. Defaults are left out so the plain URL stays clean.
+ * Everything a link can carry: `?view=mosaic&ground=dark`, `?view=catchments&basin=412`,
+ * `?view=story&step=3`, `?step=5` (top-20 tour, the start view), `?view=raindrop&drop=22.6,50.2`.
+ * Defaults are left out so the plain URL stays clean. Links from before the top 20 became a view
+ * of its own (`?top=5`, `?top=off`, `?basin=412`) still open what they used to.
  */
 export interface LinkState {
   view: MapView;
   ground: MosaicGround;
   /** Selected river basin id, or −1. */
   basin: number;
-  /** "Where the rivers end" step. */
+  /** Step of the running tour (top 20 or "Where the rivers end"). */
   step: number;
-  /** Top-20 step in the catchments view, or null when the card is closed. */
-  top: number | null;
   drop: [number, number] | null;
 }
 
@@ -38,9 +40,12 @@ export function readLink(search: string): Partial<LinkState> & { lang?: string }
   if (basin !== null) out.basin = basin;
   const step = int(p.get('step'), 0, 50);
   if (step !== null) out.step = step;
-  const top = p.get('top');
-  if (top === 'off') out.top = null;
-  else if (int(top, 0, 50) !== null) out.top = int(top, 0, 50);
+  if (!out.view) {
+    const top = p.get('top');
+    const topStep = int(top, 0, 50);
+    if (top === 'off' || out.basin !== undefined) out.view = 'catchments';
+    else if (topStep !== null) { out.view = 'top'; out.step = topStep; }
+  }
   const drop = p.get('drop')?.split(',').map(Number);
   if (drop?.length === 2 && drop.every(Number.isFinite) && Math.abs(drop[0]) <= 180 && Math.abs(drop[1]) <= 90) out.drop = [drop[0], drop[1]];
   const lang = p.get('lang');
@@ -52,16 +57,10 @@ export function readLink(search: string): Partial<LinkState> & { lang?: string }
 export function writeLink(url: URL, s: LinkState): URL {
   const p = url.searchParams;
   for (const k of ['view', 'ground', 'basin', 'step', 'top', 'drop']) p.delete(k);
-  if (s.view !== 'catchments') p.set('view', s.view);
+  if (s.view !== START_VIEW) p.set('view', s.view);
   if ((s.view === 'mosaic' || s.view === 'story') && s.ground === 'dark') p.set('ground', 'dark');
-  if (s.view === 'catchments' || s.view === 'seas' || s.view === 'mosaic') {
-    if (s.basin >= 0) p.set('basin', String(s.basin));
-  }
-  if (s.view === 'story' && s.step > 0) p.set('step', String(s.step));
-  if (s.view === 'catchments') {
-    if (s.top === null) { if (s.basin < 0) p.set('top', 'off'); }
-    else if (s.top > 0) p.set('top', String(s.top));
-  }
+  if ((s.view === 'catchments' || s.view === 'seas' || s.view === 'mosaic') && s.basin >= 0) p.set('basin', String(s.basin));
+  if ((s.view === 'top' || s.view === 'story') && s.step > 0) p.set('step', String(s.step));
   if (s.view === 'raindrop' && s.drop) p.set('drop', `${s.drop[0].toFixed(3)},${s.drop[1].toFixed(3)}`);
   return url;
 }

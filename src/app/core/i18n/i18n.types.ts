@@ -92,7 +92,13 @@ export interface Dict {
   topButton: string;
   hintTop: string;
   topHint: string;
-  topClose: string;
+  presClose: string;
+  storyHint: string;
+  viewTop: (n: number) => string;
+  mapButtons: string;
+  zoomIn: string;
+  zoomOut: string;
+  resetView: string;
   topLegend: (n: number) => string;
   topIntroTitle: (n: number) => string;
   topIntroText: (n: number, area: string, share: string) => string;

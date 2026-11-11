@@ -279,7 +279,7 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
   readonly drop = input<RaindropPath | null>(null);
   /** "Where the rivers end" step: 0 intro, 1–6 one sea each, 7 everything. */
   readonly storyStep = input(0);
-  /** Top-rivers countdown in the catchments view: basins in reveal order, and the step (−1 = off;
+  /** Top-rivers tour (drawn on the catchments map): basins in reveal order, and the step (−1 = off;
    * 0 intro, 1…n one river each, n + 1 all). */
   readonly topOrder = input<number[]>([]);
   readonly topStep = input(-1);
@@ -352,7 +352,7 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
   private cam: View = { lon: 20, lat: 59, alt: 3.2 };
   private home: View = { lon: 20, lat: 59, alt: 3.2 };
   private altMax = 3.7;
-  private fly: { from: View; to: View; t: number } | null = null;
+  private fly: { from: View; to: View; t: number; dur: number } | null = null;
   private flowOffset = 0;
   /** Dynamic resolution: sharp at rest, lighter while dragging, pinching, zooming or flying. */
   private restDpr = 1;
@@ -375,7 +375,7 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
 
   /** Views drawn on plain ground, where the rivers carry the colour. */
   private plain = () => this.view() === 'mosaic' || this.view() === 'story';
-  /** The top-rivers countdown is running in the catchments view. */
+  /** The top-rivers tour is running (the app passes it on the catchments map). */
   private topActive = () => this.view() === 'catchments' && this.topStep() >= 0;
   /** Basin highlighted by the countdown's current step, or −1. */
   private topCurrent = () => {
@@ -474,8 +474,20 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
     this.flyTo({ lon: (lon0 + lon1) / 2, lat, alt });
   }
 
-  private flyTo(to: View) {
-    this.fly = { from: { ...this.cam }, to: this.clampView(to), t: 0 };
+  private flyTo(to: View, dur = 1.1) {
+    this.fly = { from: { ...this.cam }, to: this.clampView(to), t: 0, dur };
+  }
+
+  /** Zooms about the centre of the view (factor < 1 = in), eased; repeated presses add up. */
+  zoomBy(factor: number) {
+    if (!this.ready) return;
+    const base = this.fly ? this.fly.to : this.cam;
+    this.zone.runOutsideAngular(() => this.flyTo({ ...base, alt: base.alt * factor }, 0.4));
+  }
+
+  /** Flies back to the starting view of the whole drainage basin. */
+  resetView() {
+    if (this.ready) this.zone.runOutsideAngular(() => this.flyTo(this.home, 0.9));
   }
 
   // ─── camera ───────────────────────────────────────────────────────────────
@@ -1740,7 +1752,7 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
       this.setHover(at ? this.basinAt(at[0], at[1]) : -1, { x, y });
     }
     if (this.fly) {
-      this.fly.t = Math.min(1, this.fly.t + dt / 1.1);
+      this.fly.t = Math.min(1, this.fly.t + dt / this.fly.dur);
       const e = 1 - Math.pow(1 - this.fly.t, 3);
       const { from, to } = this.fly;
       // Altitude eases geometrically so zooming in and out feel equally paced.

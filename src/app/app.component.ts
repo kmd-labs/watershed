@@ -1,8 +1,11 @@
-import { Component, computed, effect, inject, signal, viewChild } from '@angular/core';
+import { Component, computed, effect, inject, signal, untracked, viewChild } from '@angular/core';
 import {
   LucideAngularModule,
   Globe,
   BookOpen,
+  House,
+  Minus,
+  Plus,
   ChevronDown,
   ChevronUp,
   Droplet,
@@ -54,7 +57,7 @@ import { CountryListComponent } from './panels/country-list.component';
 import { SeaListComponent } from './panels/sea-list.component';
 import { MethodComponent } from './panels/method.component';
 import { SharePopupComponent } from './panels/share-popup.component';
-import { APP_CANONICAL_URL, LinkState, readLink, shareUrl, writeLink } from './core/deep-link';
+import { APP_CANONICAL_URL, LinkState, START_VIEW, readLink, shareUrl, writeLink } from './core/deep-link';
 
 /** The splash stays up at least this long from the start of page load (it doubles as the brand moment). */
 const MIN_SPLASH_MS = 5000;
@@ -73,8 +76,10 @@ interface LegendItem {
   note: string;
   color: string;
   kind: 'fill' | 'line';
-  /** Not revealed yet (story). */
+  /** Not revealed yet by the running tour. */
   dim?: boolean;
+  /** The tour's current step. */
+  current?: boolean;
 }
 
 @Component({
@@ -127,8 +132,12 @@ export class AppComponent {
   readonly playIcon = Play;
   readonly pauseIcon = Pause;
   readonly topIcon = Trophy;
+  readonly storyIcon = Route;
+  readonly zoomInIcon = Plus;
+  readonly zoomOutIcon = Minus;
+  readonly homeIcon = House;
 
-  readonly view = signal<MapView>('catchments');
+  readonly view = signal<MapView>(START_VIEW);
   readonly ground = signal<MosaicGround>('light');
   readonly selected = signal<number>(-1);
   /** The rivers / countries / seas panel starts folded; the map comes first. */
@@ -152,12 +161,14 @@ export class AppComponent {
   readonly storyStep = signal(0);
   readonly storyPlaying = signal(false);
   private storyTimer: ReturnType<typeof setTimeout> | null = null;
-  /** Top-rivers countdown running in the catchments view (shares the step & play state). */
-  readonly topActive = signal(true);
-  /** Which presentation is running, if any. */
+  /** The top-20 tour: a view of its own, drawn on the catchments map. */
+  readonly topActive = computed(() => this.view() === 'top');
+  /** Which tour is running, if any (both share the step & play state and the same card). */
   readonly presKind = computed<'seas' | 'top' | null>(() =>
-    this.view() === 'story' ? 'seas' : this.view() === 'catchments' && this.topActive() ? 'top' : null
+    this.view() === 'story' ? 'seas' : this.view() === 'top' ? 'top' : null
   );
+  /** What the map and the lists draw: the top-20 tour uses the catchments styling. */
+  readonly mapView = computed<MapView>(() => (this.view() === 'top' ? 'catchments' : this.view()));
   readonly presSteps = computed(() => (this.presKind() === 'top' ? TOP_N + 2 : STORY_STEPS));
   readonly presDots = computed(() => Array.from({ length: this.presSteps() }, (_, i) => i));
 
@@ -188,7 +199,6 @@ export class AppComponent {
       ground: this.ground(),
       basin: this.selected(),
       step: this.storyStep(),
-      top: view === 'catchments' && this.topActive() ? this.storyStep() : null,
       drop: this.drop()?.start ?? null
     };
   });
@@ -199,16 +209,10 @@ export class AppComponent {
     if (L.lang && (this.i18n.langs as string[]).includes(L.lang)) this.i18n.setLang(L.lang as Lang);
     if (L.view) {
       this.view.set(L.view);
-      if (L.view !== 'catchments') this.topActive.set(false);
       if (L.view === 'seas') this.listTab.set('seas');
     }
     if (L.ground) this.ground.set(L.ground);
-    if (L.view === 'story') this.storyStep.set(Math.min(L.step ?? 0, STORY_STEPS - 1));
-    if ((L.view ?? 'catchments') === 'catchments' && 'top' in L) {
-      if (L.top === null || L.top === undefined) this.topActive.set(false);
-      else { this.topActive.set(true); this.storyStep.set(L.top); }
-    }
-    if (L.basin !== undefined) this.topActive.set(false);
+    if (this.presKind()) this.storyStep.set(Math.min(L.step ?? 0, this.presSteps() - 1));
   }
 
   private applyLinkWhenReady() {
@@ -262,10 +266,9 @@ export class AppComponent {
   constructor() {
     this.applyLinkNow();
     effect(() => {
-      // Without the map, the presentations and the raindrop have nothing to drive.
+      // Without the map the tours have nothing to show: land on their maps' lists instead.
       if (!this.mapFailed()) return;
-      this.topActive.set(false);
-      this.playStory(false);
+      untracked(() => (this.presKind() ? this.closePresentation() : this.playStory(false)));
     });
     effect(() => {
       if (this.linkApplied || this.globeProgress() < 1) return;
@@ -314,13 +317,17 @@ export class AppComponent {
 
   readonly viewOptions = computed<DropdownOption<MapView>[]>(() => {
     const t = this.i18n.t();
-    return [
+    // Each tour sits right before the map it closes onto (top 20 → catchments, the sea-by-sea
+    // story → sea sub-basins), the start view first; then the art view; the hands-on raindrop last.
+    const all: DropdownOption<MapView>[] = [
+      { value: 'top', label: t.viewTop(TOP_N), icon: Trophy },
       { value: 'catchments', label: t.viewCatchments, icon: Droplets },
+      { value: 'story', label: t.viewStory, icon: Route },
       { value: 'seas', label: t.viewSeas, icon: Layers },
       { value: 'mosaic', label: t.viewMosaic, icon: Palette },
-      { value: 'raindrop', label: t.viewRaindrop, icon: Droplet },
-      { value: 'story', label: t.viewStory, icon: Route }
+      { value: 'raindrop', label: t.viewRaindrop, icon: Droplet }
     ];
+    return this.mapFailed() ? all.filter(o => o.value !== 'top' && o.value !== 'story') : all;
   });
 
   readonly currentViewIcon = computed(() => this.viewOptions().find(o => o.value === this.view())?.icon ?? Droplets);
@@ -329,14 +336,14 @@ export class AppComponent {
     this.view.set(v);
     this.drop.set(null);
     this.dropNote.set(null);
-    this.topActive.set(false);
-    if (v === 'raindrop' || v === 'story') this.selected.set(-1);
+    if (v === 'raindrop' || v === 'story' || v === 'top') this.selected.set(-1);
     // The sea colour key lives in the panel's Seas tab.
     if (v === 'seas') {
       this.listTab.set('seas');
       if (!this.bp.mobile()) this.panelOpen.set(true);
     }
-    if (v === 'story') {
+    // Both tours start from their intro and play.
+    if (this.presKind()) {
       this.goToStep(0);
       this.playStory(true);
     } else {
@@ -344,24 +351,30 @@ export class AppComponent {
     }
   }
 
+  /** Closes the running tour onto its map: top 20 → catchments, the story → sea sub-basins. */
+  closePresentation() {
+    this.setView(this.presKind() === 'top' ? 'catchments' : 'seas');
+  }
+
+  // ─── map buttons ─────────────────────────────────────────────────────────
+
+  zoomIn() {
+    this.globe()?.zoomBy(0.6);
+  }
+
+  zoomOut() {
+    this.globe()?.zoomBy(1 / 0.6);
+  }
+
+  resetView() {
+    this.globe()?.resetView();
+  }
+
   // ─── "Where the rivers end" ─────────────────────────────────────────────
 
   goToStep(step: number) {
     this.storyStep.set(Math.max(0, Math.min(this.presSteps() - 1, step)));
     if (this.storyPlaying()) this.scheduleStory();
-  }
-
-  /** Starts the top-rivers countdown in the catchments view. */
-  startTop() {
-    this.selected.set(-1);
-    this.topActive.set(true);
-    this.goToStep(0);
-    this.playStory(true);
-  }
-
-  stopTop() {
-    this.playStory(false);
-    this.topActive.set(false);
   }
 
   playStory(on: boolean) {
@@ -496,22 +509,28 @@ export class AppComponent {
           note: '',
           color: `var(--color-${seaToken(i, this.ground())})`,
           kind: 'line' as const,
-          dim: step < STORY_STEPS - 1 && i + 1 > step
+          dim: step < STORY_STEPS - 1 && i + 1 > step,
+          current: step === i + 1
         }))
       };
     }
-    if (this.presKind() === 'top' && d) {
+    if (view === 'top' && d) {
+      // All twenty from the intro on, so every colour on the map has a name; while the tour runs,
+      // the rivers still to come are dimmed, as they are on the map.
       const step = this.storyStep();
-      const shown = this.topOrder().slice(0, Math.max(0, step));
+      const order = this.topOrder();
+      const running = step >= 1 && step <= order.length;
       return {
         title: t.topLegend(TOP_N),
-        items: shown.map(id => {
+        items: order.map((id, i) => {
           const b = d.basins[id];
           return {
-            label: b.name ? this.i18n.river(b.name).replace(/ \(.+\)$/, '') : t.unnamed,
+            label: `${i + 1}. ${b.name ? this.i18n.river(b.name).replace(/ \(.+\)$/, '') : t.unnamed}`,
             note: '',
             color: `var(--color-${mosaicToken(b.mosaic, 'light')})`,
-            kind: 'line' as const
+            kind: 'line' as const,
+            dim: running && i + 1 > step,
+            current: step === i + 1
           };
         })
       };
@@ -599,7 +618,8 @@ export class AppComponent {
 
   onPick(p: GlobePick) {
     if (this.view() === 'story') return;
-    if (this.topActive()) this.stopTop();
+    // A click during the top-20 tour leaves it for the catchments map and opens that river.
+    if (this.view() === 'top') this.setView('catchments');
     if (this.view() !== 'raindrop') {
       this.select(p.id === this.selected() ? -1 : p.id);
       return;
@@ -698,6 +718,7 @@ export class AppComponent {
         ruleWord: t.posterRuleWord,
         coords: this.basinCoords(),
         line: rivers === 'mosaic' ? t.posterLineMosaic : rivers === 'sea' ? t.posterLineSea : t.posterLineInk,
+        // Each figure carries a footnote number; the sources are listed under the row.
         facts: [
           { value: this.i18n.num(d.total.nout), caption: t.factRivers, note: t.factRiversNote },
           { value: t.factPeopleValue, caption: t.factPeople, note: t.factPeopleNote },
@@ -721,4 +742,3 @@ export class AppComponent {
     }
   }
 }
-        // Each figure carries a footnote number; the sources are listed under the row.

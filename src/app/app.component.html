@@ -11,7 +11,7 @@
         [data]="data"
         [streams]="store.streams()"
         [relief]="store.relief()"
-        [view]="view()"
+        [view]="mapView()"
         [ground]="ground()"
         [selected]="selected()"
         [drop]="drop()"
@@ -31,7 +31,19 @@
         (progress)="globeProgress.set($event)"
         (failed)="mapFailed.set(true)">
       </app-globe>
-      @if (mapFailed()) {
+      @if (!mapFailed()) {
+        <div class="map-buttons glass-panel" role="group" [attr.aria-label]="t.mapButtons">
+          <app-button variant="ghost" [iconOnly]="true" [ariaLabel]="t.zoomIn" [titleText]="t.zoomIn" (btnClick)="zoomIn()">
+            <lucide-icon [img]="zoomInIcon" [size]="16"></lucide-icon>
+          </app-button>
+          <app-button variant="ghost" [iconOnly]="true" [ariaLabel]="t.zoomOut" [titleText]="t.zoomOut" (btnClick)="zoomOut()">
+            <lucide-icon [img]="zoomOutIcon" [size]="16"></lucide-icon>
+          </app-button>
+          <app-button variant="ghost" [iconOnly]="true" [ariaLabel]="t.resetView" [titleText]="t.resetView" (btnClick)="resetView()">
+            <lucide-icon [img]="homeIcon" [size]="15"></lucide-icon>
+          </app-button>
+        </div>
+      } @else {
         <div class="stage__fallback glass-panel" role="alert">
           <h2 class="stage__fallback-title">{{ t.mapUnavailableTitle }}</h2>
           <p class="stage__fallback-text">{{ t.mapUnavailableText }}</p>
@@ -128,7 +140,7 @@
               class="dock__list"
               [data]="data"
               [selected]="selected()"
-              [view]="view()"
+              [view]="mapView()"
               (select)="select($event, true)">
             </app-basin-list>
           } @else if (listTab() === 'countries') {
@@ -164,7 +176,7 @@
           }
           <ul class="legend__items">
             @for (it of lg.items; track it.label) {
-              <li class="legend__item" [class.legend__item--dim]="it.dim">
+              <li class="legend__item" [class.legend__item--dim]="it.dim" [class.legend__item--current]="it.current">
                 <i [class.legend__line]="it.kind === 'line'" [style.background]="it.color"></i>
                 <span>{{ it.label }}</span>
                 @if (it.note) {
@@ -202,10 +214,17 @@
             }
           </div>
           <div class="legend__actions">
-            @if (view() === 'catchments' && !topActive() && !mapFailed()) {
-              <app-button variant="ghost" [titleText]="t.topHint" (btnClick)="startTop()">
+            <!-- Each map with a tour starts it from here; the tour's card closes back onto the map. -->
+            @if (view() === 'catchments' && !mapFailed()) {
+              <app-button variant="ghost" [titleText]="t.topHint" (btnClick)="setView('top')">
                 <lucide-icon [img]="topIcon" [size]="15"></lucide-icon>
                 <span>{{ t.topButton }}</span>
+              </app-button>
+            }
+            @if (view() === 'seas' && !mapFailed()) {
+              <app-button variant="ghost" [titleText]="t.storyHint" (btnClick)="setView('story')">
+                <lucide-icon [img]="storyIcon" [size]="15"></lucide-icon>
+                <span>{{ t.viewStory }}</span>
               </app-button>
             }
             @if (!mapFailed()) {
@@ -235,11 +254,9 @@
             <section class="dock dock--detail dock--story glass-panel" aria-live="polite">
               <div class="story__head">
                 <div class="story__step">{{ t.storyStepOf(storyStep() + 1, presSteps()) }}</div>
-                @if (presKind() === 'top') {
-                  <app-button variant="ghost" size="sm" [iconOnly]="true" [ariaLabel]="t.topClose" (btnClick)="stopTop()">
-                    <lucide-icon [img]="closeIcon" [size]="15"></lucide-icon>
-                  </app-button>
-                }
+                <app-button variant="ghost" size="sm" [iconOnly]="true" [ariaLabel]="t.presClose" [titleText]="t.presClose" (btnClick)="closePresentation()">
+                  <lucide-icon [img]="closeIcon" [size]="15"></lucide-icon>
+                </app-button>
               </div>
               <h2 class="story__title">
                 @if (sc.color) {
@@ -260,9 +277,11 @@
                 <app-button variant="ghost" [iconOnly]="true" [disabled]="storyStep() === 0" [ariaLabel]="t.storyPrev" (btnClick)="goToStep(storyStep() - 1)">
                   <lucide-icon [img]="prevIcon" [size]="16"></lucide-icon>
                 </app-button>
+                <!-- A pointer shortcut only: the step count, arrows and play button carry the same for
+                     keyboards and screen readers, so the dots stay out of the tab order. -->
                 <div class="story__dots" [class.story__dots--many]="presSteps() > 10" aria-hidden="true">
                   @for (i of presDots(); track i) {
-                    <button type="button" class="story__dot" [class.story__dot--on]="i === storyStep()" [class.story__dot--done]="i < storyStep()" (click)="goToStep(i)"></button>
+                    <button type="button" tabindex="-1" class="story__dot" [class.story__dot--on]="i === storyStep()" [class.story__dot--done]="i < storyStep()" (click)="goToStep(i)"></button>
                   }
                 </div>
                 <app-button variant="toggle" [iconOnly]="true" [active]="storyPlaying()" [ariaLabel]="storyPlaying() ? t.storyPause : t.storyPlay" (btnClick)="playStory(!storyPlaying())">

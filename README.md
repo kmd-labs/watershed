@@ -10,14 +10,16 @@ npm start          # http://localhost:4200
 
 ## What's on the map
 
-- **River catchments** (default view): every HydroBASINS catchment draining to the Baltic in one sand tone, coastal strips without a sizeable river slightly lighter, the drainage divide outlined. Clicking a catchment highlights it and turns its river network blue.
+- **Top 20 river basins** (start view): a guided tour of the 20 largest river basins, largest first, on the catchments map; its legend names all twenty colours. Closing the tour leaves you on the catchments map, whose Top 20 button starts it again. **Where the rivers end** works the same way, sea by sea, and closes onto the sea sub-basins.
+- **River catchments**: every HydroBASINS catchment draining to the Baltic in one sand tone, coastal strips without a sizeable river slightly lighter, the drainage divide outlined. Clicking a catchment highlights it and turns its river network blue.
 - **Sea sub-basins** (view switcher, top right): catchments tinted by the part of the sea they drain to (Bothnian Bay … Danish Straits & Kattegat), with the area of each in the legend.
 - **Layers**: rivers (HydroRIVERS, line width by river class), country borders (dashed, off by default), labels.
 - **Rivers / Countries panel**: rivers ranked by catchment area or discharge (searchable, filterable by sub-basin); each country's area and share of the drainage basin.
 - **Catchment card**: area and rank, mean discharge, main-river and network length, mouth, nearest town, countries in the basin.
 
-- **Links & sharing**: every view lives in the URL (`?view=mosaic&ground=dark`, `?basin=1`, `?view=story&step=3`, `?top=5`, `?top=off`, `?view=raindrop&drop=22.6,50.2`, `&lang=pl`); the address bar follows the map, and the share button (as in kmd-labs/el-nino) offers a QR code, the link to the current view and the app link.
-- **A2 print poster**: the Poster button renders the current view as a 420 × 594 mm sheet at 300 dpi (150 dpi on phones), tagged with its resolution, on white paper with ink or coloured rivers (night background for the black-ground views).
+- **Links & sharing**: every view lives in the URL (`?view=mosaic&ground=dark`, `?view=catchments&basin=1`, `?view=story&step=3`, `?step=5` for the top-20 tour, `?view=raindrop&drop=22.6,50.2`, `&lang=pl`; older `?top=…` and `?basin=…` links still work); the address bar follows the map, and the share button (as in kmd-labs/el-nino) offers a QR code, the link to the current view and the app link.
+- **A2 print poster**: the Poster button renders the current view as a 420 × 594 mm sheet at 300 dpi (150 dpi on phones), tagged with its resolution, on white paper with ink or coloured rivers (night background for the black-ground views). Each figure under the map carries a footnote number pointing to its source (HydroRIVERS, HELCOM PLC-7 and State of the Baltic Sea, Björck et al. 2008).
+- **Map buttons**: zoom in, zoom out and back to the whole basin, under the view switcher.
 
 Colours are theme tokens defined in [`src/styles.scss`](src/styles.scss) from the design-system palette and read by the globe through `ThemeService`.
 

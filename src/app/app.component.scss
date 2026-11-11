@@ -552,30 +552,50 @@
     margin-top: spacing("md");
   }
 
+  // The dots share the row's width as touching 24 px-tall hit areas, so a tap anywhere along the
+  // row lands on the nearest step; the visible dot is drawn inside.
   &__dots {
     display: flex;
     flex: 1;
+    min-width: 0;
     justify-content: center;
-    gap: 6px;
   }
 
   &__dot {
-    width: 8px;
-    height: 8px;
+    position: relative;
+    flex: 1 1 0;
+    min-width: 0;
+    max-width: 24px;
+    height: 24px;
     padding: 0;
     border: 0;
-    border-radius: 50%;
-    background: color("line-strong");
+    background: none;
     cursor: pointer;
-    transition: background transition("fast"), transform transition("fast");
 
-    &--done {
+    &::before {
+      content: "";
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: color("line-strong");
+      transform: translate(-50%, -50%);
+      transition: background transition("fast"), transform transition("fast");
+    }
+
+    &:hover::before {
       background: color("text-dim");
     }
 
-    &--on {
+    &--done::before {
+      background: color("text-dim");
+    }
+
+    &--on::before {
       background: color("accent");
-      transform: scale(1.3);
+      transform: translate(-50%, -50%) scale(1.3);
     }
   }
 }
@@ -596,12 +616,32 @@
   min-height: 24px;
 }
 
-// 22 steps of the top-rivers countdown: smaller, tighter dots.
-.story__dots--many {
-  gap: 3px;
+// 22 steps of the top-rivers tour: smaller dots, narrower slots (still 24 px tall).
+.story__dots--many .story__dot {
+  max-width: 14px;
 
-  .story__dot {
+  &::before {
     width: 6px;
     height: 6px;
   }
+}
+
+// Zoom in / out and back to the whole basin, under the view switcher on the right edge: the map
+// can be driven without a wheel, trackpad or pinch.
+.map-buttons {
+  position: fixed;
+  top: calc(var(--header-offset-top) + var(--kmd-brand-h, 40px) + #{spacing("sm")});
+  right: var(--header-offset-x);
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: spacing("xxs");
+  border-radius: radius("pill");
+  transition: opacity transition("fast"), visibility transition("fast");
+}
+
+.legend__item--current {
+  font-weight: font-weight("semibold");
+  color: color("text-bright");
 }
