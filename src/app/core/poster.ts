@@ -1,8 +1,8 @@
 /**
- * A2 print poster (420 × 594 mm), after the grammar of classic city-map prints: a crisp map
- * rectangle on white paper with generous margins, then a centred title in light spaced capitals,
- * a hairline rule broken by one small word, the coordinates, and — quietly — a row of figures.
- * All sizes are in millimetres and converted at the chosen dpi.
+ * Print poster after the grammar of classic city-map prints: a crisp map rectangle on plain paper
+ * with generous margins, then a centred title in light spaced capitals, a hairline rule broken by
+ * one small word, the coordinates, and — quietly — a row of figures with their sources.
+ * Laid out in A2 millimetres (420 × 594); A3 and A4 are the same sheet at a lower grid dpi.
  */
 
 export const A2_MM = { w: 420, h: 594 };
@@ -10,7 +10,8 @@ export const A2_MM = { w: 420, h: 594 };
 /** Map rectangle on the sheet (mm). */
 export const A2_MAP = { x: 30, y: 30, w: 360, h: 420 };
 
-export interface A2PosterOptions {
+export interface PosterLayout {
+  /** Pixels per inch of the A2 grid (an A3 at 300 dpi is the A2 grid at 212 dpi). */
   dpi: number;
   paper: string;
   ink: string;
@@ -22,15 +23,30 @@ export interface A2PosterOptions {
   title: string;
   /** The small word set into the rule under the title. */
   ruleWord: string;
+  /** Coordinates line; empty leaves it out. */
   coords: string;
-  /** One quiet italic line explaining the colours (optional). */
+  /** One quiet italic line under the title (optional). */
   line?: string;
-  /** Figures; each `note` becomes a numbered source under the row, marked on its figure. */
+  /**
+   * Figures; each `note` becomes a numbered source under the row, marked on its figure (the same
+   * source keeps one number). No figures: no row, and the title block moves down.
+   */
   facts: { value: string; caption: string; note?: string }[];
   credits: string;
 }
 
+const images = new Map<string, Promise<HTMLImageElement | null>>();
+
 function loadImage(src: string): Promise<HTMLImageElement | null> {
+  let p = images.get(src);
+  if (!p) {
+    p = fetchImage(src);
+    images.set(src, p);
+  }
+  return p;
+}
+
+function fetchImage(src: string): Promise<HTMLImageElement | null> {
   return new Promise(resolve => {
     const img = new Image();
     img.onload = () => resolve(img);
@@ -76,7 +92,8 @@ export function a2Pixels(dpi: number) {
   return { px, width: px(A2_MM.w), height: px(A2_MM.h), map: { x: px(A2_MAP.x), y: px(A2_MAP.y), w: px(A2_MAP.w), h: px(A2_MAP.h) } };
 }
 
-export async function composeA2Poster(map: HTMLCanvasElement, o: A2PosterOptions): Promise<Blob> {
+/** Draws the poster around `map` (sized `a2Pixels(o.dpi).map`). */
+export async function drawPoster(map: HTMLCanvasElement, o: PosterLayout): Promise<HTMLCanvasElement> {
   await document.fonts?.ready;
   // Weights not used on the page are fetched only when asked for.
   await Promise.all(['300', 'italic 300', '400', '500'].map(w => document.fonts?.load(`${w} 64px ${o.font}`).catch(() => undefined)));
@@ -98,7 +115,9 @@ export async function composeA2Poster(map: HTMLCanvasElement, o: A2PosterOptions
     titleSize *= 0.96;
     x.font = `300 ${titleSize}px ${o.font}`;
   }
-  const titleY = px(A2_MAP.y + A2_MAP.h + 38);
+  // Without the figures row the title block sits lower, centred in the space under the map.
+  const lift = o.facts.length ? 0 : 24;
+  const titleY = px(A2_MAP.y + A2_MAP.h + 38 + lift);
   x.fillStyle = o.ink;
   centred(x, titleText, cx, titleY, titleSize * 0.32);
   const titleW = spacedWidth(x, titleText, titleSize * 0.32);
@@ -116,15 +135,23 @@ export async function composeA2Poster(map: HTMLCanvasElement, o: A2PosterOptions
   x.fillRect(cx + gap, ruleY - wordSize * 0.36, half - gap, Math.max(1, px(0.3)));
   centred(x, word, cx, ruleY, wordSize * 0.4);
 
-  // Coordinates, then the optional italic line.
-  let y = ruleY + px(10);
+  // Coordinates, then the optional italic line (shrunk to the map width if it is long).
+  let y = ruleY + px(2);
   x.fillStyle = o.inkSoft;
-  x.font = `400 ${px(3.4)}px ${o.font}`;
-  centred(x, o.coords, cx, y, px(3.4) * 0.12);
+  if (o.coords) {
+    y += px(8);
+    x.font = `400 ${px(3.4)}px ${o.font}`;
+    centred(x, o.coords, cx, y, px(3.4) * 0.12);
+  }
   if (o.line) {
     y += px(8);
-    x.font = `italic 300 ${px(3.4)}px ${o.font}`;
-    centred(x, o.line, cx, y, px(3.4) * 0.04);
+    let ls = px(3.4);
+    x.font = `italic 300 ${ls}px ${o.font}`;
+    while (spacedWidth(x, o.line, ls * 0.04) > px(A2_MAP.w) && ls > px(2)) {
+      ls *= 0.95;
+      x.font = `italic 300 ${ls}px ${o.font}`;
+    }
+    centred(x, o.line, cx, y, ls * 0.04);
   }
 
   // Figures: one quiet row, hairline separators, light numerals over spaced captions.
@@ -132,12 +159,14 @@ export async function composeA2Poster(map: HTMLCanvasElement, o: A2PosterOptions
   const rowTop = px(534);
   const n = o.facts.length;
   const notes: string[] = [];
-  const colW = px(A2_MAP.w) / n;
-  x.fillStyle = o.ink;
-  x.globalAlpha = 0.18;
-  for (let i = 1; i < n; i++) x.fillRect(M.x + colW * i, rowTop, Math.max(1, px(0.2)), px(26));
-  x.fillRect(M.x, rowTop - px(8), M.w, Math.max(1, px(0.2)));
-  x.globalAlpha = 1;
+  const colW = px(A2_MAP.w) / Math.max(1, n);
+  if (n) {
+    x.fillStyle = o.ink;
+    x.globalAlpha = 0.18;
+    for (let i = 1; i < n; i++) x.fillRect(M.x + colW * i, rowTop, Math.max(1, px(0.2)), px(26));
+    x.fillRect(M.x, rowTop - px(8), M.w, Math.max(1, px(0.2)));
+    x.globalAlpha = 1;
+  }
   o.facts.forEach((f, i) => {
     const fx = M.x + colW * (i + 0.5);
     x.fillStyle = o.ink;
@@ -150,12 +179,13 @@ export async function composeA2Poster(map: HTMLCanvasElement, o: A2PosterOptions
     }
     centred(x, f.value, fx, rowTop + px(8), -valueSize * 0.01);
     if (f.note) {
-      notes.push(f.note);
+      const known = notes.indexOf(f.note);
+      const num = known >= 0 ? known + 1 : notes.push(f.note);
       const vw = spacedWidth(x, f.value, -valueSize * 0.01);
       x.fillStyle = o.accent;
       x.font = `500 ${px(2.6)}px ${o.font}`;
       x.textAlign = 'left';
-      x.fillText(String(notes.length), fx + vw / 2 + px(0.9), rowTop + px(8) - valueSize * 0.52);
+      x.fillText(String(num), fx + vw / 2 + px(0.9), rowTop + px(8) - valueSize * 0.52);
     }
     x.fillStyle = o.inkSoft;
     const cap = px(2.25);
@@ -177,9 +207,9 @@ export async function composeA2Poster(map: HTMLCanvasElement, o: A2PosterOptions
   const total = wrapped.reduce((s, l) => s + l.length, 0);
   let split = 0;
   for (let acc = 0; split < wrapped.length && acc + wrapped[split].length <= Math.ceil(total / 2); split++) acc += wrapped[split].length;
-  split = Math.max(1, Math.min(split, wrapped.length - 1));
+  split = wrapped.length > 1 ? Math.max(1, Math.min(split, wrapped.length - 1)) : wrapped.length;
   const columns = [wrapped.slice(0, split), wrapped.slice(split)];
-  const rows = Math.max(...columns.map(c => c.reduce((s, l) => s + l.length, 0)));
+  const rows = Math.max(1, ...columns.map(c => c.reduce((s, l) => s + l.length, 0)));
   const notesTop = footY - px(5.5) - (rows - 1) * noteLead;
   if (notes.length) {
     x.fillStyle = o.ink;
@@ -214,8 +244,35 @@ export async function composeA2Poster(map: HTMLCanvasElement, o: A2PosterOptions
     x.drawImage(logo, M.x + M.w - lw, footY - lh * 0.82, lw, lh);
   }
 
+  return cv;
+}
+
+/** The poster as a PNG tagged with its print resolution. */
+export async function posterPng(cv: HTMLCanvasElement, dpi: number): Promise<Blob> {
   const blob = await new Promise<Blob>((res, rej) => cv.toBlob(b => (b ? res(b) : rej(new Error('toBlob'))), 'image/png'));
-  return withDpi(blob, o.dpi);
+  return withDpi(blob, dpi);
+}
+
+// ─── coordinates ────────────────────────────────────────────────────────────
+
+/** Area centroid of the largest ring (lon/lat pairs). */
+export function ringCentroid(rings: ArrayLike<number>[]): [number, number] {
+  const ring = rings.reduce((a, r) => (r.length > a.length ? r : a));
+  let A = 0, cx = 0, cy = 0;
+  for (let i = 0, j = ring.length - 2; i < ring.length; j = i, i += 2) {
+    const f = ring[j] * ring[i + 1] - ring[i] * ring[j + 1];
+    A += f; cx += (ring[j] + ring[i]) * f; cy += (ring[j + 1] + ring[i + 1]) * f;
+  }
+  return [cx / (3 * A), cy / (3 * A)];
+}
+
+/** Print-style coordinates: 54°21′35″N  18°57′02″E. */
+export function formatCoords(lon: number, lat: number): string {
+  const dms = (v: number, pos: string, neg: string) => {
+    const a = Math.abs(v), d = Math.floor(a), m = Math.floor((a - d) * 60), s = Math.round(((a - d) * 60 - m) * 60);
+    return `${d}°${String(m).padStart(2, '0')}′${String(Math.min(59, s)).padStart(2, '0')}″${v >= 0 ? pos : neg}`;
+  };
+  return `${dms(lat, 'N', 'S')}  ${dms(lon, 'E', 'W')}`;
 }
 
 // ─── PNG resolution tag ─────────────────────────────────────────────────────

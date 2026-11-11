@@ -1,15 +1,17 @@
 import { MapView, MosaicGround } from './data/views';
+import { POSTER_PALETTES, PosterColourBy, PosterPalette } from '../poster/poster-options';
 
 export const APP_CANONICAL_URL = 'https://kmd-labs.github.io/watershed/';
 
 /** The view a plain link opens: "Where the rivers end", the sea-by-sea tour. */
 export const START_VIEW: MapView = 'story';
 
-const VIEWS: MapView[] = ['top', 'catchments', 'story', 'seas', 'mosaic', 'raindrop'];
+const VIEWS: MapView[] = ['top', 'catchments', 'story', 'seas', 'mosaic', 'raindrop', 'poster'];
 
 /**
  * Everything a link can carry: `?view=mosaic&ground=dark`, `?view=catchments&basin=412`,
- * `?step=3` ("Where the rivers end", the start view), `?view=top&step=5`, `?view=raindrop&drop=22.6,50.2`.
+ * `?step=3` ("Where the rivers end", the start view), `?view=top&step=5`, `?view=raindrop&drop=22.6,50.2`,
+ * `?view=poster&palette=black-neon&by=sea&basin=1` (poster maker: colours, and the basin it is about).
  * Defaults are left out so the plain URL stays clean. Links from before the top 20 became a view
  * of its own (`?top=5`, `?top=off`, `?basin=412`) still open what they used to.
  */
@@ -21,6 +23,9 @@ export interface LinkState {
   /** Step of the running tour (top 20 or "Where the rivers end"). */
   step: number;
   drop: [number, number] | null;
+  /** Poster maker colours. */
+  palette: PosterPalette;
+  by: PosterColourBy;
 }
 
 const int = (v: string | null, min: number, max: number) => {
@@ -46,6 +51,9 @@ export function readLink(search: string): Partial<LinkState> & { lang?: string }
     if (top === 'off' || out.basin !== undefined) out.view = 'catchments';
     else if (topStep !== null) { out.view = 'top'; out.step = topStep; }
   }
+  const palette = p.get('palette') as PosterPalette | null;
+  if (palette && POSTER_PALETTES.includes(palette)) out.palette = palette;
+  if (p.get('by') === 'sea') out.by = 'sea';
   const drop = p.get('drop')?.split(',').map(Number);
   if (drop?.length === 2 && drop.every(Number.isFinite) && Math.abs(drop[0]) <= 180 && Math.abs(drop[1]) <= 90) out.drop = [drop[0], drop[1]];
   const lang = p.get('lang');
@@ -56,12 +64,17 @@ export function readLink(search: string): Partial<LinkState> & { lang?: string }
 /** Writes the map state into `url`'s query (defaults removed, unrelated parameters kept). */
 export function writeLink(url: URL, s: LinkState): URL {
   const p = url.searchParams;
-  for (const k of ['view', 'ground', 'basin', 'step', 'top', 'drop']) p.delete(k);
+  for (const k of ['view', 'ground', 'basin', 'step', 'top', 'drop', 'palette', 'by']) p.delete(k);
   if (s.view !== START_VIEW) p.set('view', s.view);
   if ((s.view === 'mosaic' || s.view === 'story') && s.ground === 'dark') p.set('ground', 'dark');
   if ((s.view === 'catchments' || s.view === 'seas' || s.view === 'mosaic') && s.basin >= 0) p.set('basin', String(s.basin));
   if ((s.view === 'top' || s.view === 'story') && s.step > 0) p.set('step', String(s.step));
   if (s.view === 'raindrop' && s.drop) p.set('drop', `${s.drop[0].toFixed(3)},${s.drop[1].toFixed(3)}`);
+  if (s.view === 'poster') {
+    if (s.palette !== 'white-ink') p.set('palette', s.palette);
+    if (s.by === 'sea' && s.palette !== 'white-ink' && s.palette !== 'black-white') p.set('by', 'sea');
+    if (s.basin >= 0) p.set('basin', String(s.basin));
+  }
   return url;
 }
 

@@ -1,0 +1,101 @@
+@let t = i18n.t();
+@let o = options();
+
+<div class="studio">
+  <!-- Live preview: the poster as it will print, scaled to the space left by the panel -->
+  <div class="studio__stage" #frame>
+    <div class="studio__sheet" [class.studio__sheet--busy]="preparing()">
+      <canvas #preview class="studio__canvas" role="img" [attr.aria-label]="t.posterPreviewLabel"></canvas>
+      @if (preparing()) {
+        <div class="studio__preparing" aria-live="polite">{{ t.posterPreparing }}</div>
+      }
+    </div>
+  </div>
+
+  <section class="studio__panel glass-panel" [attr.aria-label]="t.viewPoster">
+    <h2 class="studio__title">{{ t.viewPoster }}</h2>
+
+    <div class="studio__group">
+      <span class="studio__label" id="poster-palette">{{ t.posterPalette }}</span>
+      <div class="palettes" role="group" aria-labelledby="poster-palette">
+        @for (p of palettes; track p) {
+          <button type="button" class="palette" [class.palette--on]="o.palette === p" [attr.aria-pressed]="o.palette === p" (click)="set({ palette: p })">
+            <span class="palette__chip palette__chip--{{ p }}" aria-hidden="true"><i></i><i></i><i></i></span>
+            <span class="palette__name">{{ paletteName(p) }}</span>
+          </button>
+        }
+      </div>
+    </div>
+
+    @if (coloured()) {
+      <div class="studio__group">
+        <span class="studio__label" id="poster-by">{{ t.posterColourBy }}</span>
+        <div class="studio__toggles" role="group" aria-labelledby="poster-by">
+          <app-button variant="toggle" size="sm" [active]="o.by === 'basin'" (btnClick)="set({ by: 'basin' })">{{ t.posterByBasin }}</app-button>
+          <app-button variant="toggle" size="sm" [active]="o.by === 'sea'" (btnClick)="set({ by: 'sea' })">{{ t.posterBySea }}</app-button>
+        </div>
+      </div>
+    }
+
+    <div class="studio__group">
+      <span class="studio__label">{{ t.posterArea }}</span>
+      <app-dropdown
+        class="studio__area"
+        variant="default"
+        direction="up"
+        [fullWidth]="true"
+        menuMinWidth="260px"
+        [options]="areaOptions()"
+        [value]="o.focus"
+        [ariaLabel]="t.posterArea"
+        (valueChange)="setFocus($event)">
+      </app-dropdown>
+    </div>
+
+    <div class="studio__group studio__fields">
+      <label class="field">
+        <span class="studio__label">{{ t.posterTitleField }}</span>
+        <input type="text" maxlength="32" [value]="o.title ?? ''" [placeholder]="auto().title" (input)="setText('title', $event)" />
+      </label>
+      <label class="field">
+        <span class="studio__label">{{ t.posterSubtitleField }}</span>
+        <input type="text" maxlength="40" [value]="o.subtitle ?? ''" [placeholder]="auto().subtitle" (input)="setText('subtitle', $event)" />
+      </label>
+      <label class="field field--wide">
+        <span class="studio__label">{{ t.posterLineField }}</span>
+        <input type="text" maxlength="90" [value]="o.line ?? ''" [placeholder]="auto().line" (input)="setText('line', $event)" />
+      </label>
+    </div>
+
+    <div class="studio__group">
+      <span class="studio__label" id="poster-show">{{ t.posterShow }}</span>
+      <div class="studio__toggles" role="group" aria-labelledby="poster-show">
+        <app-button variant="toggle" size="sm" [active]="o.facts" (btnClick)="set({ facts: !o.facts })">{{ t.posterShowFacts }}</app-button>
+        <app-button variant="toggle" size="sm" [active]="o.seaNames" (btnClick)="set({ seaNames: !o.seaNames })">{{ t.posterShowSeas }}</app-button>
+        <app-button variant="toggle" size="sm" [active]="o.coords" (btnClick)="set({ coords: !o.coords })">{{ t.posterShowCoords }}</app-button>
+      </div>
+    </div>
+
+    <div class="studio__group">
+      <span class="studio__label" id="poster-format">{{ t.posterFormat }}</span>
+      <div class="studio__toggles" role="group" aria-labelledby="poster-format">
+        @for (f of formats; track f) {
+          <app-button variant="toggle" size="sm" [active]="o.format === f" (btnClick)="set({ format: f })">{{ f }}</app-button>
+        }
+      </div>
+      <span class="studio__size">{{ sizeText() }}</span>
+    </div>
+
+    <div class="studio__download">
+      <app-button variant="default" [disabled]="progress() !== null" (btnClick)="download()">
+        <lucide-icon [img]="downloadIcon" [size]="15"></lucide-icon>
+        <span>{{ progress() === null ? t.posterDownload : progressText() }}</span>
+      </app-button>
+      @if (progress() !== null) {
+        <div class="studio__progress" role="progressbar" [attr.aria-valuenow]="(progress() ?? 0) * 100" aria-valuemin="0" aria-valuemax="100">
+          <i [style.width.%]="(progress() ?? 0) * 100"></i>
+        </div>
+      }
+    </div>
+  </section>
+</div>

@@ -2,8 +2,9 @@
  * Primary map modes offered by the top-right view switcher. The two guided tours are views of
  * their own: "top" (the 20 largest river basins) runs on the catchments map, "story" (where the
  * rivers end, sea by sea) on its own river colouring and closes onto the sea sub-basins.
+ * "poster" is the poster maker (src/app/poster).
  */
-export type MapView = 'top' | 'catchments' | 'story' | 'seas' | 'mosaic' | 'raindrop';
+export type MapView = 'top' | 'catchments' | 'story' | 'seas' | 'mosaic' | 'raindrop' | 'poster';
 
 /** Ground of the "Basin mosaic" view: white (prints, light pages) or black (the classic look). */
 export type MosaicGround = 'light' | 'dark';

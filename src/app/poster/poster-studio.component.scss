@@ -1,0 +1,309 @@
+@use "variables" as *;
+
+// Full viewport under the header: the preview fills what the settings panel leaves free.
+// Desktop: panel on the right, anchored to the bottom like the other docks. Tablet and phone:
+// preview on top, panel as a scrolling bottom sheet.
+$panel-w: 384px;
+$top: calc(var(--header-offset-top) + var(--kmd-brand-h, 40px) + #{spacing("lg")});
+
+.studio {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  pointer-events: none;
+
+  &__stage {
+    position: absolute;
+    top: $top;
+    bottom: var(--dock-offset-bottom, 16px);
+    left: var(--dock-offset-x);
+    right: calc(#{$panel-w} + var(--dock-offset-x) * 2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  &__sheet {
+    position: relative;
+    display: flex;
+    max-width: 100%;
+    max-height: 100%;
+    aspect-ratio: 420 / 594;
+    height: 100%;
+    box-shadow: 0 1px 2px color("shadow-panel"), 0 18px 48px color("shadow-heavy");
+    transition: opacity transition("fast");
+
+    &--busy {
+      opacity: 0.85;
+    }
+  }
+
+  &__canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    background: color("panel-bg-solid");
+  }
+
+  &__preparing {
+    position: absolute;
+    left: 50%;
+    bottom: spacing("lg");
+    transform: translateX(-50%);
+    padding: spacing("xxs") spacing("md");
+    border-radius: radius("pill");
+    background: color("panel-bg-heavy");
+    font-size: font-size("xs");
+    color: color("text-desc");
+    white-space: nowrap;
+  }
+
+  &__panel {
+    position: absolute;
+    right: var(--dock-offset-x);
+    bottom: var(--dock-offset-bottom, 16px);
+    width: $panel-w;
+    max-height: calc(100dvh - #{$top} - var(--dock-offset-bottom, 16px));
+    overflow-y: auto;
+    padding: spacing("lg") spacing("xl") spacing("xl");
+    border-radius: radius("panel");
+    pointer-events: auto;
+    overscroll-behavior: contain;
+  }
+
+  &__title {
+    margin: 0 0 spacing("md");
+    font-size: font-size("md");
+    font-weight: font-weight("semibold");
+    color: color("text-bright");
+  }
+
+  &__group {
+    display: flex;
+    flex-direction: column;
+    gap: spacing("xs");
+    margin-top: spacing("lg");
+  }
+
+  &__label {
+    font-size: font-size("xs");
+    font-weight: font-weight("medium");
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: color("text-dim");
+  }
+
+  &__toggles {
+    display: flex;
+    flex-wrap: wrap;
+    gap: spacing("xxs");
+  }
+
+  &__size {
+    font-family: var(--font-family-mono);
+    font-size: font-size("xs");
+    color: color("text-dim");
+  }
+
+  &__fields {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: spacing("xs") spacing("md");
+  }
+
+  &__download {
+    margin-top: spacing("xl");
+
+    ::ng-deep app-button,
+    ::ng-deep button {
+      display: flex;
+      width: 100%;
+      justify-content: center;
+    }
+  }
+
+  &__progress {
+    height: 3px;
+    margin-top: spacing("xs");
+    border-radius: radius("pill");
+    background: color("line");
+    overflow: hidden;
+
+    i {
+      display: block;
+      height: 100%;
+      background: color("accent");
+      transition: width 0.2s linear;
+    }
+  }
+
+  @include respond-to("tablet") {
+    &__stage {
+      right: var(--dock-offset-x);
+      bottom: calc(46dvh + var(--dock-offset-bottom, 16px) + #{spacing("md")});
+    }
+
+    &__panel {
+      left: var(--dock-offset-x);
+      width: auto;
+      max-height: 46dvh;
+    }
+  }
+
+  @include respond-to("mobile-landscape") {
+    &__stage {
+      right: 52%;
+      bottom: var(--dock-offset-bottom, 8px);
+    }
+
+    &__panel {
+      left: auto;
+      width: 48%;
+      max-height: calc(100dvh - #{$top} - var(--dock-offset-bottom, 8px));
+    }
+  }
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: spacing("xxs");
+  min-width: 0;
+
+  &--wide {
+    grid-column: 1 / -1;
+  }
+
+  input {
+    width: 100%;
+    height: $control-height;
+    padding: 0 spacing("md");
+    border: 1px solid color("line");
+    border-radius: radius("sm");
+    background: color("panel-bg-solid");
+    font: inherit;
+    font-size: font-size("sm");
+    color: color("text-main");
+
+    &::placeholder {
+      color: color("text-dim");
+    }
+
+    &:focus-visible {
+      outline: 2px solid color("accent");
+      outline-offset: 1px;
+    }
+  }
+}
+
+// Five colour schemes as small paper chips with three river strokes each.
+.palettes {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: spacing("xs");
+}
+
+.palette {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: spacing("xxs");
+  min-width: 0;
+  padding: spacing("xxs");
+  border: 0;
+  border-radius: radius("sm");
+  background: none;
+  font: inherit;
+  cursor: pointer;
+
+  &:hover .palette__chip {
+    transform: translateY(-1px);
+  }
+
+  &:focus-visible {
+    outline: 2px solid color("accent");
+    outline-offset: 1px;
+  }
+
+  &--on .palette__chip {
+    box-shadow: 0 0 0 2px color("accent");
+  }
+
+  &--on .palette__name {
+    color: color("text-bright");
+    font-weight: font-weight("semibold");
+  }
+
+  &__chip {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 4px;
+    width: 100%;
+    aspect-ratio: 0.72;
+    padding: 0 18%;
+    border-radius: 6px;
+    box-shadow: inset 0 0 0 1px color("line");
+    transition: transform transition("fast"), box-shadow transition("fast");
+
+    i {
+      display: block;
+      height: 2px;
+      border-radius: 1px;
+    }
+
+    i:nth-child(2) {
+      width: 70%;
+      margin-left: 18%;
+    }
+
+    i:nth-child(3) {
+      width: 85%;
+    }
+
+    &--white-ink,
+    &--white-pastel {
+      background: var(--color-print-paper);
+    }
+
+    &--black-white,
+    &--black-vivid,
+    &--black-neon {
+      background: var(--color-print-black-paper);
+    }
+
+    &--white-ink i {
+      background: var(--color-print-ink);
+    }
+
+    &--black-white i {
+      background: var(--color-print-black-ink);
+    }
+
+    @each $family, $kind in ("white-pastel": "pastel", "black-vivid": "vivid", "black-neon": "neon") {
+      &--#{$family} i:nth-child(1) {
+        background: var(--color-print-#{$kind}-1);
+      }
+
+      &--#{$family} i:nth-child(2) {
+        background: var(--color-print-#{$kind}-2);
+      }
+
+      &--#{$family} i:nth-child(3) {
+        background: var(--color-print-#{$kind}-0);
+      }
+    }
+
+    &--black-neon i {
+      box-shadow: 0 0 4px currentColor;
+    }
+  }
+
+  &__name {
+    font-size: font-size("xxs");
+    line-height: 1.25;
+    text-align: center;
+    color: color("text-desc");
+  }
+}

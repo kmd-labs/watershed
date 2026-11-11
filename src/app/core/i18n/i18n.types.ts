@@ -1,3 +1,5 @@
+import { PosterPalette } from '../../poster/poster-options';
+
 export type Lang = 'en' | 'pl';
 
 /**
@@ -115,11 +117,41 @@ export interface Dict {
   groundWhite: string;
   groundBlack: string;
   poster: string;
-  posterBusy: string;
   posterHint: string;
   posterStats: (area: string, mouths: string, rivers: string) => string;
   posterCredits: string;
   posterTitle: string;
+  viewPoster: string;
+  viewPosterShort: string;
+  posterPalette: string;
+  posterPalettes: Record<PosterPalette, string>;
+  posterColourBy: string;
+  posterByBasin: string;
+  posterBySea: string;
+  posterArea: string;
+  posterWhole: string;
+  posterTitleField: string;
+  posterSubtitleField: string;
+  posterLineField: string;
+  posterShow: string;
+  posterShowFacts: string;
+  posterShowSeas: string;
+  posterShowCoords: string;
+  posterFormat: string;
+  posterSize: (wMm: number, hMm: number, wPx: string, hPx: string, dpi: number) => string;
+  posterDownload: string;
+  posterRendering: (pct: number) => string;
+  posterPreparing: string;
+  posterPreviewLabel: string;
+  posterRuleWordBasin: string;
+  posterLineBasin: (sea: string) => string;
+  factBasinArea: string;
+  factBasinShare: string;
+  factBasinFlow: string;
+  factBasinLength: string;
+  factBasinNetwork: string;
+  noteHydro: string;
+  noteFlow: string;
   posterRuleWord: string;
   posterLineInk: string;
   posterLineMosaic: string;

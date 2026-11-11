@@ -28,23 +28,26 @@ export interface GlobeHover {
   y: number;
 }
 
-/** How the map looks on a printed poster (see `GlobeComponent.renderPrintMap`). */
+/** How the map looks on a printed poster (see `GlobeComponent.printBegin` / `printRender`). */
 export interface PrintStyle {
-  /** Paper colour; also the scene background around the map. */
+  /** Paper: land, inside and outside the drainage basin. */
   paper: string;
   sea: string;
-  /** Land outside the drainage basin, and inside it. */
-  land: string;
-  basin: string;
-  /** Hairline along the drainage divide (it also traces the coast). */
+  /** Hairline along the drainage divide (around the focus basin, if any). */
   divide: string;
-  /** Rivers in one ink, in the basin-mosaic palette, or in the colour of their sea. */
-  rivers: 'ink' | 'mosaic' | 'sea';
-  ink: string;
-  /** Palette variant for coloured rivers. */
-  ground: MosaicGround;
+  /**
+   * How the rivers are laid over the base map: drawn on white and multiplied (dark rivers on light
+   * paper) or drawn on black and screened (light rivers on dark paper).
+   */
+  blend: 'multiply' | 'screen';
+  /** River colour per basin (index = basin id). */
+  riverColors: string[];
+  /** The basin the poster is about, or −1 for the whole drainage basin. Rivers elsewhere fade. */
+  focus: number;
+  /** One ink (small streams lighter) rather than colours (even the smallest stay legible). */
+  ink: boolean;
   seaLabel: string;
-  dpi: number;
+  seaNames: boolean;
 }
 
 export interface GlobePick {
@@ -114,6 +117,8 @@ const PRINT_INK_OPACITY = [0.42, 0.58, 0.8, 0.95, 1];
 const PRINT_COLOUR_OPACITY = [0.72, 0.85, 1, 1, 1];
 const PRINT_FOV = 10;
 const PRINT_TILE = 2048;
+/** Thinner print lines break up; they are drawn this wide but lighter (same ink per length). */
+const PRINT_MIN_LINE_PX = 0.8;
 /** Pixel ratio at rest (sharp) and while the map moves (fast); back to rest after this idle time. */
 const MAX_DPR = 1.5;
 const MOTION_DPR = 1;
@@ -419,7 +424,7 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
     effect(() => {
       this.view();
       this.ground();
-      if (this.ready) void this.restyle();
+      if (this.ready && !this.printSaved) void this.restyle();
     });
     effect(() => {
       const img = this.relief();
@@ -429,24 +434,26 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
     effect(() => {
       this.selected();
       this.drop();
-      if (!this.ready) return;
+      if (!this.ready || this.printSaved) return;
       this.updateBasinColours();
       this.updateOverlays();
       this.invalidate();
     });
     effect(() => {
       const v = this.showRivers();
+      if (this.printSaved) return;
       this.rivers.visible = v;
       this.invalidate();
     });
     effect(() => {
       const v = this.showBorders();
+      if (this.printSaved) return;
       if (this.borders) this.borders.visible = v;
       this.invalidate();
     });
     effect(() => {
       const on = this.showFlow();
-      if (this.ready) this.setFlow(on);
+      if (this.ready && !this.printSaved) this.setFlow(on);
     });
     effect(() => {
       this.basinLabel();
@@ -459,16 +466,16 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
     });
     effect(() => {
       const d = this.drop();
-      if (this.ready) this.showDrop(d);
+      if (this.ready && !this.printSaved) this.showDrop(d);
     });
     effect(() => {
       const step = this.storyStep();
-      if (this.ready && this.view() === 'story') this.startStoryStep(step);
+      if (this.ready && !this.printSaved && this.view() === 'story') this.startStoryStep(step);
     });
     effect(() => {
       const step = this.topStep();
       this.topOrder();
-      if (this.ready && this.view() === 'catchments') this.startTopStep(step);
+      if (this.ready && !this.printSaved && this.view() === 'catchments') this.startTopStep(step);
     });
   }
 
@@ -1557,87 +1564,97 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
 
   // ─── print ────────────────────────────────────────────────────────────────
 
+  /** On-screen state saved while the map is in print mode (poster maker), or null. */
+  private printSaved: { cam: View; pitch: number; fov: number; pr: number; visible: [THREE.Object3D, boolean][] } | null = null;
+  private printStyle: PrintStyle | null = null;
+  /** Altitude that frames the whole drainage basin, per frame aspect: the reference for line weights. */
+  private readonly printWholeAlt = new Map<number, number>();
+
   /**
-   * Renders the whole basin for print into a canvas of `width × height` px: straight down through a
-   * narrow lens (reads like a flat map), paper-coloured land, a quiet sea, a hairline divide, rivers
-   * weighted by size in millimetres at `style.dpi`, and the sea names in spaced italic caps.
-   * Rendered in tiles so a 300 dpi A2 map never needs a giant GPU buffer. The on-screen view is
-   * restored afterwards.
+   * Puts the map into print mode with `style` until printEnd() (call again to change the style):
+   * only the rivers stay in the scene, in the style's colours, on plain white or black for blending.
+   * The on-screen loop pauses meanwhile.
    */
-  async renderPrintMap(width: number, height: number, style: PrintStyle): Promise<HTMLCanvasElement> {
+  printBegin(style: PrintStyle) {
+    if (!this.ready) return;
+    if (!this.printSaved) {
+      this.fly = null;
+      this.printSaved = {
+        cam: { ...this.cam }, pitch: this.pitch, fov: this.camera.fov, pr: this.renderer.getPixelRatio(),
+        visible: this.scene.children.map(o => [o, o.visible] as [THREE.Object3D, boolean])
+      };
+    }
+    this.printStyle = style;
+    for (const o of this.scene.children) o.visible = o === this.rivers;
+    this.scene.background = new THREE.Color(style.blend === 'multiply' ? 0xffffff : 0x000000);
+    const paper = new THREE.Color(style.paper);
+    const c = new THREE.Color();
+    const lut = this.lut;
+    this.data().basins.forEach((_, i) => {
+      c.set(style.riverColors[i] ?? style.riverColors[0] ?? style.paper);
+      // Around a single basin, the neighbours' rivers stay as a faint context.
+      if (style.focus >= 0 && i !== style.focus) c.lerp(paper, 0.8);
+      lut.set([c.r, c.g, c.b, 1], i * 4);
+      lut[(BASIN_TEX + i) * 4] = -1;
+      lut[(BASIN_TEX + i) * 4 + 1] = 0;
+    });
+    this.basinTex.needsUpdate = true;
+    for (const l of this.riverLayers) l.mat.dashed = false;
+  }
+
+  /**
+   * Renders the print map into a `width × height` canvas at `dpi` (between printBegin and printEnd).
+   * Straight down through a narrow lens, the subject fitted with a small margin. The base map — sea,
+   * land, lakes and the drainage divide — is drawn as vectors, so it stays sharp at any scale; the
+   * rivers are rendered by WebGL in tiles (a 300 dpi A2 never needs a giant GPU buffer) and laid over
+   * it; `glow` adds a soft halo under them (neon); the sea names go on top.
+   */
+  async printRender(
+    width: number,
+    height: number,
+    dpi: number,
+    opts: { glow?: boolean; onProgress?: (done: number) => void } = {}
+  ): Promise<HTMLCanvasElement> {
+    const style = this.printStyle;
+    if (!style) throw new Error('printBegin() first');
     const data = this.data();
-    const px = (mm: number) => (mm * style.dpi) / 25.4;
+    const px = (mm: number) => (mm * dpi) / 25.4;
     const gl = this.renderer.getContext();
     const tile = Math.min(PRINT_TILE, ...(gl.getParameter(gl.MAX_VIEWPORT_DIMS) as number[]));
-    const saved = {
-      cam: { ...this.cam }, pitch: this.pitch, fov: this.camera.fov, pr: this.renderer.getPixelRatio(),
-      dropLine: this.dropLine?.visible, dropHalo: this.dropHalo?.visible
-    };
-    this.fly = null;
 
-    // ── print look ──
-    this.relief$.uReliefOn.value = 0;
-    this.scene.background = new THREE.Color(style.paper);
-    this.drawPrintContext(style);
-    await this.drawPrintRegion(style);
-    this.writePrintColours(style);
-    this.rivers.visible = true;
-    if (this.borders) this.borders.visible = false;
-    for (const o of [this.selOverlay, this.hovOverlay]) if (o) o.mesh.visible = false;
-    if (this.dropLine) this.dropLine.visible = false;
-    if (this.dropHalo) this.dropHalo.visible = false;
-    for (const l of this.riverLayers) {
-      l.mat.linewidth = px(PRINT_RIVER_MM[l.cls]);
-      l.mat.opacity = (style.rivers === 'ink' ? PRINT_INK_OPACITY : PRINT_COLOUR_OPACITY)[l.cls];
-      l.mat.dashed = false;
-    }
-
-    // ── camera: straight down, narrow lens, basin outline fitted with a small margin ──
+    // ── camera ──
     this.pitch = 0;
     this.camera.fov = PRINT_FOV;
     this.camera.aspect = width / height;
     this.camera.clearViewOffset();
-    const ring = this.softOutlines()[6].reduce((a, r) => (r.length > a.length ? r : a));
-    let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9;
-    for (let i = 0; i < ring.length; i += 2) { x0 = Math.min(x0, ring[i]); x1 = Math.max(x1, ring[i]); y0 = Math.min(y0, ring[i + 1]); y1 = Math.max(y1, ring[i + 1]); }
-    const pts: THREE.Vector3[] = [];
-    for (const r of this.softOutlines()[6]) for (let i = 0; i < r.length; i += 2 * Math.max(1, Math.floor(r.length / 800))) pts.push(lonLatToVec(r[i], r[i + 1], R));
-    const fits = () => {
-      this.placeCamera();
-      this.camera.near = Math.max(0.01, this.cam.alt * 0.5);
-      this.camera.far = this.cam.alt + R * 2;
-      this.camera.updateProjectionMatrix();
-      let mx = 0, my = 0;
-      const t = new THREE.Vector3();
-      for (const p of pts) { t.copy(p).project(this.camera); mx = Math.max(mx, Math.abs(t.x)); my = Math.max(my, Math.abs(t.y)); }
-      return [mx, my];
-    };
-    this.cam = { lon: (x0 + x1) / 2, lat: (y0 + y1) / 2, alt: 2 };
-    // Centre on the outline's projected extent, then grow the altitude until it fits.
-    for (let pass = 0; pass < 2; pass++) {
-      let alt = 2;
-      for (; alt < 80; alt *= 1.02) {
-        this.cam.alt = alt;
-        const [mx, my] = fits();
-        if (mx < 0.95 && my < 0.95) break;
-      }
-      this.placeCamera(); this.camera.updateProjectionMatrix();
-      let ax = Infinity, bx = -Infinity, ay = Infinity, by = -Infinity;
-      const t = new THREE.Vector3();
-      for (const p of pts) { t.copy(p).project(this.camera); ax = Math.min(ax, t.x); bx = Math.max(bx, t.x); ay = Math.min(ay, t.y); by = Math.max(by, t.y); }
-      // Shift the centre by the projected imbalance (convert NDC to degrees via the frame size).
-      const spanLon = (x1 - x0), spanLat = (y1 - y0);
-      this.cam.lon += ((ax + bx) / 2) * spanLon * 0.5 / Math.max(0.2, (bx - ax) / 2);
-      this.cam.lat += ((ay + by) / 2) * spanLat * 0.5 / Math.max(0.2, (by - ay) / 2);
-    }
-    fits();
+    const aspectKey = Math.round((width / height) * 1000);
+    const whole = this.softOutlines()[6];
+    if (!this.printWholeAlt.has(aspectKey)) this.printWholeAlt.set(aspectKey, this.fitPrint(whole));
+    const alt = this.fitPrint(style.focus >= 0 ? data.basinPolys[style.focus] : whole);
+    // Zoomed in on one basin, rivers draw a little heavier (gently, not to scale).
+    const weight = clamp(Math.pow(this.printWholeAlt.get(aspectKey)! / alt, 0.3), 1, 2.4);
 
-    // ── tiled render ──
+    // ── base map ──
     const out = document.createElement('canvas');
-    out.width = width; out.height = height;
+    out.width = width;
+    out.height = height;
     const ctx = out.getContext('2d')!;
+    this.drawPrintBase(ctx, width, height, style, px);
+
+    // ── rivers ──
+    for (const l of this.riverLayers) {
+      const w = px(PRINT_RIVER_MM[l.cls]) * weight;
+      l.mat.linewidth = Math.max(PRINT_MIN_LINE_PX, w);
+      l.mat.opacity = (style.ink ? PRINT_INK_OPACITY : PRINT_COLOUR_OPACITY)[l.cls] * Math.min(1, w / PRINT_MIN_LINE_PX);
+    }
+    const layer = opts.glow ? document.createElement('canvas') : null;
+    if (layer) { layer.width = width; layer.height = height; }
+    const lctx = layer ? layer.getContext('2d')! : ctx;
+    lctx.globalCompositeOperation = layer ? 'source-over' : style.blend;
     this.renderer.setPixelRatio(1);
     const lineMats = this.riverLayers.map(l => l.mat);
+    const tiles = Math.ceil(width / tile) * Math.ceil(height / tile);
+    let done = 0;
     for (let ty = 0; ty < height; ty += tile) {
       for (let tx = 0; tx < width; tx += tile) {
         const tw = Math.min(tile, width - tx), th = Math.min(tile, height - ty);
@@ -1646,29 +1663,59 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
         this.camera.updateProjectionMatrix();
         lineMats.forEach(m => m.resolution.set(tw, th));
         this.renderer.render(this.scene, this.camera);
-        ctx.drawImage(this.renderer.domElement, 0, 0, tw, th, tx, ty, tw, th);
+        lctx.drawImage(this.renderer.domElement, 0, 0, tw, th, tx, ty, tw, th);
+        opts.onProgress?.(++done / tiles);
         await nextFrame(); // keep the page responsive between tiles
       }
     }
     this.camera.clearViewOffset();
     this.camera.updateProjectionMatrix();
+    if (layer) {
+      // Two soft copies of the rivers (shrunk and stretched back = blurred) glow under the sharp ones.
+      ctx.globalCompositeOperation = 'screen';
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+      for (const [f, a] of [[1 / 7, 0.9], [1 / 22, 0.8]] as const) {
+        const sm = document.createElement('canvas');
+        sm.width = Math.max(1, Math.round(width * f));
+        sm.height = Math.max(1, Math.round(height * f));
+        const sx = sm.getContext('2d')!;
+        sx.imageSmoothingEnabled = true;
+        sx.imageSmoothingQuality = 'high';
+        sx.drawImage(layer, 0, 0, sm.width, sm.height);
+        ctx.globalAlpha = a;
+        ctx.drawImage(sm, 0, 0, width, height);
+      }
+      ctx.globalAlpha = 1;
+      ctx.drawImage(layer, 0, 0);
+    }
+    ctx.globalCompositeOperation = 'source-over';
 
     // ── sea names: spaced italic caps ──
-    const font = this.theme.getFontFamily();
-    const size = px(2.6);
-    ctx.font = `italic 300 ${size}px ${font}`;
-    ctx.letterSpacing = `${size * 0.22}px`;
-    ctx.fillStyle = style.seaLabel;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    for (const L of this.labels) {
-      if (L.kind !== 'sea') continue;
-      const p = L.p.clone().project(this.camera);
-      ctx.fillText(L.text.toUpperCase(), ((p.x + 1) / 2) * width, ((1 - p.y) / 2) * height);
+    if (style.seaNames) {
+      const size = px(2.6);
+      ctx.font = `italic 300 ${size}px ${this.theme.getFontFamily()}`;
+      ctx.letterSpacing = `${size * 0.22}px`;
+      ctx.fillStyle = style.seaLabel;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      for (const L of this.labels) {
+        if (L.kind !== 'sea') continue;
+        const p = L.p.clone().project(this.camera);
+        ctx.fillText(L.text.toUpperCase(), ((p.x + 1) / 2) * width, ((1 - p.y) / 2) * height);
+      }
+      ctx.letterSpacing = '0px';
     }
-    ctx.letterSpacing = '0px';
+    return out;
+  }
 
-    // ── restore the on-screen view ──
+  /** Leaves print mode and restores the on-screen map. */
+  async printEnd() {
+    const saved = this.printSaved;
+    if (!saved) return;
+    this.printSaved = null;
+    this.printStyle = null;
+    for (const [o, v] of saved.visible) o.visible = v;
     this.cam = saved.cam;
     this.pitch = saved.pitch;
     this.camera.fov = saved.fov;
@@ -1676,88 +1723,114 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
     this.camera.far = 400;
     this.renderer.setPixelRatio(saved.pr);
     this.resize();
-    if (this.dropLine) this.dropLine.visible = !!saved.dropLine;
-    if (this.dropHalo) this.dropHalo.visible = !!saved.dropHalo;
     this.rivers.visible = this.showRivers();
     if (this.borders) this.borders.visible = this.showBorders();
+    this.showDrop(this.drop());
     this.setFlow(this.showFlow());
-    this.applyRelief(this.relief(), this.showRelief());
     await this.restyle();
-    return out;
+    if (this.topActive()) this.startTopStep(this.topStep());
+    this.invalidate();
   }
 
-  /** Context ring in print colours, without the fade (the poster frame crops it). */
-  private drawPrintContext(style: PrintStyle) {
-    const data = this.data();
-    const [W0, W1, S0, S1] = data.worldBox;
-    const cv = this.contextCanvas, W = cv.width, H = cv.height;
-    const x = cv.getContext('2d')!;
-    x.globalCompositeOperation = 'source-over';
-    x.globalAlpha = 1;
-    x.fillStyle = style.sea; x.fillRect(0, 0, W, H);
-    x.fillStyle = style.land;
-    for (const poly of data.world) {
-      x.beginPath();
-      for (const ring of poly) {
-        for (let k = 0; k < ring.length; k += 2) {
-          const px = ((ring[k] - W0) / (W1 - W0)) * W, py = ((S1 - ring[k + 1]) / (S1 - S0)) * H;
-          k ? x.lineTo(px, py) : x.moveTo(px, py);
-        }
-        x.closePath();
+  /** Centres the print camera on `rings` and returns the altitude at which they fill ~95 % of the frame. */
+  private fitPrint(rings: ArrayLike<number>[]): number {
+    let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9, n = 0;
+    for (const r of rings) n += r.length / 2;
+    const step = Math.max(1, Math.floor(n / 1600));
+    const pts: THREE.Vector3[] = [];
+    for (const r of rings) {
+      for (let i = 0; i < r.length; i += 2) {
+        x0 = Math.min(x0, r[i]); x1 = Math.max(x1, r[i]); y0 = Math.min(y0, r[i + 1]); y1 = Math.max(y1, r[i + 1]);
       }
-      x.fill('evenodd');
+      for (let i = 0; i < r.length; i += 2 * step) pts.push(lonLatToVec(r[i], r[i + 1], R));
     }
-    if (this.contextTex) this.contextTex.needsUpdate = true;
+    const t = new THREE.Vector3();
+    const extent = () => {
+      this.placeCamera();
+      this.camera.near = Math.max(0.001, this.cam.alt * 0.5);
+      this.camera.far = this.cam.alt + R * 2;
+      this.camera.updateProjectionMatrix();
+      let ax = Infinity, bx = -Infinity, ay = Infinity, by = -Infinity;
+      for (const p of pts) { t.copy(p).project(this.camera); ax = Math.min(ax, t.x); bx = Math.max(bx, t.x); ay = Math.min(ay, t.y); by = Math.max(by, t.y); }
+      return { ax, bx, ay, by };
+    };
+    this.cam = { lon: (x0 + x1) / 2, lat: (y0 + y1) / 2, alt: 2 };
+    // Grow the altitude until the outline fits, then centre on its projected extent; twice.
+    for (let pass = 0; pass < 2; pass++) {
+      for (let alt = 0.01; alt < 80; alt *= 1.02) {
+        this.cam.alt = alt;
+        const e = extent();
+        if (Math.max(-e.ax, e.bx) < 0.95 && Math.max(-e.ay, e.by) < 0.95) break;
+      }
+      const e = extent();
+      this.cam.lon += (((e.ax + e.bx) / 2) * (x1 - x0) * 0.5) / Math.max(0.2, (e.bx - e.ax) / 2);
+      this.cam.lat += (((e.ay + e.by) / 2) * (y1 - y0) * 0.5) / Math.max(0.2, (e.by - e.ay) / 2);
+    }
+    extent();
+    return this.cam.alt;
   }
 
-  /** Base map in print colours: sea, land, basin, lakes and the hairline drainage divide. */
-  private async drawPrintRegion(style: PrintStyle) {
+  /** Sea, land, lakes and the drainage divide as vectors, projected through the print camera. */
+  private drawPrintBase(ctx: CanvasRenderingContext2D, W: number, H: number, style: PrintStyle, px: (mm: number) => number) {
     const data = this.data();
-    const cv = document.createElement('canvas');
-    cv.width = this.RW; cv.height = this.RH;
-    const x = cv.getContext('2d')!;
-    const s = this.RW / 4096;
+    this.camera.updateMatrixWorld();
+    const m = new THREE.Matrix4().multiplyMatrices(this.camera.projectionMatrix, this.camera.matrixWorldInverse).elements;
+    let first = true;
+    const put = (lon: number, lat: number) => {
+      const phi = ((lon + 180) / 360) * Math.PI * 2, th = (90 - lat) * DEG, st = Math.sin(th);
+      const x = -R * Math.cos(phi) * st, y = R * Math.cos(th), z = R * Math.sin(phi) * st;
+      const w = m[3] * x + m[7] * y + m[11] * z + m[15];
+      const X = ((m[0] * x + m[4] * y + m[8] * z + m[12]) / w + 1) * 0.5 * W;
+      const Y = (1 - (m[1] * x + m[5] * y + m[9] * z + m[13]) / w) * 0.5 * H;
+      if (first) ctx.moveTo(X, Y);
+      else ctx.lineTo(X, Y);
+      first = false;
+    };
+    // Long straight edges in lon/lat (clip lines along the data box) curve on the globe: subdivide
+    // them so neighbouring layers meet where the texture-based map has them meet.
+    const edge = (lon0: number, lat0: number, lon1: number, lat1: number) => {
+      const n = Math.ceil(Math.max(Math.abs(lon1 - lon0), Math.abs(lat1 - lat0)) / 0.25);
+      for (let s = 1; s < n; s++) put(lon0 + ((lon1 - lon0) * s) / n, lat0 + ((lat1 - lat0) * s) / n);
+    };
+    const ring = (r: ArrayLike<number>) => {
+      first = true;
+      for (let k = 0; k < r.length; k += 2) {
+        if (k) edge(r[k - 2], r[k - 1], r[k], r[k + 1]);
+        put(r[k], r[k + 1]);
+      }
+      if (r.length >= 4) edge(r[r.length - 2], r[r.length - 1], r[0], r[1]);
+      ctx.closePath();
+    };
+    const fill = (polys: ArrayLike<number>[][], colour: string) => {
+      ctx.fillStyle = colour;
+      for (const poly of polys) { ctx.beginPath(); for (const r of poly) ring(r); ctx.fill('evenodd'); }
+    };
+    ctx.fillStyle = style.sea;
+    ctx.fillRect(0, 0, W, H);
+    fill(data.world, style.paper);
+    // Inside the data box the detailed coast and lakes replace the coarse world outline.
     const [LON0, LON1, LAT0, LAT1] = data.bbox;
-    const box: [number, number, number, number] = [LON0, LON1, LAT0, LAT1];
-    const path = (p: Poly) => this.pathPoly(x, p, box, this.RW, this.RH);
-    x.setTransform(1, 0, 0, -1, 0, this.RH);
-    x.fillStyle = style.sea; x.fillRect(0, 0, this.RW, this.RH);
-    x.fillStyle = style.land;
-    for (const p of data.land) { path(p); x.fill('evenodd'); }
-    x.fillStyle = style.basin;
-    data.basins.forEach((_, i) => { path(data.basinPolys[i]); x.fill('evenodd'); });
-    x.fillStyle = style.sea;
-    for (const p of data.lakes) { path(p); x.fill('evenodd'); }
-    x.lineJoin = 'round';
-    x.strokeStyle = style.divide;
-    x.lineWidth = 1.1 * s;
-    path(this.softOutlines()[6]); x.stroke();
-    x.setTransform(1, 0, 0, 1, 0, 0);
-    const bmp = typeof createImageBitmap === 'function' ? await createImageBitmap(cv) : null;
-    const tex = bmp ? new THREE.Texture(bmp as unknown as HTMLImageElement) : new THREE.CanvasTexture(cv);
-    tex.flipY = false;
-    tex.colorSpace = THREE.SRGBColorSpace;
-    tex.anisotropy = this.aniso();
-    tex.needsUpdate = true;
-    const old = this.regionMat.map;
-    this.regionMat.map = tex;
-    if (old) { old.dispose(); (old.image as ImageBitmap | undefined)?.close?.(); }
-  }
-
-  /** River colours for print: one ink, the mosaic palette or the sea palette; nothing hidden. */
-  private writePrintColours(style: PrintStyle) {
-    const data = this.data();
-    const lut = this.lut;
-    const ink = new THREE.Color(style.ink);
-    const mosaic = this.mosaicColors[style.ground];
-    const seas = this.seaColors[style.ground];
-    data.basins.forEach((b, i) => {
-      const c = style.rivers === 'ink' ? ink : style.rivers === 'mosaic' ? mosaic[b.mosaic] : seas[b.sub];
-      lut.set([c.r, c.g, c.b, 1], i * 4);
-      lut[(BASIN_TEX + i) * 4] = -1;
-      lut[(BASIN_TEX + i) * 4 + 1] = 0;
-    });
-    this.basinTex.needsUpdate = true;
+    const box: number[] = [];
+    const N = 64;
+    for (let i = 0; i <= N; i++) box.push(LON0 + ((LON1 - LON0) * i) / N, LAT0);
+    for (let i = 0; i <= N; i++) box.push(LON1, LAT0 + ((LAT1 - LAT0) * i) / N);
+    for (let i = N; i >= 0; i--) box.push(LON0 + ((LON1 - LON0) * i) / N, LAT1);
+    for (let i = N; i >= 0; i--) box.push(LON0, LAT0 + ((LAT1 - LAT0) * i) / N);
+    ctx.save();
+    ctx.beginPath();
+    ring(box);
+    ctx.clip();
+    ctx.fillStyle = style.sea;
+    ctx.fillRect(0, 0, W, H);
+    fill(data.land, style.paper);
+    fill(data.lakes, style.sea);
+    ctx.restore();
+    ctx.strokeStyle = style.divide;
+    ctx.lineWidth = Math.max(1, px(0.13));
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    for (const r of style.focus >= 0 ? data.basinPolys[style.focus] : this.softOutlines()[6]) ring(r);
+    ctx.stroke();
   }
 
   // ─── loop ─────────────────────────────────────────────────────────────────
@@ -1780,6 +1853,8 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
 
   private frame = () => {
     this.raf = requestAnimationFrame(this.frame);
+    // The poster maker owns the renderer while the map is in print mode.
+    if (this.printSaved) return;
     const dt = Math.min(this.clock.getDelta(), 0.1);
     let animating = false;
 

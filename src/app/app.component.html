@@ -5,7 +5,7 @@
   <app-splash></app-splash>
 
   <!-- Fullscreen Visualization Stage -->
-  <section class="stage" [attr.aria-label]="t.stageAriaLabel">
+  <section class="stage" [class.stage--poster]="view() === 'poster'" [attr.aria-label]="t.stageAriaLabel">
     @if (data) {
       <app-globe
         [data]="data"
@@ -31,7 +31,7 @@
         (progress)="globeProgress.set($event)"
         (failed)="mapFailed.set(true)">
       </app-globe>
-      @if (!mapFailed()) {
+      @if (!mapFailed() && view() !== 'poster') {
         <div class="map-buttons glass-panel" role="group" [attr.aria-label]="t.mapButtons">
           <app-button variant="ghost" [iconOnly]="true" [ariaLabel]="t.zoomIn" [titleText]="t.zoomIn" (btnClick)="zoomIn()">
             <lucide-icon [img]="zoomInIcon" [size]="16"></lucide-icon>
@@ -43,7 +43,7 @@
             <lucide-icon [img]="homeIcon" [size]="15"></lucide-icon>
           </app-button>
         </div>
-      } @else {
+      } @else if (mapFailed()) {
         <div class="stage__fallback glass-panel" role="alert">
           <h2 class="stage__fallback-title">{{ t.mapUnavailableTitle }}</h2>
           <p class="stage__fallback-text">{{ t.mapUnavailableText }}</p>
@@ -103,7 +103,11 @@
 
   <!-- Bottom Dock: rivers & countries, legend & layers, selected catchment / raindrop -->
   @if (data) {
-    <footer class="dock-wrap" [class.dock-wrap--card]="hasCard()">
+    @if (view() === 'poster' && data && globeProgress() >= 1 && !mapFailed()) {
+      <app-poster-studio [globe]="globe()" [(options)]="posterOpts"></app-poster-studio>
+    }
+
+    <footer class="dock-wrap" [class.dock-wrap--card]="hasCard()" [class.dock-wrap--off]="view() === 'poster'">
       <section class="dock dock--list glass-panel" [class.dock--collapsed]="!panelOpen()">
         <header class="dock__head">
           <h2 class="dock__title">{{ t.panelTitle }}</h2>
@@ -228,9 +232,9 @@
               </app-button>
             }
             @if (!mapFailed()) {
-              <app-button variant="ghost" [disabled]="posterBusy()" [titleText]="t.posterHint" (btnClick)="downloadPoster()">
+              <app-button variant="ghost" [titleText]="t.posterHint" (btnClick)="openPosterMaker()">
                 <lucide-icon [img]="posterIcon" [size]="15"></lucide-icon>
-                <span>{{ posterBusy() ? t.posterBusy : t.poster }}</span>
+                <span>{{ t.poster }}</span>
               </app-button>
             }
             <app-button variant="ghost" (btnClick)="openGlossary()">

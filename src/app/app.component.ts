@@ -48,9 +48,9 @@ import { Lang } from './core/i18n/i18n.types';
 import { BalticDataService } from './core/data/baltic-data.service';
 import { Basin, RaindropPath } from './core/data/baltic.model';
 import { MapView, MosaicGround, STORY_STEPS, mosaicToken, seaToken } from './core/data/views';
-import { a2Pixels, composeA2Poster } from './core/poster';
-import { cssToHex } from './core/color';
-import { GlobeComponent, GlobeHover, GlobePick, PrintStyle } from './globe/globe.component';
+import { GlobeComponent, GlobeHover, GlobePick } from './globe/globe.component';
+import { PosterStudioComponent } from './poster/poster-studio.component';
+import { DEFAULT_POSTER, PosterOptions } from './poster/poster-options';
 import { BasinListComponent } from './panels/basin-list.component';
 import { BasinDetailComponent } from './panels/basin-detail.component';
 import { CountryListComponent } from './panels/country-list.component';
@@ -68,8 +68,6 @@ const INTRO_MS = 3000;
 /** Top-rivers countdown: how many rivers, and time per step while playing (reveal ≈ 3.2 s). */
 const TOP_N = 20;
 const TOP_STEP_MS = 6000;
-/** Surface of the Baltic Sea (HELCOM). */
-const BALTIC_SEA_KM2 = 415_266;
 /** Typical river flow speed used for the raindrop's travel-time estimate. */
 const FLOW_M_PER_S = 1;
 
@@ -99,7 +97,8 @@ interface LegendItem {
     BasinListComponent,
     BasinDetailComponent,
     CountryListComponent,
-    SeaListComponent
+    SeaListComponent,
+    PosterStudioComponent
   ],
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss'
@@ -115,7 +114,7 @@ export class AppComponent {
   private readonly seo = inject(SeoService);
   private readonly theme = inject(ThemeService);
 
-  private readonly globe = viewChild(GlobeComponent);
+  protected readonly globe = viewChild(GlobeComponent);
 
   readonly globeIcon = Globe;
   readonly shareIcon = Share2;
@@ -153,7 +152,8 @@ export class AppComponent {
   readonly drop = signal<RaindropPath | null>(null);
   /** Why the last click produced no raindrop path (outside the basin, river-less strip). */
   readonly dropNote = signal<'outside' | 'coast' | 'tiny' | null>(null);
-  readonly posterBusy = signal(false);
+  /** Poster maker choices (the view's state, also carried by its links). */
+  readonly posterOpts = signal<PosterOptions>(DEFAULT_POSTER);
   readonly globeProgress = signal(0);
   /** The 3D map could not be created (see GlobeComponent.failed). */
   readonly mapFailed = signal(false);
@@ -169,8 +169,13 @@ export class AppComponent {
   readonly presKind = computed<'seas' | 'top' | null>(() =>
     this.view() === 'story' ? 'seas' : this.view() === 'top' ? 'top' : null
   );
+  /** The last map view, kept under the poster maker (which hides the map and prints its own). */
+  private readonly lastMap = signal<MapView>(START_VIEW);
   /** What the map and the lists draw: the top-20 tour uses the catchments styling. */
-  readonly mapView = computed<MapView>(() => (this.view() === 'top' ? 'catchments' : this.view()));
+  readonly mapView = computed<MapView>(() => {
+    const v = this.view() === 'poster' ? this.lastMap() : this.view();
+    return v === 'top' ? 'catchments' : v;
+  });
   readonly presSteps = computed(() => (this.presKind() === 'top' ? TOP_N + 2 : STORY_STEPS));
   readonly presDots = computed(() => Array.from({ length: this.presSteps() }, (_, i) => i));
 
@@ -199,9 +204,11 @@ export class AppComponent {
     return {
       view,
       ground: this.ground(),
-      basin: this.selected(),
+      basin: view === 'poster' ? this.posterOpts().focus : this.selected(),
       step: this.storyStep(),
-      drop: this.drop()?.start ?? null
+      drop: this.drop()?.start ?? null,
+      palette: this.posterOpts().palette,
+      by: this.posterOpts().by
     };
   });
 
@@ -211,7 +218,11 @@ export class AppComponent {
     if (L.lang && (this.i18n.langs as string[]).includes(L.lang)) this.i18n.setLang(L.lang as Lang);
     if (L.view) {
       this.view.set(L.view);
+      if (L.view !== 'poster') this.lastMap.set(L.view);
       if (L.view === 'seas') this.listTab.set('seas');
+      if (L.view === 'poster') {
+        this.posterOpts.update(o => ({ ...o, palette: L.palette ?? o.palette, by: L.by ?? o.by, focus: L.basin ?? -1 }));
+      }
     }
     if (L.ground) this.ground.set(L.ground);
     if (this.presKind()) this.storyStep.set(Math.min(L.step ?? 0, this.presSteps() - 1));
@@ -220,7 +231,7 @@ export class AppComponent {
   private applyLinkWhenReady() {
     const L = this.link;
     const d = this.store.data();
-    if (L.basin !== undefined && d && L.basin < d.basins.length) this.select(L.basin, true);
+    if (L.basin !== undefined && d && L.basin < d.basins.length && this.view() !== 'poster') this.select(L.basin, true);
     if (L.drop && this.view() === 'raindrop') {
       const id = this.globe()?.basinAtPoint(L.drop[0], L.drop[1]) ?? -1;
       this.onPick({ id, lon: L.drop[0], lat: L.drop[1] });
@@ -331,15 +342,19 @@ export class AppComponent {
       { value: 'top', label: t.viewTop(TOP_N), icon: Trophy },
       { value: 'catchments', label: t.viewCatchments, icon: Droplets },
       { value: 'mosaic', label: t.viewMosaic, icon: Palette },
-      { value: 'raindrop', label: t.viewRaindrop, icon: Droplet }
+      { value: 'raindrop', label: t.viewRaindrop, icon: Droplet },
+      // On phones the header pill shows the short name (the long one would push it off screen).
+      { value: 'poster', label: t.viewPoster, shortLabel: this.bp.mobile() ? t.viewPosterShort : undefined, icon: ImageDown }
     ];
-    return this.mapFailed() ? all.filter(o => o.value !== 'top' && o.value !== 'story') : all;
+    // Without the map the tours and the poster maker have nothing to show.
+    return this.mapFailed() ? all.filter(o => o.value !== 'top' && o.value !== 'story' && o.value !== 'poster') : all;
   });
 
   readonly currentViewIcon = computed(() => this.viewOptions().find(o => o.value === this.view())?.icon ?? Droplets);
 
   setView(v: MapView) {
     this.view.set(v);
+    if (v !== 'poster') this.lastMap.set(v);
     this.drop.set(null);
     this.dropNote.set(null);
     if (v === 'raindrop' || v === 'story' || v === 'top') this.selected.set(-1);
@@ -668,91 +683,24 @@ export class AppComponent {
     });
   }
 
-  /** Centre of the drainage basin (area centroid of its outline), as print-style coordinates. */
-  private basinCoords(): string {
-    const d = this.store.data();
-    if (!d) return '';
-    const ring = d.outlines[6].reduce((a, r) => (r.length > a.length ? r : a));
-    let A = 0, cx = 0, cy = 0;
-    for (let i = 0, j = ring.length - 2; i < ring.length; j = i, i += 2) {
-      const f = ring[j] * ring[i + 1] - ring[i] * ring[j + 1];
-      A += f; cx += (ring[j] + ring[i]) * f; cy += (ring[j + 1] + ring[i + 1]) * f;
-    }
-    const dms = (v: number, pos: string, neg: string) => {
-      const a = Math.abs(v), d0 = Math.floor(a), m = Math.floor((a - d0) * 60), s = Math.round(((a - d0) * 60 - m) * 60);
-      return `${d0}°${String(m).padStart(2, '0')}′${String(s).padStart(2, '0')}″${v >= 0 ? pos : neg}`;
-    };
-    return `${dms(cy / (3 * A), 'N', 'S')}  ${dms(cx / (3 * A), 'E', 'W')}`;
-  }
-
   /**
-   * A2 print poster (420 × 594 mm) of the current view: 300 dpi on desktop (4961 × 7016 px),
-   * 150 dpi on phones and tablets (canvas size limits). White paper with ink or coloured rivers;
-   * the black-ground views print on a night background.
+   * Opens the poster maker set up for what is on screen: colours from the current view (mosaic and
+   * story keep their colouring and ground, seas colour by sea) and the selected river, if any.
    */
-  async downloadPoster() {
-    const globe = this.globe();
-    const d = this.store.data();
-    if (!globe || !d || this.posterBusy()) return;
-    this.posterBusy.set(true);
-    try {
-      await new Promise(r => setTimeout(r, 30)); // let the busy state paint
-      const t = this.i18n.t();
-      const view = this.view();
-      const night = (view === 'mosaic' || view === 'story') && this.ground() === 'dark';
-      const tok = (k: string, fb: string) => cssToHex(this.theme.getTokenColor(k, fb), fb);
-      const p = night ? 'print-night-' : 'print-';
-      const paper = tok(`${p}paper`, night ? '#0a1222' : '#ffffff');
-      const inkSoft = tok(`${p}ink-soft`, '#64748b');
-      const dpi = this.bp.tablet() ? 150 : 300;
-      const rivers: PrintStyle['rivers'] = view === 'mosaic' ? 'mosaic' : view === 'story' ? 'sea' : 'ink';
-      const style: PrintStyle = {
-        paper,
-        sea: tok(`${p}sea`, night ? '#0b1530' : '#f0f3f7'),
-        land: paper,
-        basin: paper,
-        divide: tok(`${p}divide`, '#94a3b8'),
-        rivers,
-        ink: tok(`${p}ink`, night ? '#eef2f7' : '#0f172a'),
-        ground: night ? 'dark' : 'light',
-        seaLabel: inkSoft,
-        dpi
-      };
-      const { map } = a2Pixels(dpi);
-      const mapCanvas = await globe.renderPrintMap(map.w, map.h, style);
-      const blob = await composeA2Poster(mapCanvas, {
-        dpi,
-        paper,
-        ink: style.ink,
-        inkSoft,
-        accent: tok('accent', '#d37400'),
-        font: this.theme.getFontFamily(),
-        logo: `assets/design-system/logo/${night ? 'kmd-white-orange' : 'kmd-black-orange'}.svg`,
-        title: t.posterTitle,
-        ruleWord: t.posterRuleWord,
-        coords: this.basinCoords(),
-        line: rivers === 'mosaic' ? t.posterLineMosaic : rivers === 'sea' ? t.posterLineSea : t.posterLineInk,
-        // Each figure carries a footnote number; the sources are listed under the row.
-        facts: [
-          { value: this.i18n.num(d.total.nout), caption: t.factRivers, note: t.factRiversNote },
-          { value: t.factPeopleValue, caption: t.factPeople, note: t.factPeopleNote },
-          { value: t.factRenewalValue, caption: t.factRenewal, note: t.factRenewalNote },
-          { value: t.factBrackishValue, caption: t.factBrackish, note: t.factBrackishNote },
-          {
-            value: `${this.i18n.num(d.total.parea / BALTIC_SEA_KM2, 1)} ×`,
-            caption: t.factRatio,
-            note: t.factRatioNote(this.i18n.area(d.total.parea))
-          }
-        ],
-        credits: t.posterCredits
-      });
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = `watershed-A2-${view}${night ? '-night' : ''}.png`;
-      a.click();
-      setTimeout(() => URL.revokeObjectURL(a.href), 30_000);
-    } finally {
-      this.posterBusy.set(false);
-    }
+  openPosterMaker() {
+    const v = this.view();
+    const dark = this.ground() === 'dark';
+    const coloured = v === 'mosaic' || v === 'story' || v === 'seas';
+    const b = this.selectedBasin();
+    this.posterOpts.update(o => ({
+      ...o,
+      palette: coloured ? (dark && v !== 'seas' ? 'black-vivid' : 'white-pastel') : 'white-ink',
+      by: v === 'story' || v === 'seas' ? 'sea' : 'basin',
+      focus: b && b.river && b.name ? b.id : -1,
+      title: null,
+      subtitle: null,
+      line: null
+    }));
+    this.setView('poster');
   }
 }

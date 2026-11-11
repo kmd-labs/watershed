@@ -645,3 +645,12 @@
   font-weight: font-weight("semibold");
   color: color("text-bright");
 }
+
+// Poster maker: the map steps aside (it keeps rendering the poster off screen) and so do the docks.
+.stage--poster app-globe {
+  visibility: hidden;
+}
+
+.dock-wrap--off {
+  display: none;
+}
