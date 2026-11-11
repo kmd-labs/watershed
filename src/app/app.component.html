@@ -28,8 +28,15 @@
         [subNames]="t.subNames"
         (pick)="onPick($event)"
         (hover)="onHover($event)"
-        (progress)="globeProgress.set($event)">
+        (progress)="globeProgress.set($event)"
+        (failed)="mapFailed.set(true)">
       </app-globe>
+      @if (mapFailed()) {
+        <div class="stage__fallback glass-panel" role="alert">
+          <h2 class="stage__fallback-title">{{ t.mapUnavailableTitle }}</h2>
+          <p class="stage__fallback-text">{{ t.mapUnavailableText }}</p>
+        </div>
+      }
     } @else if (store.error()) {
       <div class="stage__status">{{ t.loadError }}</div>
     }
@@ -195,16 +202,18 @@
             }
           </div>
           <div class="legend__actions">
-            @if (view() === 'catchments' && !topActive()) {
+            @if (view() === 'catchments' && !topActive() && !mapFailed()) {
               <app-button variant="ghost" [titleText]="t.topHint" (btnClick)="startTop()">
                 <lucide-icon [img]="topIcon" [size]="15"></lucide-icon>
                 <span>{{ t.topButton }}</span>
               </app-button>
             }
-            <app-button variant="ghost" [disabled]="posterBusy()" [titleText]="t.posterHint" (btnClick)="downloadPoster()">
-              <lucide-icon [img]="posterIcon" [size]="15"></lucide-icon>
-              <span>{{ posterBusy() ? t.posterBusy : t.poster }}</span>
-            </app-button>
+            @if (!mapFailed()) {
+              <app-button variant="ghost" [disabled]="posterBusy()" [titleText]="t.posterHint" (btnClick)="downloadPoster()">
+                <lucide-icon [img]="posterIcon" [size]="15"></lucide-icon>
+                <span>{{ posterBusy() ? t.posterBusy : t.poster }}</span>
+              </app-button>
+            }
             <app-button variant="ghost" (btnClick)="openGlossary()">
               <lucide-icon [img]="bookOpenIcon" [size]="15"></lucide-icon>
               @if (!bp.mobile()) {
@@ -213,7 +222,7 @@
             </app-button>
           </div>
         </div>
-        @if (!bp.tablet()) {
+        @if (!bp.tablet() && !mapFailed()) {
           <p class="legend__hint">{{ view() === 'raindrop' ? t.hintRaindrop : presKind() === 'top' ? t.hintTop : presKind() ? t.hintStory : t.hint }}</p>
         }
         }

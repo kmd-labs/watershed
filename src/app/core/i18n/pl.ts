@@ -23,6 +23,8 @@ export const PL: Dict = {
   stageAriaLabel: 'Trójwymiarowy globus ze zlewiskiem Morza Bałtyckiego, zlewniami i rzekami',
   loading: 'Wczytywanie danych…',
   loadError: 'Nie udało się wczytać danych.',
+  mapUnavailableTitle: 'Nie można tu wyświetlić mapy 3D',
+  mapUnavailableText: 'Ta przeglądarka ma wyłączoną lub nieobsługiwaną technologię WebGL. Spróbuj innej przeglądarki albo włącz akcelerację sprzętową w jej ustawieniach. Listy rzek, państw i akwenów poniżej nadal działają.',
   splashBuilding: 'Rysowanie rzek…',
 
   // Bottom Dock & Glossary

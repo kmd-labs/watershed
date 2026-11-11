@@ -23,6 +23,8 @@ export const EN: Dict = {
   stageAriaLabel: '3D globe of the Baltic Sea drainage basin with river catchments and rivers',
   loading: 'Loading data…',
   loadError: 'Could not load data.',
+  mapUnavailableTitle: 'The 3D map can’t be shown here',
+  mapUnavailableText: 'This browser has WebGL turned off or unsupported. Try another browser, or switch on hardware acceleration in its settings. The river, country and sea lists below still work.',
   splashBuilding: 'Drawing the rivers…',
 
   // Bottom Dock & Glossary

@@ -144,6 +144,8 @@ export class AppComponent {
   readonly dropNote = signal<'outside' | 'coast' | 'tiny' | null>(null);
   readonly posterBusy = signal(false);
   readonly globeProgress = signal(0);
+  /** The 3D map could not be created (see GlobeComponent.failed). */
+  readonly mapFailed = signal(false);
   /** The legend & layers panel can fold down to a single pill. */
   readonly legendOpen = signal<boolean>(!this.bp.mobile() && !this.bp.mobileLandscape());
   /** "Where the rivers end" presentation. */
@@ -260,6 +262,12 @@ export class AppComponent {
   constructor() {
     this.applyLinkNow();
     effect(() => {
+      // Without the map, the presentations and the raindrop have nothing to drive.
+      if (!this.mapFailed()) return;
+      this.topActive.set(false);
+      this.playStory(false);
+    });
+    effect(() => {
       if (this.linkApplied || this.globeProgress() < 1) return;
       this.linkApplied = true;
       queueMicrotask(() => this.applyLinkWhenReady());
@@ -285,7 +293,7 @@ export class AppComponent {
     effect(() => {
       const t = this.i18n.t();
       if (this.store.error()) { this.splash.setError(t.loadError); return; }
-      const data = this.store.progress(), map = this.globeProgress();
+      const data = this.store.progress(), map = this.mapFailed() ? 1 : this.globeProgress();
       this.splash.setProgress((data * 0.45 + map * 0.55) * 100, data < 1 ? t.loading : t.splashBuilding);
       if (!this.splashDone && this.splash.revealed() && map >= 1) {
         this.splashDone = true;

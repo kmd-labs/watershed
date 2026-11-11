@@ -77,6 +77,31 @@
     font-size: font-size("sm");
     color: color("text-dim");
   }
+
+  // Shown where the map would be when WebGL is unavailable; the panels keep working.
+  &__fallback {
+    position: absolute;
+    top: 30%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: min(440px, calc(100% - 2 * var(--dock-offset-x)));
+    padding: spacing("xl") spacing("2xl");
+    text-align: center;
+  }
+
+  &__fallback-title {
+    margin: 0;
+    font-size: font-size("lg");
+    font-weight: font-weight("semibold");
+    color: color("text-bright");
+  }
+
+  &__fallback-text {
+    margin: spacing("xs") 0 0;
+    font-size: font-size("sm");
+    line-height: 1.55;
+    color: color("text-desc");
+  }
 }
 
 // ─── Bottom dock ────────────────────────────────────────────────────────────

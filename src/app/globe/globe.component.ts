@@ -298,6 +298,8 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
   readonly hover = output<GlobeHover | null>();
   /** Setup progress 0–1; 1 once the first frame is on screen. */
   readonly progress = output<number>();
+  /** The map cannot be shown (no WebGL 2, or setup failed); the app explains and carries on. */
+  readonly failed = output<void>();
 
   private readonly canvasRef = viewChild.required<ElementRef<HTMLCanvasElement>>('canvas');
   private readonly labelsRef = viewChild.required<ElementRef<HTMLDivElement>>('labels');
@@ -440,7 +442,10 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
   }
 
   ngAfterViewInit() {
-    this.zone.runOutsideAngular(() => this.init());
+    this.zone.runOutsideAngular(() => {
+      if (!GlobeComponent.webgl2()) { this.fail(new Error('WebGL 2 is not available')); return; }
+      this.init().catch(err => this.fail(err));
+    });
   }
 
   ngOnDestroy() {
@@ -669,6 +674,23 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
     this.frame();
     performance.mark('watershed:firstframe');
     this.emitProgress(1);
+  }
+
+  /** WebGL 2 (required by three.js r170) can be created in this browser. */
+  static webgl2(): boolean {
+    try {
+      const gl = document.createElement('canvas').getContext('webgl2');
+      gl?.getExtension('WEBGL_lose_context')?.loseContext();
+      return !!gl;
+    } catch {
+      return false;
+    }
+  }
+
+  private fail(err: unknown) {
+    console.error('Map unavailable:', err);
+    cancelAnimationFrame(this.raf);
+    this.zone.run(() => this.failed.emit());
   }
 
   private emitProgress(p: number) {

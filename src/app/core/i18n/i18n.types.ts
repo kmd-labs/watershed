@@ -29,6 +29,8 @@ export interface Dict {
   stageAriaLabel: string;
   loading: string;
   loadError: string;
+  mapUnavailableTitle: string;
+  mapUnavailableText: string;
   splashBuilding: string;
 
   // Bottom Dock & Glossary
