@@ -2,14 +2,14 @@ import { MapView, MosaicGround } from './data/views';
 
 export const APP_CANONICAL_URL = 'https://kmd-labs.github.io/watershed/';
 
-/** The view a plain link opens: the top-20 tour over the catchments map. */
-export const START_VIEW: MapView = 'top';
+/** The view a plain link opens: "Where the rivers end", the sea-by-sea tour. */
+export const START_VIEW: MapView = 'story';
 
 const VIEWS: MapView[] = ['top', 'catchments', 'story', 'seas', 'mosaic', 'raindrop'];
 
 /**
  * Everything a link can carry: `?view=mosaic&ground=dark`, `?view=catchments&basin=412`,
- * `?view=story&step=3`, `?step=5` (top-20 tour, the start view), `?view=raindrop&drop=22.6,50.2`.
+ * `?step=3` ("Where the rivers end", the start view), `?view=top&step=5`, `?view=raindrop&drop=22.6,50.2`.
  * Defaults are left out so the plain URL stays clean. Links from before the top 20 became a view
  * of its own (`?top=5`, `?top=off`, `?basin=412`) still open what they used to.
  */

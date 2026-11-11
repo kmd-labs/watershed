@@ -75,7 +75,7 @@ export const PL: Dict = {
   storyStepOf: (s, n) => `Krok ${s} z ${n}`,
   storyIntroTitle: 'Dokąd płyną rzeki Bałtyku?',
   storyIntroText: (area, mouths, rivers) =>
-    `${area} lądu odprowadza wodę do Bałtyku przez ${mouths} ujść i ${rivers} rzek. Ta woda nie trafia w jedno miejsce: Bałtyk to sześć akwenów w jednym. Prześledźmy rzeki akwen po akwenie.`,
+    `${area} lądu odprowadza wodę do Bałtyku przez ${mouths} ujść rzek (HydroRIVERS v1.0, Lehner i Grill 2013) i ${rivers} rzek. Ta woda nie trafia w jedno miejsce: Bałtyk to sześć akwenów w jednym. Prześledźmy rzeki akwen po akwenie.`,
   storySeaText: (area, share) => `Rzeki, które tu uchodzą, odwadniają ${area}, czyli ${share} całego zlewiska Bałtyku.`,
   storyMouths: 'Ujścia rzek',
   storyOutflow: 'Średni odpływ',
@@ -98,8 +98,8 @@ export const PL: Dict = {
   resetView: 'Pokaż całe zlewisko',
   topLegend: n => `${n} największych dorzeczy`,
   topIntroTitle: n => `${n} największych dorzeczy`,
-  topIntroText: (n, area, share) =>
-    `Spośród 1568 rzek zaledwie ${n} odwadnia ${area}, czyli ${share} całego lądu wokół Bałtyku. Przejdźmy przez nie po kolei, od największej.`,
+  topIntroText: (n, area, share, rivers) =>
+    `Spośród ${rivers} rzek uchodzących do Bałtyku (HydroRIVERS v1.0, Lehner i Grill 2013) zaledwie ${n} odwadnia ${area}, czyli ${share} całego lądu wokół morza. Przejdźmy przez nie po kolei, od największej.`,
   topRiverText: (area, share, sea) => `Odwadnia ${area} (${share} zlewiska Bałtyku) i uchodzi do akwenu: ${sea}.`,
   topFinaleTitle: n => `${n} rzek, większość Bałtyku`,
   topFinaleText: (n, sa, sf, rest) =>
@@ -108,7 +108,7 @@ export const PL: Dict = {
   storyNext: 'Następny krok',
   storyPlay: 'Odtwórz prezentację',
   storyPause: 'Pauza',
-  layerFlow: 'Przepływ',
+  layerFlow: 'Animacja nurtu',
   layerRelief: 'Rzeźba terenu',
   groundLabel: 'Tło',
   groundWhite: 'Białe',
@@ -127,9 +127,9 @@ export const PL: Dict = {
   factRivers: 'rzek uchodzi do Bałtyku',
   factPeopleValue: '82 mln',
   factPeople: 'ludzi mieszka w jego zlewisku',
-  factRenewalValue: '≈ 30 lat',
+  factRenewalValue: 'ponad 30 lat',
   factRenewal: 'trwa pełna wymiana wody w morzu',
-  factBrackishValue: '≈ 8000 lat',
+  factBrackishValue: 'ponad 8000 lat',
   factBrackish: 'z wodą słonawą — wcześniej Bałtyk był słodkowodnym jeziorem',
   factRatio: 'tyle razy zlewisko jest większe od samego morza',
   factRiversNote:

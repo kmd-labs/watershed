@@ -110,6 +110,11 @@ $land: palette("neutral-300");
   --color-print-night-ink: #{palette("neutral-100")};
   --color-print-night-ink-soft: #{palette("neutral-400")};
 
+  // Flow animation: glints over the slate rivers, on the black ground, and on the white mosaic.
+  --color-globe-flow-glint: #{palette("info-400")};
+  --color-globe-flow-glint-dark: #{palette("neutral-0")};
+  --color-globe-flow-glint-plain: #{palette("neutral-950")};
+
   // Raindrop view: the traced path
   --color-globe-drop: #{palette("warning-500")};
   --color-globe-drop-halo: #{palette("neutral-0")};

@@ -101,7 +101,7 @@ export interface Dict {
   resetView: string;
   topLegend: (n: number) => string;
   topIntroTitle: (n: number) => string;
-  topIntroText: (n: number, area: string, share: string) => string;
+  topIntroText: (n: number, area: string, share: string, rivers: string) => string;
   topRiverText: (area: string, share: string, sea: string) => string;
   topFinaleTitle: (n: number) => string;
   topFinaleText: (n: number, shareArea: string, shareFlow: string, rest: string) => string;

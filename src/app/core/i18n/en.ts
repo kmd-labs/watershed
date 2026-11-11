@@ -75,7 +75,7 @@ export const EN: Dict = {
   storyStepOf: (s, n) => `Step ${s} of ${n}`,
   storyIntroTitle: 'Where do the Baltic’s rivers end?',
   storyIntroText: (area, mouths, rivers) =>
-    `${area} of land drains into the Baltic through ${mouths} river mouths and ${rivers} of rivers. The water does not all end up in the same place: the Baltic is six seas in one. Let’s follow the rivers, sea by sea.`,
+    `${area} of land drains into the Baltic through ${mouths} river mouths (HydroRIVERS v1.0, Lehner & Grill 2013) and ${rivers} of rivers. The water does not all end up in the same place: the Baltic is six seas in one. Let’s follow the rivers, sea by sea.`,
   storySeaText: (area, share) => `Rivers that end here drain ${area} — ${share} of the whole Baltic basin.`,
   storyMouths: 'River mouths',
   storyOutflow: 'Mean outflow',
@@ -98,8 +98,8 @@ export const EN: Dict = {
   resetView: 'Show the whole drainage basin',
   topLegend: n => `The ${n} largest river basins`,
   topIntroTitle: n => `The ${n} largest river basins`,
-  topIntroText: (n, area, share) =>
-    `Of 1,568 rivers, just ${n} drain ${area} — ${share} of all the land around the Baltic. Let’s go through them one by one, from the largest.`,
+  topIntroText: (n, area, share, rivers) =>
+    `Of the ${rivers} rivers that flow into the Baltic (HydroRIVERS v1.0, Lehner & Grill 2013), just ${n} drain ${area} — ${share} of all the land around the sea. Let’s go through them one by one, from the largest.`,
   topRiverText: (area, share, sea) => `Drains ${area} (${share} of the Baltic basin) into the ${sea}.`,
   topFinaleTitle: n => `${n} rivers, most of the Baltic`,
   topFinaleText: (n, sa, sf, rest) =>
@@ -108,7 +108,7 @@ export const EN: Dict = {
   storyNext: 'Next step',
   storyPlay: 'Play the presentation',
   storyPause: 'Pause',
-  layerFlow: 'Flow',
+  layerFlow: 'Flow animation',
   layerRelief: 'Relief',
   groundLabel: 'Ground',
   groundWhite: 'White',
@@ -127,9 +127,9 @@ export const EN: Dict = {
   factRivers: 'rivers flow into the Baltic',
   factPeopleValue: '82 million',
   factPeople: 'people live in its drainage basin',
-  factRenewalValue: '≈ 30 years',
+  factRenewalValue: 'over 30 years',
   factRenewal: 'for the sea to renew all of its water',
-  factBrackishValue: '≈ 8,000 years',
+  factBrackishValue: 'over 8,000 years',
   factBrackish: 'of salt water — before that, the Baltic was a freshwater lake',
   factRatio: 'more land drains into the sea than the sea itself covers',
   factRiversNote:

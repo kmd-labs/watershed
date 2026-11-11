@@ -63,7 +63,7 @@ interface View {
 
 const R = 5;
 const DEG = Math.PI / 180;
-const RIVER_WIDTH = [0.5, 0.85, 1.4, 2.2, 3.2];
+const RIVER_WIDTH = [0.5, 0.85, 1.35, 2.0, 2.8];
 const RIVER_OPACITY = [0.3, 0.5, 0.75, 0.9, 0.95];
 /** In the mosaic the rivers are the colour, so even the smallest streams stay legible. */
 const MOSAIC_RIVER_OPACITY = [0.6, 0.75, 0.9, 1, 1];
@@ -85,10 +85,15 @@ const STORY_GHOST = 0.35;
 const BORDER_WIDTH = 1.6;
 /** Screen length (px) of one dash unit for borders and the flow animation. */
 const BORDER_DASH_PX = 5;
-const FLOW_DASH_PX = 7;
-/** Flow: gap length (in dash units) and speed (dash units per second, downstream). */
-const FLOW_GAP = 0.7;
-const FLOW_SPEED = 1.6;
+const FLOW_DASH_PX = 9;
+/**
+ * Flow animation: soft glints travel downstream over the rivers. One glint per (1 + FLOW_GAP) dash
+ * units, moving FLOW_SPEED units a second; bigger river classes stretch the unit, so their glints
+ * are longer and faster.
+ */
+const FLOW_GAP = 2.2;
+const FLOW_SPEED = 1.1;
+const FLOW_CLASS_STRETCH = 0.4;
 /** The camera looks this far north of its nadir (× altitude), giving a gentle ~14° oblique view. */
 const PITCH = 0.25;
 /** Closest zoom (altitude above the surface, in globe units; R = 5 ≈ 6371 km). */
@@ -153,10 +158,18 @@ function sector(box: [number, number, number, number], r: number, wSeg: number, 
  * segment's basin id travels in `instanceColorStart.x`. Hover, selection and view changes then
  * rewrite ~1,600 texels rather than ~200,000 segment colours.
  */
-function patchBasinColours(mat: LineMaterial, tex: THREE.DataTexture, ghost: { value: THREE.Color }) {
+function patchBasinColours(
+  mat: LineMaterial,
+  tex: THREE.DataTexture,
+  ghost: { value: THREE.Color },
+  glint: { value: THREE.Color },
+  glintMix: { value: number }
+) {
   mat.onBeforeCompile = shader => {
     shader.uniforms['basinColors'] = { value: tex };
     shader.uniforms['uGhost'] = ghost;
+    shader.uniforms['uGlint'] = glint;
+    shader.uniforms['uGlintMix'] = glintMix;
     // instanceColorStart = (basin id, distance to the mouth in km, –). A segment is drawn in its
     // basin's colour once the basin's reveal threshold (row 1) drops below its distance.
     shader.vertexShader = shader.vertexShader
@@ -170,9 +183,24 @@ function patchBasinColours(mat: LineMaterial, tex: THREE.DataTexture, ghost: { v
         vColor.xyz = shown ? bc.rgb : uGhost;
         vBasinAlpha = shown ? bc.a : rv.g;`
       );
+    // Flow (USE_DASH): instead of cutting the river into dashes, a soft glint runs downstream over
+    // it — a long tail easing into a bright head — so the network stays whole while it moves.
     shader.fragmentShader = shader.fragmentShader
-      .replace('uniform float opacity;', 'uniform float opacity;\nvarying float vBasinAlpha;')
-      .replace('vec4 diffuseColor = vec4( diffuse, alpha );', 'alpha *= vBasinAlpha;\nvec4 diffuseColor = vec4( diffuse, alpha );');
+      .replace('uniform float opacity;', 'uniform float opacity;\nvarying float vBasinAlpha;\nuniform vec3 uGlint;\nuniform float uGlintMix;')
+      .replace(
+        'if ( mod( vLineDistance + dashOffset, dashSize + gapSize ) > dashSize ) discard; // todo - FIX',
+        'float flowPh = fract( ( vLineDistance + dashOffset ) / ( dashSize + gapSize ) );'
+      )
+      .replace('vec4 diffuseColor = vec4( diffuse, alpha );', 'alpha *= vBasinAlpha;\nvec4 diffuseColor = vec4( diffuse, alpha );')
+      .replace(
+        'gl_FragColor = vec4( diffuseColor.rgb, alpha );',
+        `#ifdef USE_DASH
+          float flowGlint = smoothstep( 0.35, 0.93, flowPh ) * ( 1.0 - smoothstep( 0.93, 1.0, flowPh ) );
+          diffuseColor.rgb = mix( diffuseColor.rgb, uGlint, flowGlint * uGlintMix );
+          alpha = mix( alpha, max( alpha, 0.95 ), flowGlint );
+        #endif
+        gl_FragColor = vec4( diffuseColor.rgb, alpha );`
+      );
   };
   mat.customProgramCacheKey = () => 'basin-colours';
 }
@@ -316,6 +344,9 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
   /** RGBA (linear) per basin id, backing `basinTex`. */
   private lut = new Float32Array(BASIN_TEX * 2 * 4);
   private readonly ghost = { value: new THREE.Color() };
+  /** Flow glint colour and strength (set per view in updateBasinColours). */
+  private readonly glint = { value: new THREE.Color() };
+  private readonly glintMix = { value: 0.8 };
   /** Longest distance to a mouth among each sea's rivers (km), for the reveal pace. */
   private subMaxKm = new Array<number>(SUB_COUNT).fill(1);
   /** Longest distance to the mouth within each basin (km). */
@@ -609,6 +640,9 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
       this.seaColors[g] = Array.from({ length: SUB_COUNT }, (_, i) => new THREE.Color(tok(seaToken(i, g), this.colors['river'])));
     }
     this.colors['ghost'] = tok('globe-story-ghost', '#cfd8e3');
+    this.colors['glint'] = tok('globe-flow-glint', '#38bdf8');
+    this.colors['glintDark'] = tok('globe-flow-glint-dark', '#ffffff');
+    this.colors['glintPlain'] = tok('globe-flow-glint-plain', '#040812');
     this.colors['darkGhost'] = tok('globe-dark-story-ghost', '#1e293b');
   }
 
@@ -1037,7 +1071,7 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
       opacity: (this.plain() || this.topActive() ? MOSAIC_RIVER_OPACITY : RIVER_OPACITY)[rc.cls],
       depthWrite: rc.cls > 0
     });
-    patchBasinColours(mat, this.basinTex, this.ghost);
+    patchBasinColours(mat, this.basinTex, this.ghost, this.glint, this.glintMix);
     const el = this.host.nativeElement;
     mat.resolution.set(el.clientWidth || 1, el.clientHeight || 1);
     const line = new LineSegments2(geo, mat);
@@ -1061,6 +1095,10 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
     const tmp = new THREE.Color();
     const dark = this.dark();
     this.ghost.value.set(dark ? this.colors['darkGhost'] : this.colors['ghost']);
+    // Flow glints: water blue over the slate rivers, white on black, a deeper tone of each colour on white.
+    const plain = this.plain();
+    this.glint.value.set(dark ? this.colors['glintDark'] : plain ? this.colors['glintPlain'] : this.colors['glint']);
+    this.glintMix.value = dark ? 0.75 : plain ? 0.25 : 0.85;
     this.writeRevealRows();
     if (this.topActive()) {
       const pal = this.mosaicColors.light;
@@ -1190,7 +1228,7 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
     return true;
   }
 
-  /** Flow: rivers become dashes marching downstream (reaches are stored in flow direction). */
+  /** Flow animation: glints travel downstream over the rivers (reaches are stored in flow direction). */
   private setFlow(on: boolean) {
     for (const l of this.riverLayers) {
       if (on && !l.distances) { l.line.computeLineDistances(); l.distances = true; }
@@ -1775,12 +1813,17 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
     const alt = this.cam.alt;
     this.camera.near = clamp(alt * 0.02, 0.002, 0.5);
     this.camera.updateProjectionMatrix();
-    const wf = clamp(Math.sqrt(5.6 / alt), 0.75, 3.2);
+    // Rivers thicken gently as you zoom in and stop at a modest width (the big ones turned into
+    // ribbons before).
+    const wf = clamp(Math.pow(5.6 / alt, 0.3), 0.8, 1.9);
     // World length of one screen pixel at the surface → dash patterns of constant screen size.
     const pxWorld = (alt * 2 * Math.tan((VFOV / 2) * DEG)) / Math.max(1, el.clientHeight);
     for (const l of this.riverLayers) {
       l.mat.linewidth = RIVER_WIDTH[l.cls] * wf;
-      if (l.mat.dashed) { l.mat.dashScale = 1 / (pxWorld * FLOW_DASH_PX); l.mat.dashOffset = this.flowOffset; }
+      if (l.mat.dashed) {
+        l.mat.dashScale = 1 / (pxWorld * FLOW_DASH_PX * (1 + FLOW_CLASS_STRETCH * l.cls));
+        l.mat.dashOffset = this.flowOffset;
+      }
     }
     if (this.borderMat) this.borderMat.dashScale = 1 / (pxWorld * BORDER_DASH_PX);
 

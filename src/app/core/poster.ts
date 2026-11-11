@@ -141,8 +141,13 @@ export async function composeA2Poster(map: HTMLCanvasElement, o: A2PosterOptions
   o.facts.forEach((f, i) => {
     const fx = M.x + colW * (i + 0.5);
     x.fillStyle = o.ink;
-    const valueSize = px(8.5);
+    // Longer figures ("over 8,000 years") step down until they fit their column.
+    let valueSize = px(8.5);
     x.font = `300 ${valueSize}px ${o.font}`;
+    while (spacedWidth(x, f.value, -valueSize * 0.01) > colW - px(9) && valueSize > px(4.5)) {
+      valueSize *= 0.95;
+      x.font = `300 ${valueSize}px ${o.font}`;
+    }
     centred(x, f.value, fx, rowTop + px(8), -valueSize * 0.01);
     if (f.note) {
       notes.push(f.note);

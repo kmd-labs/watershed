@@ -63,6 +63,8 @@ import { APP_CANONICAL_URL, LinkState, START_VIEW, readLink, shareUrl, writeLink
 const MIN_SPLASH_MS = 5000;
 /** "Where the rivers end": time per step while playing (reveal ≈ 4.5 s + reading). */
 const STORY_STEP_MS = 8000;
+/** A playing tour leaves its intro card after this long (the start view begins 3 s after the map shows). */
+const INTRO_MS = 3000;
 /** Top-rivers countdown: how many rivers, and time per step while playing (reveal ≈ 3.2 s). */
 const TOP_N = 20;
 const TOP_STEP_MS = 6000;
@@ -301,7 +303,11 @@ export class AppComponent {
       if (!this.splashDone && this.splash.revealed() && map >= 1) {
         this.splashDone = true;
         performance.mark('watershed:map');
-        setTimeout(() => { this.splash.finish(); performance.mark('watershed:splash'); }, Math.max(0, MIN_SPLASH_MS - performance.now()));
+        setTimeout(() => {
+          this.splash.finish();
+          performance.mark('watershed:splash');
+          this.autoplay();
+        }, Math.max(0, MIN_SPLASH_MS - performance.now()));
       }
     });
   }
@@ -317,13 +323,13 @@ export class AppComponent {
 
   readonly viewOptions = computed<DropdownOption<MapView>[]>(() => {
     const t = this.i18n.t();
-    // Each tour sits right before the map it closes onto (top 20 → catchments, the sea-by-sea
-    // story → sea sub-basins), the start view first; then the art view; the hands-on raindrop last.
+    // The start view first; each tour right before the map it closes onto (the sea-by-sea story →
+    // sea sub-basins, top 20 → catchments); then the art view; the hands-on raindrop last.
     const all: DropdownOption<MapView>[] = [
-      { value: 'top', label: t.viewTop(TOP_N), icon: Trophy },
-      { value: 'catchments', label: t.viewCatchments, icon: Droplets },
       { value: 'story', label: t.viewStory, icon: Route },
       { value: 'seas', label: t.viewSeas, icon: Layers },
+      { value: 'top', label: t.viewTop(TOP_N), icon: Trophy },
+      { value: 'catchments', label: t.viewCatchments, icon: Droplets },
       { value: 'mosaic', label: t.viewMosaic, icon: Palette },
       { value: 'raindrop', label: t.viewRaindrop, icon: Droplet }
     ];
@@ -349,6 +355,14 @@ export class AppComponent {
     } else {
       this.playStory(false);
     }
+  }
+
+  /**
+   * The start view's tour plays on its own once the map is on screen: the intro card for INTRO_MS,
+   * then the first sea. A link to a later step, or a user who already took over, is left alone.
+   */
+  private autoplay() {
+    if (this.presKind() && this.storyStep() === 0 && !this.storyPlaying() && !this.mapFailed()) this.playStory(true);
   }
 
   /** Closes the running tour onto its map: top 20 → catchments, the story → sea sub-basins. */
@@ -395,7 +409,7 @@ export class AppComponent {
       this.storyStep.set(next);
       if (next >= this.presSteps() - 1) this.storyPlaying.set(false);
       else this.scheduleStory();
-    }, kind === 'top' ? TOP_STEP_MS : STORY_STEP_MS);
+    }, this.storyStep() === 0 ? INTRO_MS : kind === 'top' ? TOP_STEP_MS : STORY_STEP_MS);
   }
 
   /** Text and numbers for the current presentation step. */
@@ -411,11 +425,11 @@ export class AppComponent {
       const top = order.map(id => d.basins[id]);
       const area = top.reduce((a, b) => a + b.area, 0);
       if (step === 0) {
-        return { title: t.topIntroTitle(TOP_N), color: '', text: t.topIntroText(TOP_N, this.i18n.area(area), pct(area, total.parea)), facts: [] as { k: string; v: string }[] };
+        return { title: t.topIntroTitle(TOP_N), color: '', text: t.topIntroText(TOP_N, this.i18n.area(area), pct(area, total.parea), this.i18n.num(total.nout)), facts: [] as { k: string; v: string }[] };
       }
       if (step > order.length) {
         const flow = top.reduce((a, b) => a + b.dis, 0);
-        const rest = d.basins.filter(b => b.river).length - TOP_N;
+        const rest = total.nout - TOP_N;
         return {
           title: t.topFinaleTitle(TOP_N),
           color: '',
