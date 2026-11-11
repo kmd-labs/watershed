@@ -137,7 +137,6 @@ export const EN: Dict = {
   posterShow: 'On the poster',
   posterShowFacts: 'Figures & sources',
   posterShowSeas: 'Sea names',
-  posterShowCoords: 'Coordinates',
   posterFormat: 'Size',
   posterSize: (w, h, wp, hp, dpi) => `${w} × ${h} mm · ${wp} × ${hp} px · ${dpi} dpi`,
   posterDownload: 'Download poster (PNG)',

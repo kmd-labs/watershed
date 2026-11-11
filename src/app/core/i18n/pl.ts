@@ -137,7 +137,6 @@ export const PL: Dict = {
   posterShow: 'Na plakacie',
   posterShowFacts: 'Liczby i źródła',
   posterShowSeas: 'Nazwy akwenów',
-  posterShowCoords: 'Współrzędne',
   posterFormat: 'Format',
   posterSize: (w, h, wp, hp, dpi) => `${w} × ${h} mm · ${wp} × ${hp} px · ${dpi} dpi`,
   posterDownload: 'Pobierz plakat (PNG)',

@@ -136,7 +136,6 @@ export interface Dict {
   posterShow: string;
   posterShowFacts: string;
   posterShowSeas: string;
-  posterShowCoords: string;
   posterFormat: string;
   posterSize: (wMm: number, hMm: number, wPx: string, hPx: string, dpi: number) => string;
   posterDownload: string;

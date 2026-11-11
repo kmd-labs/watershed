@@ -5,7 +5,7 @@ import { I18nService } from '../core/i18n/i18n.service';
 import { BalticDataService } from '../core/data/baltic-data.service';
 import { MOSAIC_COUNT, SUB_COUNT } from '../core/data/views';
 import { cssToHex } from '../core/color';
-import { A2_MM, PosterLayout, a2Pixels, drawPoster, formatCoords, posterPng, ringCentroid } from '../core/poster';
+import { A2_MM, PosterLayout, a2Pixels, drawPoster, posterPng } from '../core/poster';
 import { GlobeComponent, PrintStyle } from '../globe/globe.component';
 import {
   BALTIC_SEA_KM2,
@@ -90,24 +90,20 @@ export class PosterStudioComponent implements OnDestroy {
     const t = this.i18n.t();
     const d = this.store.data();
     const o = this.options();
-    if (!d) return { title: '', subtitle: '', line: '', coords: '' };
+    if (!d) return { title: '', subtitle: '', line: '' };
     const b = o.focus >= 0 ? d.basins[o.focus] : null;
     if (b) {
-      const [lon, lat] = b.mouth ?? ringCentroid(d.basinPolys[b.id]);
       return {
         title: b.name ? this.i18n.river(b.name).replace(/ \(.+\)$/, '') : t.unnamed,
         subtitle: t.posterRuleWordBasin,
-        line: t.posterLineBasin(t.subNames[b.sub]),
-        coords: formatCoords(lon, lat)
+        line: t.posterLineBasin(t.subNames[b.sub])
       };
     }
     const by = colourFamily(o.palette) ? o.by : null;
-    const [lon, lat] = ringCentroid(d.outlines[6]);
     return {
       title: t.posterTitle,
       subtitle: t.posterRuleWord,
-      line: by === 'basin' ? t.posterLineMosaic : by === 'sea' ? t.posterLineSea : t.posterLineInk,
-      coords: formatCoords(lon, lat)
+      line: by === 'basin' ? t.posterLineMosaic : by === 'sea' ? t.posterLineSea : t.posterLineInk
     };
   });
 
@@ -274,7 +270,6 @@ export class PosterStudioComponent implements OnDestroy {
       logo: `assets/design-system/logo/${dark ? 'kmd-white-orange' : 'kmd-black-orange'}.svg`,
       title: o.title ?? a.title,
       ruleWord: o.subtitle ?? a.subtitle,
-      coords: o.coords ? a.coords : '',
       line: o.line ?? a.line,
       facts: o.facts ? this.facts(o) : [],
       credits: t.posterCredits

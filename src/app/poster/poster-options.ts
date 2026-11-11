@@ -24,7 +24,6 @@ export interface PosterOptions {
   /** Figures row with numbered sources. */
   facts: boolean;
   seaNames: boolean;
-  coords: boolean;
   /** Custom texts; null follows the area and the language. */
   title: string | null;
   subtitle: string | null;
@@ -38,7 +37,6 @@ export const DEFAULT_POSTER: PosterOptions = {
   format: 'A2',
   facts: true,
   seaNames: true,
-  coords: true,
   title: null,
   subtitle: null,
   line: null

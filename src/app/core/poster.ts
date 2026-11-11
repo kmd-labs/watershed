@@ -1,7 +1,7 @@
 /**
  * Print poster after the grammar of classic city-map prints: a crisp map rectangle on plain paper
  * with generous margins, then a centred title in light spaced capitals, a hairline rule broken by
- * one small word, the coordinates, and — quietly — a row of figures with their sources.
+ * one small word, an italic line, and — quietly — a row of figures with their sources.
  * Laid out in A2 millimetres (420 × 594); A3 and A4 are the same sheet at a lower grid dpi.
  */
 
@@ -23,8 +23,6 @@ export interface PosterLayout {
   title: string;
   /** The small word set into the rule under the title. */
   ruleWord: string;
-  /** Coordinates line; empty leaves it out. */
-  coords: string;
   /** One quiet italic line under the title (optional). */
   line?: string;
   /**
@@ -135,16 +133,10 @@ export async function drawPoster(map: HTMLCanvasElement, o: PosterLayout): Promi
   x.fillRect(cx + gap, ruleY - wordSize * 0.36, half - gap, Math.max(1, px(0.3)));
   centred(x, word, cx, ruleY, wordSize * 0.4);
 
-  // Coordinates, then the optional italic line (shrunk to the map width if it is long).
-  let y = ruleY + px(2);
+  // The optional italic line (shrunk to the map width if it is long).
   x.fillStyle = o.inkSoft;
-  if (o.coords) {
-    y += px(8);
-    x.font = `400 ${px(3.4)}px ${o.font}`;
-    centred(x, o.coords, cx, y, px(3.4) * 0.12);
-  }
   if (o.line) {
-    y += px(8);
+    const y = ruleY + px(10);
     let ls = px(3.4);
     x.font = `italic 300 ${ls}px ${o.font}`;
     while (spacedWidth(x, o.line, ls * 0.04) > px(A2_MAP.w) && ls > px(2)) {
@@ -251,28 +243,6 @@ export async function drawPoster(map: HTMLCanvasElement, o: PosterLayout): Promi
 export async function posterPng(cv: HTMLCanvasElement, dpi: number): Promise<Blob> {
   const blob = await new Promise<Blob>((res, rej) => cv.toBlob(b => (b ? res(b) : rej(new Error('toBlob'))), 'image/png'));
   return withDpi(blob, dpi);
-}
-
-// ─── coordinates ────────────────────────────────────────────────────────────
-
-/** Area centroid of the largest ring (lon/lat pairs). */
-export function ringCentroid(rings: ArrayLike<number>[]): [number, number] {
-  const ring = rings.reduce((a, r) => (r.length > a.length ? r : a));
-  let A = 0, cx = 0, cy = 0;
-  for (let i = 0, j = ring.length - 2; i < ring.length; j = i, i += 2) {
-    const f = ring[j] * ring[i + 1] - ring[i] * ring[j + 1];
-    A += f; cx += (ring[j] + ring[i]) * f; cy += (ring[j + 1] + ring[i + 1]) * f;
-  }
-  return [cx / (3 * A), cy / (3 * A)];
-}
-
-/** Print-style coordinates: 54°21′35″N  18°57′02″E. */
-export function formatCoords(lon: number, lat: number): string {
-  const dms = (v: number, pos: string, neg: string) => {
-    const a = Math.abs(v), d = Math.floor(a), m = Math.floor((a - d) * 60), s = Math.round(((a - d) * 60 - m) * 60);
-    return `${d}°${String(m).padStart(2, '0')}′${String(Math.min(59, s)).padStart(2, '0')}″${v >= 0 ? pos : neg}`;
-  };
-  return `${dms(lat, 'N', 'S')}  ${dms(lon, 'E', 'W')}`;
 }
 
 // ─── PNG resolution tag ─────────────────────────────────────────────────────
