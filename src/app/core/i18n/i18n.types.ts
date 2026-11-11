@@ -16,6 +16,15 @@ export interface Dict {
   // Top HUD & Navigation
   appName: string;
   changeLanguage: string;
+  shareLink: string;
+  shareTitle: string;
+  shareSubtitle: string;
+  shareQrCode: string;
+  shareThisView: string;
+  shareAppUrl: string;
+  shareNative: string;
+  copyLink: string;
+  linkCopied: string;
   chooseView: string;
   stageAriaLabel: string;
   loading: string;
@@ -102,6 +111,11 @@ export interface Dict {
   posterHint: string;
   posterStats: (area: string, mouths: string, rivers: string) => string;
   posterCredits: string;
+  posterTitle: string;
+  posterRuleWord: string;
+  posterLineInk: string;
+  posterLineMosaic: string;
+  posterLineSea: string;
   factsHeading: string;
   factRivers: string;
   factPeopleValue: string;
@@ -127,6 +141,7 @@ export interface Dict {
   dropHint: string;
   dropOutside: string;
   dropCoast: string;
+  dropTiny: string;
   dropClear: string;
   methodReliefTitle: string;
   methodRelief: string;

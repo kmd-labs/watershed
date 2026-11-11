@@ -36,7 +36,11 @@
                 "src",
                 "src/design-system"
               ]
-            }
+            },
+            "allowedCommonJsDependencies": [
+              "qrcode",
+              "dijkstrajs"
+            ]
           },
           "configurations": {
             "production": {

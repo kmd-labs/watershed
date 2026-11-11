@@ -15,6 +15,7 @@ import {
   Pause,
   Play,
   Route,
+  Share2,
   ChevronLeft,
   ChevronRight,
   Waves,
@@ -44,13 +45,16 @@ import { Lang } from './core/i18n/i18n.types';
 import { BalticDataService } from './core/data/baltic-data.service';
 import { Basin, RaindropPath } from './core/data/baltic.model';
 import { MapView, MosaicGround, STORY_STEPS, mosaicToken, seaToken } from './core/data/views';
-import { composePoster, PosterLegendItem } from './core/poster';
-import { GlobeComponent, GlobeHover, GlobePick } from './globe/globe.component';
+import { a2Pixels, composeA2Poster } from './core/poster';
+import { cssToHex } from './core/color';
+import { GlobeComponent, GlobeHover, GlobePick, PrintStyle } from './globe/globe.component';
 import { BasinListComponent } from './panels/basin-list.component';
 import { BasinDetailComponent } from './panels/basin-detail.component';
 import { CountryListComponent } from './panels/country-list.component';
 import { SeaListComponent } from './panels/sea-list.component';
 import { MethodComponent } from './panels/method.component';
+import { SharePopupComponent } from './panels/share-popup.component';
+import { APP_CANONICAL_URL, LinkState, readLink, shareUrl, writeLink } from './core/deep-link';
 
 /** The splash stays up at least this long from the start of page load (it doubles as the brand moment). */
 const MIN_SPLASH_MS = 5000;
@@ -107,6 +111,7 @@ export class AppComponent {
   private readonly globe = viewChild(GlobeComponent);
 
   readonly globeIcon = Globe;
+  readonly shareIcon = Share2;
   readonly bookOpenIcon = BookOpen;
   readonly chevronDownIcon = ChevronDown;
   readonly chevronUpIcon = ChevronUp;
@@ -136,7 +141,7 @@ export class AppComponent {
   readonly listTab = signal<'rivers' | 'countries' | 'seas'>('rivers');
   readonly drop = signal<RaindropPath | null>(null);
   /** Why the last click produced no raindrop path (outside the basin, river-less strip). */
-  readonly dropNote = signal<'outside' | 'coast' | null>(null);
+  readonly dropNote = signal<'outside' | 'coast' | 'tiny' | null>(null);
   readonly posterBusy = signal(false);
   readonly globeProgress = signal(0);
   /** The legend & layers panel can fold down to a single pill. */
@@ -166,7 +171,105 @@ export class AppComponent {
 
   private splashDone = false;
 
+  // ─── deep links ─────────────────────────────────────────────────────────
+
+  /** What the URL asked for at start-up; river, step and raindrop wait for the map. */
+  private readonly link = readLink(typeof location !== 'undefined' ? location.search : '');
+  private linkApplied = false;
+  private syncTimer: ReturnType<typeof setTimeout> | null = null;
+
+  /** The map state a link carries (see core/deep-link.ts). */
+  readonly linkState = computed<LinkState>(() => {
+    const view = this.view();
+    return {
+      view,
+      ground: this.ground(),
+      basin: this.selected(),
+      step: this.storyStep(),
+      top: view === 'catchments' && this.topActive() ? this.storyStep() : null,
+      drop: this.drop()?.start ?? null
+    };
+  });
+
+  /** Applies the start-up link: view, ground and language now, the rest once the map is ready. */
+  private applyLinkNow() {
+    const L = this.link;
+    if (L.lang && (this.i18n.langs as string[]).includes(L.lang)) this.i18n.setLang(L.lang as Lang);
+    if (L.view) {
+      this.view.set(L.view);
+      if (L.view !== 'catchments') this.topActive.set(false);
+      if (L.view === 'seas') this.listTab.set('seas');
+    }
+    if (L.ground) this.ground.set(L.ground);
+    if (L.view === 'story') this.storyStep.set(Math.min(L.step ?? 0, STORY_STEPS - 1));
+    if ((L.view ?? 'catchments') === 'catchments' && 'top' in L) {
+      if (L.top === null || L.top === undefined) this.topActive.set(false);
+      else { this.topActive.set(true); this.storyStep.set(L.top); }
+    }
+    if (L.basin !== undefined) this.topActive.set(false);
+  }
+
+  private applyLinkWhenReady() {
+    const L = this.link;
+    const d = this.store.data();
+    if (L.basin !== undefined && d && L.basin < d.basins.length) this.select(L.basin, true);
+    if (L.drop && this.view() === 'raindrop') {
+      const id = this.globe()?.basinAtPoint(L.drop[0], L.drop[1]) ?? -1;
+      this.onPick({ id, lon: L.drop[0], lat: L.drop[1] });
+    }
+  }
+
+  /** Address bar follows the map (debounced; defaults left out; other parameters kept). */
+  private syncUrl(s: LinkState) {
+    if (typeof location === 'undefined') return;
+    const url = writeLink(new URL(location.href), s);
+    if (url.href === location.href) return;
+    try {
+      history.replaceState(history.state, '', url);
+    } catch {
+      // Browsers may throttle history updates; the share dialog still builds the link.
+    }
+  }
+
+  openShare() {
+    const t = this.i18n.t();
+    const lang = this.i18n.lang();
+    const view = this.viewOptions().find(o => o.value === this.view())?.label ?? '';
+    const b = this.selectedBasin();
+    const detail =
+      this.presKind() ? this.storyCard()?.title ?? ''
+      : this.view() === 'raindrop' && this.drop() ? this.dropInfo()?.reaches ?? ''
+      : b ? (b.name ? this.i18n.river(b.name) : t.unnamed) : '';
+    const app = new URL(APP_CANONICAL_URL);
+    app.searchParams.set('lang', lang);
+    this.popup.open({
+      id: 'share',
+      title: computed(() => this.i18n.t().shareTitle),
+      subtitle: computed(() => this.i18n.t().shareSubtitle),
+      component: SharePopupComponent,
+      componentInputs: {
+        viewUrl: shareUrl(this.linkState(), lang),
+        appUrl: app.toString(),
+        viewLabel: detail ? `${view} · ${detail}` : view
+      },
+      size: 'sm',
+      actions: [{ label: computed(() => this.i18n.t().close), variant: 'default' }]
+    });
+  }
+
   constructor() {
+    this.applyLinkNow();
+    effect(() => {
+      if (this.linkApplied || this.globeProgress() < 1) return;
+      this.linkApplied = true;
+      queueMicrotask(() => this.applyLinkWhenReady());
+    });
+    effect(() => {
+      const s = this.linkState();
+      if (!this.linkApplied) return;
+      if (this.syncTimer) clearTimeout(this.syncTimer);
+      this.syncTimer = setTimeout(() => this.syncUrl(s), 400);
+    });
     effect(() => {
       const t = this.i18n.t();
       this.about.setLang(this.i18n.lang());
@@ -495,7 +598,8 @@ export class AppComponent {
     }
     if (p.id < 0) { this.dropNote.set('outside'); return; }
     const path = this.store.trace(p.lon, p.lat, p.id);
-    this.dropNote.set(path ? null : 'coast');
+    // No path: a river-less coastal strip, or a catchment whose streams are too small to show.
+    this.dropNote.set(path ? null : this.store.data()?.basins[p.id]?.river ? 'tiny' : 'coast');
     this.drop.set(path);
   }
 
@@ -522,7 +626,28 @@ export class AppComponent {
     });
   }
 
-  /** Renders the current view as a 3000 × 4000 px poster and downloads it as PNG. */
+  /** Centre of the drainage basin (area centroid of its outline), as print-style coordinates. */
+  private basinCoords(): string {
+    const d = this.store.data();
+    if (!d) return '';
+    const ring = d.outlines[6].reduce((a, r) => (r.length > a.length ? r : a));
+    let A = 0, cx = 0, cy = 0;
+    for (let i = 0, j = ring.length - 2; i < ring.length; j = i, i += 2) {
+      const f = ring[j] * ring[i + 1] - ring[i] * ring[j + 1];
+      A += f; cx += (ring[j] + ring[i]) * f; cy += (ring[j + 1] + ring[i + 1]) * f;
+    }
+    const dms = (v: number, pos: string, neg: string) => {
+      const a = Math.abs(v), d0 = Math.floor(a), m = Math.floor((a - d0) * 60), s = Math.round(((a - d0) * 60 - m) * 60);
+      return `${d0}°${String(m).padStart(2, '0')}′${String(s).padStart(2, '0')}″${v >= 0 ? pos : neg}`;
+    };
+    return `${dms(cy / (3 * A), 'N', 'S')}  ${dms(cx / (3 * A), 'E', 'W')}`;
+  }
+
+  /**
+   * A2 print poster (420 × 594 mm) of the current view: 300 dpi on desktop (4961 × 7016 px),
+   * 150 dpi on phones and tablets (canvas size limits). White paper with ink or coloured rivers;
+   * the black-ground views print on a night background.
+   */
   async downloadPoster() {
     const globe = this.globe();
     const d = this.store.data();
@@ -531,43 +656,54 @@ export class AppComponent {
     try {
       await new Promise(r => setTimeout(r, 30)); // let the busy state paint
       const t = this.i18n.t();
-      const dark = (this.view() === 'mosaic' || this.view() === 'story') && this.ground() === 'dark';
-      const map = globe.renderMapImage(3000, 3300, 2.4);
-      const lg = this.legend();
-      const view = this.viewOptions().find(o => o.value === this.view())?.label ?? '';
-      const color = (css: string) => this.theme.getTokenColor(css.replace(/^var\(--color-|\)$/g, ''), '#888');
-      const items: PosterLegendItem[] = lg.items.map(i => ({ label: i.label, color: color(i.color), kind: i.kind }));
-      const blob = await composePoster(map, {
-        width: 3000,
-        height: 4000,
-        dark,
-        background: this.theme.getTokenColor(dark ? 'globe-dark-bg' : 'globe-bg', dark ? '#040812' : '#f5f7fb'),
-        ink: this.theme.getTokenColor(dark ? 'neutral-100' : 'text-bright', dark ? '#eef2f7' : '#0f172a'),
-        dim: this.theme.getTokenColor(dark ? 'neutral-400' : 'text-dim', '#64748b'),
+      const view = this.view();
+      const night = (view === 'mosaic' || view === 'story') && this.ground() === 'dark';
+      const tok = (k: string, fb: string) => cssToHex(this.theme.getTokenColor(k, fb), fb);
+      const p = night ? 'print-night-' : 'print-';
+      const paper = tok(`${p}paper`, night ? '#0a1222' : '#ffffff');
+      const inkSoft = tok(`${p}ink-soft`, '#64748b');
+      const dpi = this.bp.tablet() ? 150 : 300;
+      const rivers: PrintStyle['rivers'] = view === 'mosaic' ? 'mosaic' : view === 'story' ? 'sea' : 'ink';
+      const style: PrintStyle = {
+        paper,
+        sea: tok(`${p}sea`, night ? '#0b1530' : '#f0f3f7'),
+        land: paper,
+        basin: paper,
+        divide: tok(`${p}divide`, '#94a3b8'),
+        rivers,
+        ink: tok(`${p}ink`, night ? '#eef2f7' : '#0f172a'),
+        ground: night ? 'dark' : 'light',
+        seaLabel: inkSoft,
+        dpi
+      };
+      const { map } = a2Pixels(dpi);
+      const mapCanvas = await globe.renderPrintMap(map.w, map.h, style);
+      const blob = await composeA2Poster(mapCanvas, {
+        dpi,
+        paper,
+        ink: style.ink,
+        inkSoft,
+        accent: tok('accent', '#d37400'),
         font: this.theme.getFontFamily(),
-        title: t.appName,
-        subtitle: [view, lg.title].filter(Boolean).join(' · '),
-        legend: items,
-        stats: t.posterStats(this.i18n.area(d.total.parea), this.i18n.num(d.total.nout), `${this.i18n.num(d.total.rkm / 1000)} ${t.thousandKm}`),
-        credits: t.posterCredits,
-        accent: this.theme.getTokenColor('accent', '#d37400'),
-        facts: {
-          heading: t.factsHeading,
-          items: [
-            { value: this.i18n.num(d.total.nout), caption: t.factRivers },
-            { value: t.factPeopleValue, caption: t.factPeople },
-            { value: t.factRenewalValue, caption: t.factRenewal },
-            { value: t.factBrackishValue, caption: t.factBrackish },
-            { value: `${this.i18n.num(d.total.parea / BALTIC_SEA_KM2, 1)} ×`, caption: t.factRatio }
-          ],
-          note: t.factsNote
-        }
+        logo: `assets/design-system/logo/${night ? 'kmd-white-orange' : 'kmd-black-orange'}.svg`,
+        title: t.posterTitle,
+        ruleWord: t.posterRuleWord,
+        coords: this.basinCoords(),
+        line: rivers === 'mosaic' ? t.posterLineMosaic : rivers === 'sea' ? t.posterLineSea : t.posterLineInk,
+        facts: [
+          { value: this.i18n.num(d.total.nout), caption: t.factRivers },
+          { value: t.factPeopleValue, caption: t.factPeople },
+          { value: t.factRenewalValue, caption: t.factRenewal },
+          { value: t.factBrackishValue, caption: t.factBrackish },
+          { value: `${this.i18n.num(d.total.parea / BALTIC_SEA_KM2, 1)} ×`, caption: t.factRatio }
+        ],
+        credits: `${t.posterCredits} · ${t.factsNote}`
       });
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
-      a.download = `watershed-${this.view()}${dark ? '-black' : ''}.png`;
+      a.download = `watershed-A2-${view}${night ? '-night' : ''}.png`;
       a.click();
-      setTimeout(() => URL.revokeObjectURL(a.href), 10_000);
+      setTimeout(() => URL.revokeObjectURL(a.href), 30_000);
     } finally {
       this.posterBusy.set(false);
     }

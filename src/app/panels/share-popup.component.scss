@@ -1,0 +1,251 @@
+@use "variables" as *;
+
+.share-modal {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 4px 0;
+
+  &__qr-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px;
+    background: color("btn-bg");
+    border: 1px solid color("line");
+    border-radius: radius("card");
+
+    @include respond-to("mobile") {
+      display: none;
+    }
+  }
+
+  &__qr {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: color("neutral-0");
+    padding: 10px;
+    border-radius: radius("sm");
+    box-shadow: 0 1px 3px color("shadow-panel");
+
+    ::ng-deep svg {
+      display: block;
+      width: 140px;
+      height: 140px;
+    }
+  }
+
+  &__qr-caption {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: font-size("xxs");
+    color: color("text-dim");
+  }
+
+  &__section {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  &__title {
+    margin: 0;
+    font-size: font-size("xxs");
+    font-weight: font-weight("bold");
+    color: color("accent");
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  &__input-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 4px 4px 12px;
+    border: 1px solid color("line");
+    border-radius: radius("pill");
+    background: color("btn-bg");
+    transition: border-color transition("fast");
+
+    &:focus-within {
+      border-color: color("line-strong");
+    }
+  }
+
+  &__input {
+    flex: 1;
+    min-width: 0;
+    border: 0;
+    background: transparent;
+    font-family: var(--font-family-mono);
+    font-size: font-size("xs");
+    color: color("text-main");
+    outline: none;
+    cursor: pointer;
+  }
+
+  &__copy-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    height: 28px;
+    padding: 0 12px;
+    border-radius: radius("pill");
+    border: 0;
+    background: color("accent");
+    color: color("neutral-0");
+    font: inherit;
+    font-size: font-size("xs");
+    font-weight: font-weight("medium");
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background transition("fast"), opacity transition("fast");
+
+    &:hover {
+      background: color("accent-hover");
+    }
+
+    &:focus-visible {
+      outline: 2px solid color("accent");
+      outline-offset: 1px;
+    }
+
+    &--copied {
+      background: color("success");
+
+      &:hover {
+        background: color("success");
+      }
+    }
+  }
+
+  &__options {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  &__card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: radius("control");
+    border: 1px solid color("line");
+    background: color("btn-bg");
+    transition: background transition("fast"), border-color transition("fast");
+
+    &:hover {
+      background: color("btn-hover");
+      border-color: color("line-strong");
+    }
+  }
+
+  &__card-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: nowrap;
+    white-space: nowrap;
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  &__card-icon {
+    display: inline-flex;
+    color: color("accent");
+    flex-shrink: 0;
+  }
+
+  &__card-label {
+    font-size: font-size("xs");
+    font-weight: font-weight("medium");
+    color: color("text-bright");
+    white-space: nowrap;
+  }
+
+  &__card-badge {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: font-size("xxs");
+    font-family: var(--font-family-mono);
+    color: color("text-dim");
+    background: color("line");
+    padding: 2px 6px;
+    border-radius: radius("sm");
+    white-space: nowrap;
+  }
+
+  &__action-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    height: 28px;
+    padding: 0 10px;
+    border-radius: radius("pill");
+    border: 1px solid color("line");
+    background: color("panel-bg-solid");
+    color: color("text-main");
+    font: inherit;
+    font-size: font-size("xs");
+    font-weight: font-weight("medium");
+    cursor: pointer;
+    white-space: nowrap;
+    flex-shrink: 0;
+    transition: background transition("fast"), border-color transition("fast"), color transition("fast");
+
+    &:hover {
+      background: color("btn-hover");
+      color: color("text-bright");
+      border-color: color("line-strong");
+    }
+
+    &:focus-visible {
+      outline: 2px solid color("accent");
+      outline-offset: 1px;
+    }
+
+    &--copied {
+      background: color("success-soft");
+      border-color: color("success");
+      color: color("success");
+
+      &:hover {
+        background: color("success-soft");
+        color: color("success");
+      }
+    }
+  }
+
+  // System share sheet (phones, Safari): one tap to messages, mail, apps.
+  &__native {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    height: $control-height;
+    border-radius: radius("pill");
+    border: 1px solid color("btn-active-red-border");
+    background: color("accent-glow-soft");
+    color: color("text-bright");
+    font: inherit;
+    font-size: font-size("sm");
+    font-weight: font-weight("medium");
+    cursor: pointer;
+    transition: background transition("fast");
+
+    &:hover {
+      background: color("btn-active-red");
+    }
+
+    &:focus-visible {
+      outline: 2px solid color("accent");
+      outline-offset: 1px;
+    }
+  }
+}

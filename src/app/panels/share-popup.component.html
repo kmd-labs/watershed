@@ -1,0 +1,60 @@
+@let t = i18n.t();
+
+<div class="share-modal">
+  <!-- QR code (hidden on phones) -->
+  <div class="share-modal__qr-wrap">
+    <div class="share-modal__qr" [innerHTML]="qrSvg()"></div>
+    <span class="share-modal__qr-caption">
+      <lucide-icon [img]="qrIcon" [size]="13"></lucide-icon>
+      {{ t.shareQrCode }}
+    </span>
+  </div>
+
+  <!-- Exactly what is on screen -->
+  <section class="share-modal__section">
+    <h3 class="share-modal__title">{{ t.shareTitle }}</h3>
+    <div class="share-modal__card">
+      <div class="share-modal__card-header">
+        <lucide-icon class="share-modal__card-icon" [img]="viewIcon" [size]="15"></lucide-icon>
+        <span class="share-modal__card-label">{{ t.shareThisView }}</span>
+        <span class="share-modal__card-badge">{{ viewLabel }}</span>
+      </div>
+      <button
+        type="button"
+        class="share-modal__action-btn"
+        [class.share-modal__action-btn--copied]="copiedKey() === 'view'"
+        (click)="copyText(viewUrl, 'view')">
+        <lucide-icon [img]="copiedKey() === 'view' ? checkIcon : copyIcon" [size]="13"></lucide-icon>
+        <span>{{ copiedKey() === 'view' ? t.linkCopied : t.copyLink }}</span>
+      </button>
+    </div>
+    @if (canShare) {
+      <button type="button" class="share-modal__native" (click)="nativeShare()">
+        <lucide-icon [img]="shareIcon" [size]="14"></lucide-icon>
+        <span>{{ t.shareNative }}</span>
+      </button>
+    }
+  </section>
+
+  <!-- The app's start page -->
+  <section class="share-modal__section">
+    <h3 class="share-modal__title">{{ t.shareAppUrl }}</h3>
+    <div class="share-modal__input-row">
+      <input
+        type="text"
+        class="share-modal__input"
+        readonly
+        [value]="appUrl"
+        [attr.aria-label]="t.shareAppUrl"
+        (click)="copyText(appUrl, 'app')" />
+      <button
+        type="button"
+        class="share-modal__copy-btn"
+        [class.share-modal__copy-btn--copied]="copiedKey() === 'app'"
+        (click)="copyText(appUrl, 'app')">
+        <lucide-icon [img]="copiedKey() === 'app' ? checkIcon : copyIcon" [size]="14"></lucide-icon>
+        <span>{{ copiedKey() === 'app' ? t.linkCopied : t.copyLink }}</span>
+      </button>
+    </div>
+  </section>
+</div>

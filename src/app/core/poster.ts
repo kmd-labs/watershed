@@ -1,32 +1,32 @@
-export interface PosterLegendItem {
-  label: string;
-  color: string;
-  kind: 'fill' | 'line';
-}
+/**
+ * A2 print poster (420 × 594 mm), after the grammar of classic city-map prints: a crisp map
+ * rectangle on white paper with generous margins, then a centred title in light spaced capitals,
+ * a hairline rule broken by one small word, the coordinates, and — quietly — a row of figures.
+ * All sizes are in millimetres and converted at the chosen dpi.
+ */
 
-export interface PosterOptions {
-  width: number;
-  height: number;
-  dark: boolean;
-  background: string;
+export const A2_MM = { w: 420, h: 594 };
+
+/** Map rectangle on the sheet (mm). */
+export const A2_MAP = { x: 30, y: 30, w: 360, h: 420 };
+
+export interface A2PosterOptions {
+  dpi: number;
+  paper: string;
   ink: string;
-  dim: string;
-  font: string;
-  title: string;
-  subtitle: string;
-  legend: PosterLegendItem[];
-  stats: string;
-  credits: string;
-  /** Accent colour (heading rule). */
+  inkSoft: string;
   accent: string;
-  /** "The Baltic in numbers": set in the empty south-east corner of the map. */
-  facts?: PosterFacts;
-}
-
-export interface PosterFacts {
-  heading: string;
-  items: { value: string; caption: string }[];
-  note: string;
+  font: string;
+  /** Logotype matching the paper (black or white wordmark with the orange dot). */
+  logo: string;
+  title: string;
+  /** The small word set into the rule under the title. */
+  ruleWord: string;
+  coords: string;
+  /** One quiet italic line explaining the colours (optional). */
+  line?: string;
+  facts: { value: string; caption: string }[];
+  credits: string;
 }
 
 function loadImage(src: string): Promise<HTMLImageElement | null> {
@@ -38,10 +38,6 @@ function loadImage(src: string): Promise<HTMLImageElement | null> {
   });
 }
 
-/**
- * Lays the rendered map out as a poster: map on top, then a footer with the KMD logotype, title,
- * view, legend, headline numbers and data credits. Sizes are relative to the poster width.
- */
 /** Greedy word wrap to a pixel width. */
 function wrap(x: CanvasRenderingContext2D, text: string, maxW: number): string[] {
   const lines: string[] = [];
@@ -55,129 +51,156 @@ function wrap(x: CanvasRenderingContext2D, text: string, maxW: number): string[]
   return lines;
 }
 
-/**
- * "The Baltic in numbers" in the south-east corner of the map, outside the basin (Belarus and
- * Russia beyond the divide): accent heading with a hairline, then each figure as a large light
- * numeral over a small letter-spaced caption, separated by hairlines.
- */
-function drawFacts(x: CanvasRenderingContext2D, f: PosterFacts, o: PosterOptions, mapH: number, u: number) {
-  const left = o.width * 0.655;
-  const maxW = o.width - left - 150 * u;
-  let size = 92 * u;
-  const capSize = 27 * u;
-  const capLead = 38 * u;
-  const block = () => {
-    x.font = `400 ${capSize}px ${o.font}`;
-    const caps = f.items.map(it => wrap(x, it.caption.toUpperCase(), maxW).length);
-    return 70 * u + caps.reduce((h, n) => h + size * 1.02 + 14 * u + n * capLead + 40 * u, 0) + 50 * u;
-  };
-  // Fit the block between ~70% of the map height and its bottom edge.
-  const top = mapH * 0.7, room = mapH - top - 40 * u;
-  while (block() > room && size > 60 * u) size -= 4 * u;
-  let y = top;
-
-  // Heading: short accent rule + letter-spaced caps.
-  x.fillStyle = o.accent;
-  x.fillRect(left, y - 10 * u, 64 * u, 3 * u);
-  x.font = `600 ${capSize}px ${o.font}`;
-  x.letterSpacing = `${capSize * 0.22}px`;
-  x.fillText(f.heading.toUpperCase(), left + 88 * u, y);
-  y += 70 * u;
-
-  f.items.forEach((it, i) => {
-    if (i > 0) {
-      x.fillStyle = o.ink;
-      x.globalAlpha = 0.14;
-      x.fillRect(left, y - 26 * u, maxW, Math.max(1, 1.5 * u));
-      x.globalAlpha = 1;
-    }
-    y += size * 0.86;
-    x.letterSpacing = `${-size * 0.02}px`;
-    x.fillStyle = o.ink;
-    x.font = `300 ${size}px ${o.font}`;
-    x.fillText(it.value, left, y);
-    y += 14 * u + capLead * 0.7;
-    x.letterSpacing = `${capSize * 0.12}px`;
-    x.fillStyle = o.dim;
-    x.font = `400 ${capSize}px ${o.font}`;
-    for (const line of wrap(x, it.caption.toUpperCase(), maxW)) {
-      x.fillText(line, left, y);
-      y += capLead;
-    }
-    y += 40 * u;
-  });
-
+/** Visible text width with `spacing` between letters (measured without the context's own
+ * letter-spacing, which some engines include in measureText and others ignore). */
+function spacedWidth(x: CanvasRenderingContext2D, text: string, spacing: number): number {
+  const prev = x.letterSpacing;
   x.letterSpacing = '0px';
-  x.globalAlpha = 0.75;
-  x.fillStyle = o.dim;
-  x.font = `400 ${21 * u}px ${o.font}`;
-  for (const line of wrap(x, f.note, maxW)) {
-    x.fillText(line, left, y);
-    y += 30 * u;
-  }
-  x.globalAlpha = 1;
+  const w = x.measureText(text).width;
+  x.letterSpacing = prev;
+  return w + spacing * Math.max(0, [...text].length - 1);
 }
 
-export async function composePoster(map: HTMLCanvasElement, o: PosterOptions): Promise<Blob> {
+/** Draws text centred on `cx`, compensating the trailing letter-spacing. */
+function centred(x: CanvasRenderingContext2D, text: string, cx: number, y: number, spacing: number) {
+  x.letterSpacing = `${spacing}px`;
+  const w = spacedWidth(x, text, spacing);
+  x.textAlign = 'left';
+  x.fillText(text, cx - w / 2, y);
+  x.letterSpacing = '0px';
+}
+
+export function a2Pixels(dpi: number) {
+  const px = (mm: number) => Math.round((mm * dpi) / 25.4);
+  return { px, width: px(A2_MM.w), height: px(A2_MM.h), map: { x: px(A2_MAP.x), y: px(A2_MAP.y), w: px(A2_MAP.w), h: px(A2_MAP.h) } };
+}
+
+export async function composeA2Poster(map: HTMLCanvasElement, o: A2PosterOptions): Promise<Blob> {
   await document.fonts?.ready;
   // Weights not used on the page are fetched only when asked for.
-  await Promise.all(['300', '400', '600'].map(w => document.fonts?.load(`${w} 64px ${o.font}`).catch(() => undefined)));
-  const W = o.width, H = o.height;
-  const u = W / 3000; // layout unit: 1 px at 3000 px width
+  await Promise.all(['300', 'italic 300', '400', '500'].map(w => document.fonts?.load(`${w} 64px ${o.font}`).catch(() => undefined)));
+  const { px, width: W, height: H, map: M } = a2Pixels(o.dpi);
   const cv = document.createElement('canvas');
   cv.width = W; cv.height = H;
   const x = cv.getContext('2d')!;
-  x.fillStyle = o.background;
+  x.fillStyle = o.paper;
   x.fillRect(0, 0, W, H);
-  const mapH = Math.round((map.height * W) / map.width);
-  x.drawImage(map, 0, 0, W, mapH);
+  x.drawImage(map, M.x, M.y, M.w, M.h);
   x.textBaseline = 'alphabetic';
-  if (o.facts) drawFacts(x, o.facts, o, mapH, W / 3000);
+  const cx = W / 2;
 
-  const left = 160 * u;
-  let y = mapH + 90 * u;
-  const logo = await loadImage(`assets/design-system/logo/${o.dark ? 'kmd-white-orange' : 'kmd-black-orange'}.svg`);
-  if (logo) {
-    const lh = 64 * u;
-    const lw = logo.naturalWidth && logo.naturalHeight ? (lh * logo.naturalWidth) / logo.naturalHeight : lh * 2.5;
-    x.drawImage(logo, left, y, lw, lh);
+  // Title: light, widely spaced capitals, fitted to the map width.
+  let titleSize = px(25);
+  const titleText = o.title.toUpperCase();
+  x.font = `300 ${titleSize}px ${o.font}`;
+  while (spacedWidth(x, titleText, titleSize * 0.32) > px(300) && titleSize > px(12)) {
+    titleSize *= 0.96;
+    x.font = `300 ${titleSize}px ${o.font}`;
   }
-  y += 64 * u + 110 * u;
-
-  x.textBaseline = 'alphabetic';
+  const titleY = px(A2_MAP.y + A2_MAP.h + 38);
   x.fillStyle = o.ink;
-  x.font = `700 ${120 * u}px ${o.font}`;
-  x.fillText(o.title, left, y);
-  y += 80 * u;
-  x.fillStyle = o.dim;
-  x.font = `500 ${52 * u}px ${o.font}`;
-  x.fillText(o.subtitle, left, y);
-  y += 90 * u;
+  centred(x, titleText, cx, titleY, titleSize * 0.32);
+  const titleW = spacedWidth(x, titleText, titleSize * 0.32);
 
-  // Legend, wrapped to the poster width.
-  x.font = `500 ${44 * u}px ${o.font}`;
-  let lx = left;
-  const maxX = W - left;
-  for (const it of o.legend) {
-    const sw = 56 * u, gap = 18 * u, after = 56 * u;
-    const w = sw + gap + x.measureText(it.label).width + after;
-    if (lx + w > maxX && lx > left) { lx = left; y += 70 * u; }
-    x.fillStyle = it.color;
-    if (it.kind === 'line') x.fillRect(lx, y - 20 * u, sw, 8 * u);
-    else x.fillRect(lx, y - 34 * u, sw, 36 * u);
+  // Hairline rule broken by one small spaced word (the city-poster "COUNTRY" line).
+  const ruleY = titleY + px(13);
+  const wordSize = px(3.6);
+  x.font = `500 ${wordSize}px ${o.font}`;
+  const word = o.ruleWord.toUpperCase();
+  const wordW = spacedWidth(x, word, wordSize * 0.4);
+  const half = Math.max(titleW / 2, wordW / 2 + px(30));
+  const gap = wordW / 2 + px(6);
+  x.fillStyle = o.ink;
+  x.fillRect(cx - half, ruleY - wordSize * 0.36, half - gap, Math.max(1, px(0.3)));
+  x.fillRect(cx + gap, ruleY - wordSize * 0.36, half - gap, Math.max(1, px(0.3)));
+  centred(x, word, cx, ruleY, wordSize * 0.4);
+
+  // Coordinates, then the optional italic line.
+  let y = ruleY + px(10);
+  x.fillStyle = o.inkSoft;
+  x.font = `400 ${px(3.4)}px ${o.font}`;
+  centred(x, o.coords, cx, y, px(3.4) * 0.12);
+  if (o.line) {
+    y += px(8);
+    x.font = `italic 300 ${px(3.4)}px ${o.font}`;
+    centred(x, o.line, cx, y, px(3.4) * 0.04);
+  }
+
+  // Figures: one quiet row, hairline separators, light numerals over spaced captions.
+  const rowTop = px(536);
+  const n = o.facts.length;
+  const colW = px(A2_MAP.w) / n;
+  x.fillStyle = o.ink;
+  x.globalAlpha = 0.18;
+  for (let i = 1; i < n; i++) x.fillRect(M.x + colW * i, rowTop, Math.max(1, px(0.2)), px(26));
+  x.fillRect(M.x, rowTop - px(8), M.w, Math.max(1, px(0.2)));
+  x.globalAlpha = 1;
+  o.facts.forEach((f, i) => {
+    const fx = M.x + colW * (i + 0.5);
     x.fillStyle = o.ink;
-    x.fillText(it.label, lx + sw + gap, y);
-    lx += w;
+    x.font = `300 ${px(8.5)}px ${o.font}`;
+    centred(x, f.value, fx, rowTop + px(8), -px(8.5) * 0.01);
+    x.fillStyle = o.inkSoft;
+    const cap = px(2.25);
+    x.font = `400 ${cap}px ${o.font}`;
+    x.letterSpacing = `${cap * 0.14}px`;
+    const lines = wrap(x, f.caption.toUpperCase(), colW - px(12)).slice(0, 3);
+    x.letterSpacing = '0px';
+    lines.forEach((ln, k) => centred(x, ln, fx, rowTop + px(14.5) + k * px(3.6), cap * 0.14));
+  });
+
+  // Foot: sources left, logotype right — small, on the bottom margin line.
+  const footY = px(A2_MM.h - 14);
+  x.fillStyle = o.inkSoft;
+  x.globalAlpha = 0.85;
+  x.font = `400 ${px(2.1)}px ${o.font}`;
+  x.textAlign = 'left';
+  wrap(x, o.credits, px(250)).slice(0, 2).forEach((ln, k, all) => x.fillText(ln, M.x, footY - (all.length - 1 - k) * px(3)));
+  x.globalAlpha = 1;
+  const logo = await loadImage(o.logo);
+  if (logo) {
+    const lh = px(5.2);
+    const lw = logo.naturalWidth && logo.naturalHeight ? (lh * logo.naturalWidth) / logo.naturalHeight : lh * 2.5;
+    x.drawImage(logo, M.x + M.w - lw, footY - lh * 0.82, lw, lh);
   }
-  y += 100 * u;
 
-  x.fillStyle = o.ink;
-  x.font = `600 ${46 * u}px ${o.font}`;
-  x.fillText(o.stats, left, y);
+  const blob = await new Promise<Blob>((res, rej) => cv.toBlob(b => (b ? res(b) : rej(new Error('toBlob'))), 'image/png'));
+  return withDpi(blob, o.dpi);
+}
 
-  x.fillStyle = o.dim;
-  x.font = `400 ${34 * u}px ${o.font}`;
-  x.fillText(o.credits, left, H - 90 * u);
+// ─── PNG resolution tag ─────────────────────────────────────────────────────
 
-  return new Promise((resolve, reject) => cv.toBlob(b => (b ? resolve(b) : reject(new Error('toBlob'))), 'image/png'));
+const CRC = (() => {
+  const t = new Uint32Array(256);
+  for (let n = 0; n < 256; n++) {
+    let c = n;
+    for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+    t[n] = c >>> 0;
+  }
+  return t;
+})();
+
+function crc32(bytes: Uint8Array): number {
+  let c = 0xffffffff;
+  for (const b of bytes) c = CRC[(c ^ b) & 0xff] ^ (c >>> 8);
+  return (c ^ 0xffffffff) >>> 0;
+}
+
+/**
+ * Inserts a pHYs chunk so print software reads the PNG at its true size (e.g. A2 at 300 dpi)
+ * instead of the 72/96 dpi default.
+ */
+async function withDpi(blob: Blob, dpi: number): Promise<Blob> {
+  const src = new Uint8Array(await blob.arrayBuffer());
+  const ppm = Math.round(dpi / 0.0254);
+  const chunk = new Uint8Array(21);
+  const dv = new DataView(chunk.buffer);
+  dv.setUint32(0, 9);
+  chunk.set([0x70, 0x48, 0x59, 0x73], 4); // "pHYs"
+  dv.setUint32(8, ppm);
+  dv.setUint32(12, ppm);
+  chunk[16] = 1; // unit: metre
+  dv.setUint32(17, crc32(chunk.subarray(4, 17)));
+  const ihdrEnd = 8 + 8 + 13 + 4; // signature + IHDR (length, type, 13 data bytes, crc)
+  return new Blob([src.subarray(0, ihdrEnd), chunk, src.subarray(ihdrEnd)], { type: 'image/png' });
 }

@@ -27,6 +27,7 @@
     z-index: 120;
 
     .header__settings,
+    .header__share,
     .header__view {
       opacity: 0;
       visibility: hidden;
@@ -43,6 +44,7 @@
   }
 
   &__settings,
+  &__share,
   &__view {
     display: inline-flex;
     align-items: center;

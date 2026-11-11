@@ -16,6 +16,9 @@ npm start          # http://localhost:4200
 - **Rivers / Countries panel**: rivers ranked by catchment area or discharge (searchable, filterable by sub-basin); each country's area and share of the drainage basin.
 - **Catchment card**: area and rank, mean discharge, main-river and network length, mouth, nearest town, countries in the basin.
 
+- **Links & sharing**: every view lives in the URL (`?view=mosaic&ground=dark`, `?basin=1`, `?view=story&step=3`, `?top=5`, `?top=off`, `?view=raindrop&drop=22.6,50.2`, `&lang=pl`); the address bar follows the map, and the share button (as in kmd-labs/el-nino) offers a QR code, the link to the current view and the app link.
+- **A2 print poster**: the Poster button renders the current view as a 420 × 594 mm sheet at 300 dpi (150 dpi on phones), tagged with its resolution, on white paper with ink or coloured rivers (night background for the black-ground views).
+
 Colours are theme tokens defined in [`src/styles.scss`](src/styles.scss) from the design-system palette and read by the globe through `ThemeService`.
 
 ## Data & method
@@ -25,7 +28,11 @@ Colours are theme tokens defined in [`src/styles.scss`](src/styles.scss) from th
 | River network, catchments, discharge | HydroRIVERS v1.0 / HydroBASINS v1c (Lehner & Grill 2013, WWF / HydroSHEDS), WaterGAP mean flow 1971–2000 |
 | Land, lakes, borders | Natural Earth |
 
-`src/assets/data/baltic.json` holds the packed geometry. Two clean-ups happen at load time (`BalticDataService`, `GlobeComponent`):
+`src/assets/data/baltic.json` and `streams.json` are built by `node scripts/build-data.mjs` from `data/baltic.source.json` and `data/rivers.hr.json`.
+
+River geometry: `python scripts/build-rivers.py` matches every reach of the source export to the original HydroRIVERS v1.0 (download the Europe shapefile into `data/hydrorivers/`, see the script header) by its end points, smooths the 15″ grid staircase (two Chaikin passes) and simplifies at 80 m. The export had cut reaches down to ~3 vertices each — straight chords km long. Checked against OpenStreetMap, streams draining under 100 km² are often off the real channel in flat land, so the build leaves out streams under 50 km² upstream, unnamed river systems under 100 km² and rivers on islands under 500 km² (constants at the top of `build-data.mjs`).
+
+Other clean-ups, also at build time:
 
 - HydroRIVERS routes flow through lakes as straight connector reaches (hundreds of parallel lines across Ladoga and Onega). River segments whose midpoint lies on a Natural Earth lake are skipped, so rivers stop at the shore.
 - HydroBASINS leaves holes inside the biggest lakes (Ladoga, Peipus) that showed up as stray jagged outlines; hole rings lying ≥ 80 % on a lake are dropped.

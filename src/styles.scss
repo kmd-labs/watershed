@@ -97,6 +97,19 @@ $land: palette("neutral-300");
   --color-globe-story-ghost: #{palette("neutral-300")};
   --color-globe-dark-story-ghost: #{palette("neutral-700")};
 
+  // A2 print poster: white paper (no ink on the background — uncoated stock prints large dark
+  // areas unevenly), a whisper of cool grey for water, slate ink, one orange accent.
+  --color-print-paper: #{palette("neutral-0")};
+  --color-print-sea: #{color.mix(palette("neutral-200"), palette("neutral-0"), 45%)};
+  --color-print-divide: #{palette("neutral-400")};
+  --color-print-ink: #{palette("neutral-900")};
+  --color-print-ink-soft: #{palette("neutral-500")};
+  --color-print-night-paper: #{palette("neutral-925")};
+  --color-print-night-sea: #{color.mix(palette("primary-900"), palette("neutral-950"), 30%)};
+  --color-print-night-divide: #{palette("neutral-700")};
+  --color-print-night-ink: #{palette("neutral-100")};
+  --color-print-night-ink-soft: #{palette("neutral-400")};
+
   // Raindrop view: the traced path
   --color-globe-drop: #{palette("warning-500")};
   --color-globe-drop-halo: #{palette("neutral-0")};

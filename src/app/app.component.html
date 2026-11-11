@@ -57,6 +57,16 @@
     </div>
 
     <div class="header__right">
+      <div class="header__share glass-panel">
+        <app-button
+          variant="ghost"
+          [iconOnly]="true"
+          [ariaLabel]="t.shareLink"
+          [titleText]="t.shareLink"
+          (btnClick)="openShare()">
+          <lucide-icon [img]="shareIcon" [size]="15"></lucide-icon>
+        </app-button>
+      </div>
       <div class="header__view glass-panel">
         <app-dropdown
           variant="ghost"
@@ -286,7 +296,7 @@
               <p class="drop__note">{{ t.dropTimeNote }}</p>
             } @else {
               <p class="drop__note">
-                {{ dropNote() === 'outside' ? t.dropOutside : dropNote() === 'coast' ? t.dropCoast : t.dropHint }}
+                {{ dropNote() === 'outside' ? t.dropOutside : dropNote() === 'coast' ? t.dropCoast : dropNote() === 'tiny' ? t.dropTiny : t.dropHint }}
               </p>
             }
           </section>

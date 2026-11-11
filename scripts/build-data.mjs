@@ -15,6 +15,14 @@
  *     straight connector reaches); the browser skips them without rasterising lakes
  *   - HydroBASINS hole rings lying ≥ 80% on a lake (Ladoga, Peipus) are dropped
  *   - world land is clipped to the cut-out around the basin
+ *   - river geometry comes from data/rivers.hr.json when present (scripts/build-rivers.py: the
+ *     original HydroRIVERS lines, smoothed), and the least reliable streams are left out:
+ *       · streams with less than MIN_UPSTREAM_KM2 of upstream area (DEM-derived lines that, in flat
+ *         land, often run where no stream exists — checked against OpenStreetMap),
+ *       · unnamed river systems smaller than MIN_UNNAMED_KM2 (coastal creeks),
+ *       · rivers on islands smaller than MIN_ISLAND_KM2.
+ *     Leaving out whole headwaters keeps the downstream topology intact (upstream area only grows
+ *     downstream, so every removed reach takes all of its own tributaries with it).
  */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -26,6 +34,9 @@ const OUT = path.join(root, 'src/assets/data');
 /** Must match CONTEXT_MARGIN in globe.component.ts (lon°, lat°). */
 const CONTEXT_MARGIN = [7, 3.5];
 const LAKE_HOLE_SHARE = 0.8;
+const MIN_UPSTREAM_KM2 = 50;
+const MIN_UNNAMED_KM2 = 100;
+const MIN_ISLAND_KM2 = 500;
 
 const B = JSON.parse(fs.readFileSync(SRC, 'utf8'));
 const [LON0, LON1, LAT0, LAT1] = B.bbox;
@@ -144,9 +155,51 @@ const world = unpack(B.world)
   .filter(p => p.length);
 
 // ─── rivers: delta-encoded, with in-lake segment flags ───────────────────────
-let wetCount = 0;
-const rivers = B.rivers.map((rc, cls) => {
-  const cnt = u16(rc.cnt), xy = u16(rc.xy);
+// ─── which river systems to leave out ────────────────────────────────────────
+const sArea = r => { let a = 0; for (let i = 0, j = r.length - 2; i < r.length; j = i, i += 2) a += r[j] * r[i + 1] - r[i] * r[j + 1]; return a / 2; };
+const km2 = r => Math.abs(sArea(r)) * 111.32 * 111.32 * Math.cos((r[1] * Math.PI) / 180);
+const outlineRings = outlines[6].map(r => { const f = new Float64Array(r.length); for (let i = 0; i < r.length; i += 2) { f[i] = qx(r[i]); f[i + 1] = qy(r[i + 1]); } return f; });
+const mainRing = outlineRings.reduce((a, r) => (Math.abs(sArea(r)) > Math.abs(sArea(a)) ? r : a));
+const islands = outlineRings
+  .filter(r => r !== mainRing && Math.sign(sArea(r)) === Math.sign(sArea(mainRing)))
+  .map(r => { let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9; for (let i = 0; i < r.length; i += 2) { x0 = Math.min(x0, r[i]); x1 = Math.max(x1, r[i]); y0 = Math.min(y0, r[i + 1]); y1 = Math.max(y1, r[i + 1]); } return { r, km2: km2(r), bb: [x0, x1, y0, y1] }; });
+const islandOf = g => {
+  if (!g.mouth) return null;
+  const [x, y] = g.mouth, t = g.lbl ?? g.mouth;
+  for (const [px, py] of [[x, y], [x + (t[0] - x) * 0.2, y + (t[1] - y) * 0.2], t]) {
+    const I = islands.find(I => px >= I.bb[0] && px <= I.bb[1] && py >= I.bb[2] && py <= I.bb[3] && inRing(I.r, px, py));
+    if (I) return I;
+  }
+  return null;
+};
+const hiddenBasin = B.groups.map(g => {
+  if (g.kind !== 'basin') return false;
+  if (!g.name && g.area < MIN_UNNAMED_KM2) return true;
+  const I = islandOf(g);
+  return !!I && I.km2 < MIN_ISLAND_KM2;
+});
+
+const hrPath = path.join(root, 'data/rivers.hr.json');
+const HR = fs.existsSync(hrPath) ? JSON.parse(fs.readFileSync(hrPath, 'utf8')) : null;
+let wetCount = 0, keptReaches = 0, droppedReaches = 0, vertices = 0;
+const rivers = (HR ? HR.rivers : B.rivers).map((rc0, cls) => {
+  // Keep only reliable reaches; rebuild cnt / xy / g for the survivors.
+  const cnt0 = u16(rc0.cnt), xy0 = u16(rc0.xy), g0 = u16(rc0.g);
+  const upB = rc0.up ? Buffer.from(rc0.up, 'base64') : null;
+  const up = upB ? new Uint32Array(upB.buffer.slice(upB.byteOffset, upB.byteOffset + upB.length)) : null;
+  const keepCnt = [], keepG = [], parts = [];
+  let v0 = 0;
+  for (let i = 0; i < cnt0.length; i++) {
+    const n = cnt0[i];
+    const small = up && up[i] > 0 && up[i] < MIN_UPSTREAM_KM2;
+    if (small || hiddenBasin[g0[i]]) droppedReaches++;
+    else { keepCnt.push(n); keepG.push(g0[i]); parts.push(xy0.subarray(v0 * 2, (v0 + n) * 2)); keptReaches++; vertices += n; }
+    v0 += n;
+  }
+  const xy = new Uint16Array(parts.reduce((a, q) => a + q.length, 0));
+  { let k = 0; for (const q of parts) { xy.set(q, k); k += q.length; } }
+  const cnt = Uint16Array.from(keepCnt);
+  const rc = { n: rc0.n, cnt: b64(cnt), g: b64(Uint16Array.from(keepG)) };
   let nseg = 0;
   for (const n of cnt) nseg += n - 1;
   const wet = new Uint8Array(Math.ceil(nseg / 8));
@@ -185,3 +238,4 @@ fs.writeFileSync(path.join(OUT, 'streams.json'), JSON.stringify(streams));
 const kb = f => (fs.statSync(path.join(OUT, f)).size / 1024).toFixed(0);
 console.log(`baltic.json ${kb('baltic.json')} KB, streams.json ${kb('streams.json')} KB`);
 console.log(`in-lake segments flagged: ${wetCount}, lake holes dropped: ${holesDropped}, world rings kept: ${world.flat().length}`);
+console.log(`rivers: ${HR ? 'HydroRIVERS rebuild' : 'source export'}; reaches kept ${keptReaches}, left out ${droppedReaches} (upstream < ${MIN_UPSTREAM_KM2} km², unnamed < ${MIN_UNNAMED_KM2} km², islands < ${MIN_ISLAND_KM2} km²); vertices ${vertices}`);
