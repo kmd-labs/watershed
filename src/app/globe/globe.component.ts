@@ -119,6 +119,8 @@ const PRINT_FOV = 10;
 const PRINT_TILE = 2048;
 /** Thinner print lines break up; they are drawn this wide but lighter (same ink per length). */
 const PRINT_MIN_LINE_PX = 0.8;
+/** The basin's mass sits left of centre; the print map shifts right by this share of its width. */
+const PRINT_SHIFT_X = 0.03;
 /** Pixel ratio at rest (sharp) and while the map moves (fast); back to rest after this idle time. */
 const MAX_DPR = 1.5;
 const MOTION_DPR = 1;
@@ -1633,6 +1635,10 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
     const alt = this.fitPrint(style.focus >= 0 ? data.basinPolys[style.focus] : whole);
     // Zoomed in on one basin, rivers draw a little heavier (gently, not to scale).
     const weight = clamp(Math.pow(this.printWholeAlt.get(aspectKey)! / alt, 0.3), 1, 2.4);
+    // Balance the sheet: the whole map (base, rivers, sea names) moves right by PRINT_SHIFT_X.
+    const dx = Math.round(width * PRINT_SHIFT_X);
+    this.camera.setViewOffset(width, height, -dx, 0, width, height);
+    this.camera.updateProjectionMatrix();
 
     // ── base map ──
     const out = document.createElement('canvas');
@@ -1659,7 +1665,7 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
       for (let tx = 0; tx < width; tx += tile) {
         const tw = Math.min(tile, width - tx), th = Math.min(tile, height - ty);
         this.renderer.setSize(tw, th, false);
-        this.camera.setViewOffset(width, height, tx, ty, tw, th);
+        this.camera.setViewOffset(width, height, tx - dx, ty, tw, th);
         this.camera.updateProjectionMatrix();
         lineMats.forEach(m => m.resolution.set(tw, th));
         this.renderer.render(this.scene, this.camera);
@@ -1702,7 +1708,7 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
       for (const L of this.labels) {
         if (L.kind !== 'sea') continue;
         const p = L.p.clone().project(this.camera);
-        ctx.fillText(L.text.toUpperCase(), ((p.x + 1) / 2) * width, ((1 - p.y) / 2) * height);
+        ctx.fillText(L.text.toUpperCase(), ((p.x + 1) / 2) * width + dx, ((1 - p.y) / 2) * height);
       }
       ctx.letterSpacing = '0px';
     }

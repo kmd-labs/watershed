@@ -136,6 +136,9 @@ $sea-dark: (
   --color-print-black-divide: #{palette("neutral-700")};
   --color-print-black-ink: #{palette("neutral-50")};
   --color-print-black-ink-soft: #{palette("neutral-400")};
+  // Sea names ~15 % brighter than the soft ink (lightness 65 → 75 %), source numbers in a quiet amber.
+  --color-print-black-sea-label: #{color.adjust(palette("neutral-400"), $lightness: 10%)};
+  --color-print-black-accent: #{color.mix(palette("warning-500"), palette("neutral-500"), 55%)};
 
   // Poster maker river palettes, derived from the mosaic and sea colours. Pastel (white paper):
   // saturation down, lightness up, still dark enough to read as hairlines on white. Vivid (black

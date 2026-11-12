@@ -99,11 +99,10 @@ export class PosterStudioComponent implements OnDestroy {
         line: t.posterLineBasin(t.subNames[b.sub])
       };
     }
-    const by = colourFamily(o.palette) ? o.by : null;
     return {
       title: t.posterTitle,
       subtitle: t.posterRuleWord,
-      line: by === 'basin' ? t.posterLineMosaic : by === 'sea' ? t.posterLineSea : t.posterLineInk
+      line: t.posterLine
     };
   });
 
@@ -250,7 +249,7 @@ export class PosterStudioComponent implements OnDestroy {
       riverColors,
       focus: o.focus,
       ink: !family,
-      seaLabel: this.tok(`${p}ink-soft`, '#64748b'),
+      seaLabel: dark ? this.tok('print-black-sea-label', '#b4c0d0') : this.tok('print-ink-soft', '#64748b'),
       seaNames: o.seaNames
     };
   }
@@ -265,7 +264,8 @@ export class PosterStudioComponent implements OnDestroy {
       paper: this.tok(`${p}paper`, dark ? '#040812' : '#ffffff'),
       ink: this.tok(`${p}ink`, dark ? '#f5f7fb' : '#0f172a'),
       inkSoft: this.tok(`${p}ink-soft`, '#64748b'),
-      accent: this.tok('accent', '#d37400'),
+      // Source numbers: the KMD orange on white, a quieter amber on black.
+      accent: dark ? this.tok('print-black-accent', '#9c7a52') : this.tok('accent', '#d37400'),
       font: this.theme.getFontFamily(),
       logo: `assets/design-system/logo/${dark ? 'kmd-white-orange' : 'kmd-black-orange'}.svg`,
       title: o.title ?? a.title,

@@ -152,9 +152,8 @@ export interface Dict {
   noteHydro: string;
   noteFlow: string;
   posterRuleWord: string;
-  posterLineInk: string;
-  posterLineMosaic: string;
-  posterLineSea: string;
+  /** Default tagline of the whole-basin poster. */
+  posterLine: string;
   factsHeading: string;
   factRivers: string;
   factPeopleValue: string;
