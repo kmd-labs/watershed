@@ -250,7 +250,9 @@ export class PosterStudioComponent implements OnDestroy {
       focus: o.focus,
       ink: !family,
       seaLabel: dark ? this.tok('print-black-sea-label', '#b4c0d0') : this.tok('print-ink-soft', '#64748b'),
-      seaNames: o.seaNames
+      seaNames: o.seaNames,
+      // On black with white rivers the lakes (dark water on black) get a faint outline.
+      lakeLine: o.palette === 'black-white' ? this.tok('print-black-lake-line', '#1a2433') : undefined
     };
   }
 

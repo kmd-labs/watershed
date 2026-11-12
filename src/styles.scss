@@ -138,6 +138,8 @@ $sea-dark: (
   --color-print-black-ink-soft: #{palette("neutral-400")};
   // Sea names ~15 % brighter than the soft ink (lightness 65 → 75 %), source numbers in a quiet amber.
   --color-print-black-sea-label: #{color.adjust(palette("neutral-400"), $lightness: 10%)};
+  // Lake outline on the black-and-white poster: fainter than the divide (neutral-700) along the coast.
+  --color-print-black-lake-line: #{color.mix(palette("neutral-700"), palette("neutral-950"), 80%)};
   --color-print-black-accent: #{color.mix(palette("warning-500"), palette("neutral-500"), 55%)};
 
   // Poster maker river palettes, derived from the mosaic and sea colours. Pastel (white paper):

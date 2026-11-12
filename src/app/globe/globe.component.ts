@@ -48,6 +48,8 @@ export interface PrintStyle {
   ink: boolean;
   seaLabel: string;
   seaNames: boolean;
+  /** Hairline around lakes (subtler than the divide along the coast); none when absent. */
+  lakeLine?: string;
 }
 
 export interface GlobePick {
@@ -1830,6 +1832,12 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
     ctx.fillRect(0, 0, W, H);
     fill(data.land, style.paper);
     fill(data.lakes, style.sea);
+    if (style.lakeLine) {
+      ctx.strokeStyle = style.lakeLine;
+      ctx.lineWidth = Math.max(0.6, px(0.08));
+      ctx.lineJoin = 'round';
+      for (const poly of data.lakes) { ctx.beginPath(); for (const r of poly) ring(r); ctx.stroke(); }
+    }
     ctx.restore();
     ctx.strokeStyle = style.divide;
     ctx.lineWidth = Math.max(1, px(0.13));
