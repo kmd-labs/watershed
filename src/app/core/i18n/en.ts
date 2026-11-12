@@ -153,7 +153,7 @@ export const EN: Dict = {
   noteHydro: 'HydroRIVERS v1.0 and HydroBASINS v1c (WWF / HydroSHEDS; Lehner & Grill 2013): streams with a catchment of at least 10 km² or a mean flow of at least 0.1 m³/s.',
   noteFlow: 'Long-term mean 1971–2000 modelled by WaterGAP, after HydroRIVERS v1.0 (Lehner & Grill 2013).',
   posterRuleWord: 'Watershed',
-  posterLine: 'Many Rivers. Many Landscapes. One shared destiny flowing towards Baltic.',
+  posterLine: 'Many Rivers. Many Landscapes. One shared destiny flowing towards the Baltic.',
   posterStats: (area, mouths, rivers) => `${area} · ${mouths} river mouths · ${rivers} of rivers`,
   posterCredits: 'Data: HydroRIVERS & HydroBASINS (WWF / HydroSHEDS), Natural Earth, ETOPO1 (NOAA) · kmd-labs.github.io/watershed',
   factsHeading: 'The Baltic in numbers',
