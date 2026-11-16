@@ -180,11 +180,17 @@ $entry-seas: (
   // Panels
   --color-share-bar: #{palette("warning-200")};
 
-  // Entry map of Europe (src/app/entry): the five seas' watersheds on a quiet ground.
-  --color-entry-sea: #{palette("neutral-50")};
-  --color-entry-land: #{palette("neutral-200")};
+  // Entry map of Europe (src/app/entry), in both looks whatever the page's theme (the choice of
+  // look shows them side by side): paper (White & Classy) and night (Midnight City Neons). The
+  // seas' colours are the same; at night the map turns them into neon (full saturation, bright).
+  --color-entry-paper-sea: #{palette("neutral-50")};
+  --color-entry-paper-land: #{color.mix(palette("neutral-200"), palette("neutral-100"), 70%)};
+  --color-entry-paper-ink: #{palette("neutral-800")};
+  --color-entry-night-sea: #{color.mix(midnight(950), #000000, 75%)};
+  --color-entry-night-land: #{color.mix(midnight(900), midnight(850), 60%)};
+  --color-entry-night-ink: #{midnight(100)};
   @each $id, $c in $entry-seas {
-    --color-entry-#{$id}: #{color.adjust($c, $lightness: -6%)};
+    --color-entry-#{$id}: #{$c};
   }
 }
 
@@ -227,9 +233,4 @@ $night-sea: color.mix(midnight(900), midnight(950), 40%);
   --color-globe-drop-halo: #{midnight(950)};
   --color-share-bar: #{color.mix(palette("warning-500"), midnight(800), 30%)};
 
-  --color-entry-sea: #{$night-sea};
-  --color-entry-land: #{midnight(800)};
-  @each $id, $c in $entry-seas {
-    --color-entry-#{$id}: #{$c};
-  }
 }

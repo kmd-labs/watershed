@@ -266,6 +266,7 @@ export const EN: Dict = {
     caspian: 'Caspian Sea'
   },
   changeSea: 'Change sea…',
+  changeSeaAria: sea => `Sea: ${sea}. Change sea`,
   chooseSea: 'Choose a sea',
   pickerTitle: 'Which drainage basin?',
   pickerSubtitle: 'Each sea is a different map of rivers. Only the sea you choose is downloaded; you can switch any time from the view menu.',
@@ -277,13 +278,13 @@ export const EN: Dict = {
   pickerHint: 'Point at a sea to see its numbers — click to open its rivers.',
   entryStep: (n, of) => `Step ${n} of ${of}`,
   lookTitle: 'Choose a look',
-  lookSubtitle: 'The same rivers, two moods. You can switch any time from “Change sea…”.',
+  lookSubtitle: 'The same rivers, two moods. You can switch any time later.',
   lookNames: { classic: 'White & Classy', midnight: 'Midnight City Neons' },
   lookNotes: {
     classic: 'Ink on paper: fine rivers on a pale map, calm and clear.',
     midnight: 'Rivers glow like city lights on a night-blue map.'
   },
-  lookExample: name => `Example: the Baltic’s rivers in the “${name}” look`,
+  lookPick: 'Choose this look',
   lookCurrent: 'current',
   lookLabel: 'Look',
   lookChange: 'Change the look',

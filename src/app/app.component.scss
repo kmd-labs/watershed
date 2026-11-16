@@ -27,6 +27,7 @@
     z-index: 120;
 
     .header__settings,
+    .header__sea,
     .header__share,
     .header__view {
       opacity: 0;
@@ -44,6 +45,7 @@
   }
 
   &__settings,
+  &__sea,
   &__share,
   &__view {
     display: inline-flex;
@@ -55,6 +57,21 @@
 
   &__view {
     width: 210px;
+  }
+
+  // The sea tab: the sea's colour as a glowing dot, and its name.
+  .sea-tab__dot {
+    flex: none;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: var(--sea);
+    box-shadow: 0 0 8px var(--sea);
+  }
+
+  .sea-tab__name {
+    margin-left: spacing("xxs");
+    white-space: nowrap;
   }
 
   @include respond-to("mobile") {

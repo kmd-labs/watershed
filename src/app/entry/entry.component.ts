@@ -17,7 +17,7 @@ import { I18nService } from '../core/i18n/i18n.service';
 import { Lang } from '../core/i18n/i18n.types';
 import { LOOKS, Look, LookService } from '../core/look';
 import { SEA_IDS, SeaId, SeaService } from '../core/sea';
-import { EntryMap, EntryPalette, Rgb, SeasMap, parseRgb } from './entry-map';
+import { EntryMap, EntryStyle, Rgb, SeasMap, parseRgb } from './entry-map';
 
 /** The entry map file, fetched once per visit (the entry opens again on "Change sea…"). */
 let seasMap: Promise<SeasMap> | null = null;
@@ -27,11 +27,15 @@ const loadSeasMap = () =>
     throw e;
   }));
 
+/** At most this many device pixels per map canvas (keeps big, dense screens light). */
+const MAX_PIXELS = 4.5e6;
+
 /**
- * The entry, at the start of every visit: first a look (White & Classy or Midnight City Neons,
- * each with an example), then a sea on a map of Europe with the five seas' drainage basins.
- * Nothing of the seas' own data is downloaded before the choice (BalticDataService.load); the
- * map itself is one small file, fetched when the entry opens. "Change sea…" opens it at the map.
+ * The entry, at the start of every visit: first a look — one map of Europe, half on paper
+ * (White & Classy), half in neon at night (Midnight City Neons) — then a sea on that map in the
+ * chosen look. Nothing of the seas' own data is downloaded before the choice
+ * (BalticDataService.load); the map itself is one file, fetched when the entry opens.
+ * "Change sea…" opens it at the map.
  */
 @Component({
   selector: 'app-entry',
@@ -50,27 +54,33 @@ export class EntryComponent {
 
   readonly closeIcon = X;
   readonly lookIcon = Palette;
-  readonly looks = LOOKS;
   readonly step = this.seas.entryStep;
+  readonly looks = LOOKS;
 
   /** Closing is possible once a sea is on screen; at the start of a visit a choice is needed. */
   readonly closable = computed(() => this.seas.sea() !== null);
 
   private readonly dialog = viewChild.required<ElementRef<HTMLElement>>('dialog');
+  // Step 1: the same map on paper and at night (its glow on a layer of its own, so it can hum).
+  private readonly paperRef = viewChild<ElementRef<HTMLCanvasElement>>('paper');
+  private readonly nightRef = viewChild<ElementRef<HTMLCanvasElement>>('night');
+  private readonly glowRef = viewChild<ElementRef<HTMLCanvasElement>>('glow');
+  // Step 2: the map to choose on, and the panels it leaves room for.
   private readonly canvasRef = viewChild<ElementRef<HTMLCanvasElement>>('map');
   private readonly headRef = viewChild<ElementRef<HTMLElement>>('head');
   private readonly dockRef = viewChild<ElementRef<HTMLElement>>('dock');
 
   readonly geo = signal<SeasMap | null>(null);
-  /** The sea under the pointer or keyboard focus. */
+  /** Step 1: the look the pointer (or focus) leans to; the divider moves its way. */
+  readonly lean = signal<Look | null>(null);
+  /** Step 1 is drawn (the maps fade in). */
+  readonly looksReady = signal(false);
+  /** Step 2: the sea under the pointer or keyboard focus. */
   readonly hot = signal<SeaId | null>(null);
   /** Hover note next to the mouse pointer. */
   readonly tip = signal<{ x: number; y: number; id: SeaId } | null>(null);
   private map?: EntryMap;
   private size = { w: 0, h: 0 };
-
-  /** The sea marked on the map: the open one, else the last visit's. */
-  readonly marked = computed(() => this.seas.sea() ?? this.seas.last());
 
   readonly cards = computed(() => {
     const t = this.i18n.t();
@@ -94,19 +104,20 @@ export class EntryComponent {
   readonly langs = computed(() => this.i18n.langs.map(l => ({ l, label: l.toUpperCase(), name: this.i18n.dicts[l].langName })));
 
   constructor() {
-    // The map file loads while the look is being chosen, so the second step opens at once.
+    // The map file loads at once (both steps draw it).
     loadSeasMap()
       .then(g => this.geo.set(g))
       .catch(() => {
-        // Without the map the sea buttons below it still work.
+        // Without the map the looks' names and the sea buttons still work.
       });
 
     afterNextRender(() => this.dialog().nativeElement.focus());
 
-    // (Re)fit the map when it appears or its frame resizes.
+    // (Re)fit the maps when they appear, when their frame resizes, or at the other step.
     let obs: ResizeObserver | null = null;
     effect(() => {
-      const canvas = this.canvasRef()?.nativeElement;
+      const step = this.step();
+      const canvas = (step === 'look' ? this.paperRef() : this.canvasRef())?.nativeElement;
       const geo = this.geo();
       obs?.disconnect();
       obs = null;
@@ -118,21 +129,26 @@ export class EntryComponent {
     });
     this.destroyRef.onDestroy(() => obs?.disconnect());
 
-    // Redraw on pointing, another look (colours) or language (names).
+    // Step 2 redraws on pointing, another look (colours) or language (names).
     effect(() => {
       this.hot();
-      this.marked();
       this.i18n.t();
       this.theme.mode();
-      untracked(() => this.draw());
+      untracked(() => this.step() === 'sea' && this.drawSea());
     });
   }
 
   chooseLook(l: Look) {
     this.look.set(l);
+    this.lean.set(null);
     this.step.set('sea');
     // The map step's heading takes the focus, for keyboard and screen-reader users.
     setTimeout(() => this.dialog().nativeElement.focus());
+  }
+
+  backToLooks() {
+    this.looksReady.set(false);
+    this.step.set('look');
   }
 
   chooseSea(id: SeaId) {
@@ -148,21 +164,52 @@ export class EntryComponent {
     this.i18n.setLang(l);
   }
 
-  // ─── map ────────────────────────────────────────────────────────────────
+  // ─── drawing ────────────────────────────────────────────────────────────
+
+  private dprFor(w: number, h: number) {
+    return Math.min(2, devicePixelRatio || 1, Math.sqrt(MAX_PIXELS / Math.max(1, w * h)));
+  }
+
+  private fit(canvas: HTMLCanvasElement, w: number, h: number, dpr: number) {
+    canvas.width = Math.round(w * dpr);
+    canvas.height = Math.round(h * dpr);
+  }
 
   private layout() {
+    if (!this.map) return;
+    if (this.step() === 'look') this.layoutLooks();
+    else this.layoutSea();
+  }
+
+  /** Step 1: one map across the screen, under both halves. */
+  private layoutLooks() {
+    const paper = this.paperRef()?.nativeElement, night = this.nightRef()?.nativeElement, glow = this.glowRef()?.nativeElement;
+    if (!paper || !night || !glow || !this.map) return;
+    const w = paper.clientWidth, h = paper.clientHeight;
+    if (!w || !h) return;
+    const dpr = this.dprFor(w, h);
+    for (const c of [paper, night, glow]) this.fit(c, w, h, dpr);
+    const phone = isAtMost('mobile');
+    // On a tall phone the map is drawn larger, cropped at the sides, between the heading and the names.
+    this.map.layout(w, h, dpr, phone ? { top: 130, right: 0, bottom: 230, left: 0 } : { top: 80, right: 24, bottom: 120, left: 24 }, phone ? 2.1 : 1.04, false);
+    this.map.render(paper.getContext('2d')!, this.style(false));
+    const st = this.style(true);
+    this.map.render(night.getContext('2d')!, st, { layer: 'base' });
+    this.map.render(glow.getContext('2d')!, st, { layer: 'glow' });
+    this.looksReady.set(true);
+  }
+
+  /** Step 2: the map between the heading and the sea buttons, in the chosen look. */
+  private layoutSea() {
     const canvas = this.canvasRef()?.nativeElement;
     if (!canvas || !this.map) return;
     const w = canvas.clientWidth, h = canvas.clientHeight;
     if (!w || !h) return;
-    const dpr = Math.min(2, devicePixelRatio || 1);
-    canvas.width = Math.round(w * dpr);
-    canvas.height = Math.round(h * dpr);
-    // Leave the heading above and the sea buttons below free (they float over the map).
+    const dpr = this.dprFor(w, h);
+    this.fit(canvas, w, h, dpr);
     const head = this.headRef()?.nativeElement.getBoundingClientRect();
     const dock = this.dockRef()?.nativeElement.getBoundingClientRect();
-    const phone = isAtMost('mobile');
-    const pad = phone ? 8 : 32;
+    const pad = isAtMost('mobile') ? 8 : 32;
     this.map.layout(w, h, dpr, {
       top: (head ? head.bottom : 0) + pad,
       bottom: (dock ? h - dock.top : 0) + pad,
@@ -170,35 +217,34 @@ export class EntryComponent {
       right: pad
     });
     this.size = { w, h };
-    this.draw();
+    this.drawSea();
   }
 
-  private palette(): EntryPalette {
+  /** The map's colours (design tokens), for either look. */
+  private style(night: boolean): EntryStyle {
     const tok = (k: string, fb: Rgb) => parseRgb(this.theme.getTokenColor(k), fb);
     const seas = {} as Record<SeaId, Rgb>;
     for (const id of SEA_IDS) seas[id] = tok(`entry-${id}`, [59, 130, 246]);
+    const set = night ? 'night' : 'paper';
     return {
-      sea: tok('entry-sea', [245, 247, 251]),
-      land: tok('entry-land', [226, 232, 240]),
-      ink: tok('text-main', [30, 41, 59]),
+      night,
+      sea: tok(`entry-${set}-sea`, night ? [5, 11, 21] : [245, 247, 251]),
+      land: tok(`entry-${set}-land`, night ? [11, 21, 38] : [229, 234, 241]),
+      ink: tok(`entry-${set}-ink`, night ? [219, 228, 243] : [30, 41, 59]),
       seas,
-      night: this.theme.isDark(),
       font: this.theme.getFontFamily()
     };
   }
 
-  private draw() {
+  private drawSea() {
     const canvas = this.canvasRef()?.nativeElement;
     if (!canvas || !this.map || !this.size.w) return;
-    const hot = this.hot(), marked = this.marked();
+    const hot = this.hot();
     const t = this.i18n.t();
-    this.map.draw(
-      canvas.getContext('2d')!,
-      this.palette(),
-      hot ? SEA_IDS.indexOf(hot) : -1,
-      marked ? SEA_IDS.indexOf(marked) : -1,
-      SEA_IDS.map(id => t.seaNames[id])
-    );
+    this.map.render(canvas.getContext('2d')!, this.style(this.theme.isDark()), {
+      hot: hot ? SEA_IDS.indexOf(hot) : -1,
+      names: SEA_IDS.map(id => t.seaNames[id])
+    });
   }
 
   private seaAt(e: PointerEvent | MouseEvent): SeaId | null {

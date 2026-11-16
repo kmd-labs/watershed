@@ -370,7 +370,7 @@ export class AppComponent {
     }))
   );
 
-  /** Starts another sea: its own data and a fresh map; the view stays, the tours restart. */
+  /** Starts another sea: its own data and a fresh map, landing on the story view. */
   private loadSea(sea: SeaId) {
     if (this.store.sea() === sea) return;
     this.globeProgress.set(0);
@@ -378,22 +378,26 @@ export class AppComponent {
     this.drop.set(null);
     this.dropNote.set(null);
     this.playStory(false);
-    if (this.store.sea()) this.storyStep.set(0);
+    // Another sea opens like the first one: on "Where the rivers end", from its intro — it starts
+    // playing once the new map is on screen.
+    if (this.store.sea()) {
+      this.view.set('story');
+      this.lastMap.set('story');
+      this.storyStep.set(0);
+    }
     this.posterOpts.update(o => ({ ...o, focus: -1, title: null, subtitle: null, line: null }));
     void this.store.load(sea);
   }
 
-  /** The view menu also opens the sea picker (its last entry). */
-  onViewChange(v: MapView | 'sea') {
-    if (v === 'sea') this.seas.openPicker();
-    else this.setView(v);
+  onViewChange(v: MapView) {
+    this.setView(v);
   }
 
-  readonly viewOptions = computed<DropdownOption<MapView | 'sea'>[]>(() => {
+  readonly viewOptions = computed<DropdownOption<MapView>[]>(() => {
     const t = this.i18n.t();
     // The start view first; each tour right before the map it closes onto (the sea-by-sea story →
     // sea sub-basins, top 20 → catchments); then the art view; the hands-on raindrop last.
-    const all: DropdownOption<MapView | 'sea'>[] = [
+    const all: DropdownOption<MapView>[] = [
       { value: 'story', label: t.viewStory, icon: Route },
       { value: 'seas', label: t.viewSeas, icon: Layers },
       { value: 'top', label: t.viewTop(TOP_N), icon: Trophy },
@@ -401,8 +405,7 @@ export class AppComponent {
       { value: 'mosaic', label: t.viewMosaic, icon: Palette },
       { value: 'raindrop', label: t.viewRaindrop, icon: Droplet },
       // On phones the header pill shows the short name (the long one would push it off screen).
-      { value: 'poster', label: t.viewPoster, shortLabel: this.bp.mobile() ? t.viewPosterShort : undefined, icon: ImageDown },
-      { value: 'sea', label: t.changeSea, icon: Waves }
+      { value: 'poster', label: t.viewPoster, shortLabel: this.bp.mobile() ? t.viewPosterShort : undefined, icon: ImageDown }
     ];
     // Without the map the tours and the poster maker have nothing to show.
     return this.mapFailed() ? all.filter(o => o.value !== 'top' && o.value !== 'story' && o.value !== 'poster') : all;

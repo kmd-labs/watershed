@@ -81,6 +81,19 @@ const GLOW_MIN_CLASS = 2;
 const GLOW_WIDTH = 3.2;
 const GLOW_OPACITY = [0, 0, 0.07, 0.09, 0.11];
 const GLOW_PLAIN_OPACITY = [0, 0, 0.1, 0.13, 0.16];
+/**
+ * The glow follows the distance, so it never turns the map into a busy haze: with the whole basin
+ * in view only the largest rivers glow, faint and narrow; the medium ones join as you zoom in and
+ * the smaller ones only up close, where their glows no longer overlap. Zoom progress runs from 0
+ * (the start view's altitude) to 1 (GLOW_NEAR × it), on a log scale; a class starts to glow at
+ * GLOW_FROM[class] and is fully lit GLOW_RAMP later. Far away the glow is GLOW_FAR_WIDTH as wide.
+ */
+const GLOW_NEAR = 0.2;
+const GLOW_FROM = [1, 1, 0.5, 0.15, 0];
+const GLOW_RAMP = 0.35;
+const GLOW_FAR_WIDTH = 0.55;
+/** The largest rivers' glow at the start view (× full). */
+const GLOW_FAR_BIG = 0.45;
 /** How far other basins' rivers fade toward the ground: with a selection, and on hover alone. */
 const MOSAIC_FADE = 0.8;
 const MOSAIC_HOVER_FADE = 0.4;
@@ -949,9 +962,11 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
     // Catchment and sub-basin lines; the mosaic draws its borders with colour alone.
     const soft = this.softOutlines();
     if (view !== 'mosaic' && view !== 'story') {
-      x.strokeStyle = this.colors['ink']; x.globalAlpha = 0.16; x.lineWidth = 0.9 * s;
+      // Light ink on the night map stands out more than dark ink on paper: fainter there.
+      const k = this.theme.isDark() ? 0.5 : 1;
+      x.strokeStyle = this.colors['ink']; x.globalAlpha = 0.16 * k; x.lineWidth = 0.9 * s;
       data.basins.forEach((b, i) => { if (b.kind === 'basin') { path(data.basinPolys[i]); x.stroke(); } });
-      x.globalAlpha = 0.28; x.lineWidth = 1.3 * s;
+      x.globalAlpha = 0.28 * k; x.lineWidth = 1.3 * s;
       for (let k = 0; k < data.subs.length; k++) { path(soft[k]); x.stroke(); }
     }
 
@@ -1262,16 +1277,36 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
     this.riverLayers.forEach(l => (l.mat.opacity = (full ? MOSAIC_RIVER_OPACITY : RIVER_OPACITY)[l.cls]));
   }
 
-  /** The Midnight glow: on dark ground only (added light would vanish on white), never in print. */
+  /** The Midnight glow is on: dark ground only (added light would vanish on white), never in print. */
+  private glowOn = false;
+  private glowPlain = false;
+
+  /** Switches the Midnight glow for the view; its strength by distance is set per frame (glowByDistance). */
   private applyGlow() {
-    const on = this.glow() && !this.printSaved && !(this.plain() && this.ground() === 'light');
-    const plain = this.plain() || this.topActive();
+    this.glowOn = this.glow() && !this.printSaved && !(this.plain() && this.ground() === 'light');
+    this.glowPlain = this.plain() || this.topActive();
+    for (const l of this.riverLayers) if (l.halo) l.halo.visible = this.glowOn;
+    this.invalidate();
+  }
+
+  /** Glow opacity and width per river class for the camera's altitude (see GLOW_NEAR). */
+  private glowByDistance(alt: number, wf: number) {
+    if (!this.glowOn) return;
+    const t = clamp(Math.log(this.home.alt / alt) / Math.log(1 / GLOW_NEAR), 0, 1);
+    const smooth = (a: number, b: number, v: number) => {
+      const x = clamp((v - a) / (b - a), 0, 1);
+      return x * x * (3 - 2 * x);
+    };
+    const base = this.glowPlain ? GLOW_PLAIN_OPACITY : GLOW_OPACITY;
+    const width = GLOW_FAR_WIDTH + (1 - GLOW_FAR_WIDTH) * t;
     for (const l of this.riverLayers) {
       if (!l.halo || !l.haloMat) continue;
-      l.halo.visible = on;
-      l.haloMat.opacity = (plain ? GLOW_PLAIN_OPACITY : GLOW_OPACITY)[l.cls];
+      const from = GLOW_FROM[l.cls];
+      const f = from <= 0 ? GLOW_FAR_BIG + (1 - GLOW_FAR_BIG) * smooth(0, GLOW_RAMP * 2, t) : smooth(from, from + GLOW_RAMP, t);
+      l.halo.visible = f > 0.02;
+      l.haloMat.opacity = base[l.cls] * f;
+      l.haloMat.linewidth = RIVER_WIDTH[l.cls] * wf * GLOW_WIDTH * width;
     }
-    this.invalidate();
   }
 
   /**
@@ -1683,6 +1718,8 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
       lut[(BASIN_TEX + i) * 4 + 1] = 0;
     });
     this.basinTex.needsUpdate = true;
+    // Posters print without the glow (printEnd → restyle switches it back).
+    this.glowOn = false;
     for (const l of this.riverLayers) {
       l.mat.dashed = false;
       if (l.halo) l.halo.visible = false;
@@ -2258,9 +2295,9 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
     const wf = clamp(Math.pow(5.6 / alt, 0.3), 0.8, 1.9);
     // World length of one screen pixel at the surface → dash patterns of constant screen size.
     const pxWorld = (alt * 2 * Math.tan((VFOV / 2) * DEG)) / Math.max(1, el.clientHeight);
+    this.glowByDistance(alt, wf);
     for (const l of this.riverLayers) {
       l.mat.linewidth = RIVER_WIDTH[l.cls] * wf;
-      if (l.haloMat) l.haloMat.linewidth = RIVER_WIDTH[l.cls] * wf * GLOW_WIDTH;
       if (l.mat.dashed) {
         l.mat.dashScale = 1 / (pxWorld * FLOW_DASH_PX * (1 + FLOW_CLASS_STRETCH * l.cls));
         l.mat.dashOffset = this.flowOffset;

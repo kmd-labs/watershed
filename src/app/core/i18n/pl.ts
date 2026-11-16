@@ -266,6 +266,7 @@ export const PL: Dict = {
     caspian: 'Morze Kaspijskie'
   },
   changeSea: 'Zmień morze…',
+  changeSeaAria: sea => `Morze: ${sea}. Zmień morze`,
   chooseSea: 'Wybierz morze',
   pickerTitle: 'Które zlewisko pokazać?',
   pickerSubtitle: 'Każde morze to inna mapa rzek. Pobierze się tylko wybrane; morze zmienisz w każdej chwili w menu widoków.',
@@ -277,13 +278,13 @@ export const PL: Dict = {
   pickerHint: 'Wskaż morze, by zobaczyć jego liczby — kliknij, by otworzyć jego rzeki.',
   entryStep: (n, of) => `Krok ${n} z ${of}`,
   lookTitle: 'Wybierz styl',
-  lookSubtitle: 'Te same rzeki, dwa nastroje. Styl zmienisz w każdej chwili w „Zmień morze…”.',
+  lookSubtitle: 'Te same rzeki, dwa nastroje. Styl zmienisz w każdej chwili.',
   lookNames: { classic: 'Biel i elegancja', midnight: 'Neony nocnego miasta' },
   lookNotes: {
     classic: 'Tusz na papierze: delikatne rzeki na jasnej mapie, spokojnie i czytelnie.',
     midnight: 'Rzeki świecą jak światła miasta na granatowej, nocnej mapie.'
   },
-  lookExample: name => `Przykład: rzeki Bałtyku w stylu „${name}”`,
+  lookPick: 'Wybierz ten styl',
   lookCurrent: 'obecny',
   lookLabel: 'Styl',
   lookChange: 'Zmień styl',

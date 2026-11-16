@@ -77,6 +77,22 @@
     </div>
 
     <div class="header__right">
+      <!-- The sea on screen; opens the map of seas -->
+      @if (seas.sea(); as sea) {
+        <div class="header__sea glass-panel">
+          <app-button
+            variant="ghost"
+            [iconOnly]="bp.mobile()"
+            [ariaLabel]="t.changeSeaAria(t.seaNames[sea])"
+            [titleText]="t.changeSea"
+            (btnClick)="seas.openPicker()">
+            <i class="sea-tab__dot" [style.--sea]="'var(--color-entry-' + sea + ')'" aria-hidden="true"></i>
+            @if (!bp.mobile()) {
+              <span class="sea-tab__name">{{ t.seaNames[sea] }}</span>
+            }
+          </app-button>
+        </div>
+      }
       <div class="header__share glass-panel">
         <app-button
           variant="ghost"

@@ -9,7 +9,13 @@
   tabindex="-1">
   <!-- Logotype, language and (once a sea is open) close, above both steps -->
   <div class="entry__bar">
-    <img class="entry__logo" [src]="theme.logoSrc()" alt="KMD" width="72" height="20" />
+    <!-- The choice of look starts on paper (left / top): the black logotype there -->
+    <img
+      class="entry__logo"
+      [src]="step() === 'look' ? 'assets/design-system/logo/kmd-black-orange.svg' : theme.logoSrc()"
+      alt="KMD"
+      width="72"
+      height="20" />
     <div class="entry__tools">
       <div class="entry__langs" role="group" [attr.aria-label]="t.changeLanguage">
         @for (o of langs(); track o.l) {
@@ -34,44 +40,52 @@
   </div>
 
   @if (step() === 'look') {
-    <!-- Step 1: the look, each with an example of the map in it -->
-    <section class="looks">
-      <header class="looks__head">
+    <!-- Step 1: one map of Europe, half on paper, half in neon at night; the divider leans to the
+         half pointed at -->
+    <section
+      class="split"
+      [class.split--ready]="looksReady()"
+      [class.split--classic]="lean() === 'classic'"
+      [class.split--midnight]="lean() === 'midnight'"
+      aria-labelledby="entry-look-title">
+      <canvas #paper class="split__map split__map--paper" aria-hidden="true"></canvas>
+      <div class="split__night" aria-hidden="true">
+        <canvas #night class="split__map"></canvas>
+        <canvas #glow class="split__map split__glow"></canvas>
+      </div>
+      <i class="split__divider" aria-hidden="true"></i>
+
+      <header class="split__head">
         <span class="entry__step">{{ t.entryStep(1, 2) }}</span>
-        <h1 class="entry__title" id="entry-look-title">{{ t.lookTitle }}</h1>
-        <p class="entry__subtitle">{{ t.lookSubtitle }}</p>
+        <h1 class="split__title" id="entry-look-title">{{ t.lookTitle }}</h1>
+        <p class="split__subtitle">{{ t.lookSubtitle }}</p>
       </header>
-      <ul class="looks__grid">
-        @for (l of looks; track l) {
-          <li>
-            <button
-              type="button"
-              class="look look--{{ l }}"
-              [class.look--current]="look.look() === l"
-              [attr.aria-current]="look.look() === l ? 'true' : null"
-              (click)="chooseLook(l)">
-              <span class="look__frame">
-                <img
-                  [src]="'assets/entry/look-' + l + '.webp'"
-                  [alt]="t.lookExample(t.lookNames[l])"
-                  width="800"
-                  height="500"
-                  decoding="async" />
-              </span>
-              <span class="look__name">
-                {{ t.lookNames[l] }}
-                @if (look.look() === l) {
-                  <em class="look__now">{{ t.lookCurrent }}</em>
-                }
-              </span>
-              <span class="look__note">{{ t.lookNotes[l] }}</span>
-            </button>
-          </li>
-        }
-      </ul>
+
+      @for (lk of looks; track lk) {
+        <button
+          type="button"
+          class="half half--{{ lk }}"
+          [attr.aria-current]="look.look() === lk ? 'true' : null"
+          (mouseenter)="lean.set(lk)"
+          (mouseleave)="lean.set(null)"
+          (focus)="lean.set(lk)"
+          (blur)="lean.set(null)"
+          (click)="chooseLook(lk)">
+          <span class="half__body">
+            <span class="half__name">{{ t.lookNames[lk] }}</span>
+            <span class="half__note">{{ t.lookNotes[lk] }}</span>
+            <span class="half__foot">
+              <span class="half__cta">{{ t.lookPick }}</span>
+              @if (look.look() === lk) {
+                <em class="half__now">{{ t.lookCurrent }}</em>
+              }
+            </span>
+          </span>
+        </button>
+      }
     </section>
   } @else {
-    <!-- Step 2: the sea, on the map of Europe -->
+    <!-- Step 2: the sea, on the map of Europe in the chosen look -->
     <div class="seamap">
       <canvas
         #map
@@ -127,7 +141,7 @@
             {{ t.pickerHint }}
           }
         </p>
-        <button type="button" class="seamap__look" [attr.aria-label]="t.lookChange" (click)="step.set('look')">
+        <button type="button" class="seamap__look" [attr.aria-label]="t.lookChange" (click)="backToLooks()">
           <lucide-icon [img]="lookIcon" [size]="14"></lucide-icon>
           <span>{{ t.lookLabel }}: {{ t.lookNames[look.look()] }}</span>
         </button>

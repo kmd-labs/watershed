@@ -1,3 +1,4 @@
+@use "sass:color";
 @use "variables" as *;
 
 // Full screen, above the splash (z-index 300), which waits behind it for the chosen sea.
@@ -18,7 +19,7 @@
     top: 0;
     left: 0;
     right: 0;
-    z-index: 2;
+    z-index: 3;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -135,119 +136,341 @@
 }
 
 // ─── step 1: the look ────────────────────────────────────────────────────────
+// One map across the screen: paper on the left (top on phones), night on the right (bottom).
+// Both halves keep their own colours whatever the page's theme.
 
-.looks {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: spacing("3xl");
-  padding: 72px spacing("3xl") spacing("3xl");
-  overflow-y: auto;
-  animation: entry-in 0.35s ease-out;
+$paper-ink: palette("neutral-900");
+$paper-note: palette("neutral-600");
+$paper-bg: palette("neutral-50");
+$night-bg: color.mix(midnight(950), #000000, 75%);
+$night-ink: midnight(50);
+$night-note: midnight(200);
+$neon-cyan: color.scale(color.change(palette("info-400"), $saturation: 100%), $lightness: 8%);
+$neon-blue: color.scale(color.change(palette("primary-400"), $saturation: 100%), $lightness: 6%);
+$neon-violet: color.scale(color.change(palette("purple-400"), $saturation: 100%), $lightness: 6%);
+$ease: cubic-bezier(0.22, 0.8, 0.24, 1);
 
-  &__head {
-    text-align: center;
+.split {
+  --split: 50%;
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: $paper-bg;
+
+  &--classic {
+    --split: 60%;
   }
 
-  &__grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 460px));
-    gap: spacing("3xl");
-    margin: 0;
-    padding: 0;
-    list-style: none;
+  &--midnight {
+    --split: 40%;
+  }
+
+  &__map {
+    position: absolute;
+    inset: 0;
+    display: block;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    transition:
+      opacity 0.9s ease-out,
+      filter 0.6s ease;
+  }
+
+  &--ready &__map {
+    opacity: 1;
+  }
+
+  &__night {
+    position: absolute;
+    inset: 0;
+    background: $night-bg;
+    clip-path: inset(0 0 0 var(--split));
+    transition:
+      clip-path 0.8s $ease,
+      filter 0.6s ease;
+  }
+
+  // The glow on a layer of its own: it lights up like a neon tube, then hums.
+  &__glow {
+    mix-blend-mode: screen;
+  }
+
+  &--ready &__glow {
+    animation:
+      neon-on 1.8s linear 0.3s both,
+      neon-hum 5s ease-in-out 2.1s infinite;
+  }
+
+  // The half not pointed at steps back.
+  &--classic &__night {
+    filter: brightness(0.6) saturate(0.8);
+  }
+
+  &--midnight &__map--paper {
+    filter: saturate(0.4) brightness(0.96);
+  }
+
+  &__divider {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: var(--split);
+    z-index: 1;
+    width: 1px;
+    background: linear-gradient(to bottom, transparent, rgba($neon-cyan, 0.85) 30%, rgba($neon-violet, 0.85) 70%, transparent);
+    box-shadow:
+      0 0 8px rgba($neon-cyan, 0.7),
+      0 0 24px rgba($neon-violet, 0.45);
+    transition: left 0.8s $ease;
+    pointer-events: none;
+  }
+
+  &__head {
+    position: absolute;
+    top: 76px;
+    left: 48px;
+    z-index: 2;
+    max-width: min(420px, calc(var(--split) - 96px));
+    pointer-events: none;
+    transition: max-width 0.8s $ease;
+    // A paper halo keeps the words clear of the rivers under them.
+    text-shadow:
+      0 0 6px $paper-bg,
+      0 0 14px $paper-bg,
+      0 0 24px $paper-bg;
+
+    .entry__step {
+      color: palette("warning-700");
+    }
+  }
+
+  &__title {
+    margin: spacing("xs") 0 0;
+    font-size: 2rem;
+    font-weight: font-weight("semibold");
+    letter-spacing: -0.02em;
+    color: $paper-ink;
+  }
+
+  &__subtitle {
+    margin: spacing("xs") 0 0;
+    font-size: font-size("base");
+    line-height: 1.55;
+    color: $paper-note;
   }
 }
 
-.look {
+.half {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 1;
   display: flex;
-  flex-direction: column;
-  gap: spacing("xs");
-  width: 100%;
-  padding: spacing("md");
-  border: 1px solid color("line");
-  border-radius: radius("panel");
-  background: color("panel-bg");
-  color: inherit;
+  align-items: flex-end;
+  padding: 48px;
+  border: 0;
   font: inherit;
   text-align: left;
   cursor: pointer;
   transition:
-    transform transition("base"),
-    border-color transition("base"),
-    box-shadow transition("base");
-
-  &:hover {
-    transform: translateY(-3px);
-    border-color: color("line-strong");
-    box-shadow: 0 12px 32px color("shadow-panel");
-  }
+    left 0.8s $ease,
+    width 0.8s $ease;
 
   &:focus-visible {
-    outline: 2px solid color("accent");
-    outline-offset: 3px;
-  }
+    outline: none;
 
-  &--current {
-    border-color: color("accent");
-  }
-
-  &__frame {
-    display: block;
-    overflow: hidden;
-    border-radius: calc(#{radius("panel")} - 4px);
-    aspect-ratio: 16 / 10;
-    // The examples are themselves light or dark, whatever the page's look.
-    background: palette("neutral-200");
-  }
-
-  &--midnight &__frame {
-    background: midnight(950);
-  }
-
-  &__frame img {
-    display: block;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
-
-  &__name {
-    display: flex;
-    align-items: baseline;
-    gap: spacing("xs");
-    margin-top: spacing("xxs");
-    font-size: font-size("lg");
-    font-weight: font-weight("semibold");
-    color: color("text-bright");
-  }
-
-  &__now {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    font-size: font-size("xxs");
-    font-style: normal;
-    font-weight: font-weight("medium");
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: color("text-dim");
-
-    &::before {
-      content: "";
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      background: color("accent");
+    .half__cta {
+      outline: 2px solid palette("warning-500");
+      outline-offset: 3px;
     }
   }
 
+  &--classic {
+    left: 0;
+    width: var(--split);
+    // A soft scrim keeps the words clear of the rivers.
+    background: linear-gradient(to top, rgba($paper-bg, 0.94), rgba($paper-bg, 0) 36%);
+  }
+
+  &--midnight {
+    left: var(--split);
+    right: 0;
+    justify-content: flex-end;
+    text-align: right;
+    background: linear-gradient(to top, rgba($night-bg, 0.9), rgba($night-bg, 0) 36%);
+  }
+
+  &__body {
+    display: flex;
+    flex-direction: column;
+    gap: spacing("sm");
+    max-width: 440px;
+  }
+
+  &__name {
+    font-size: clamp(2rem, 3.6vw, 3.25rem);
+    line-height: 1.08;
+    letter-spacing: -0.02em;
+  }
+
   &__note {
-    font-size: font-size("sm");
+    font-size: font-size("md");
     line-height: 1.5;
-    color: color("text-desc");
+  }
+
+  &__foot {
+    display: flex;
+    align-items: center;
+    gap: spacing("md");
+    margin-top: spacing("xs");
+  }
+
+  &--midnight &__foot {
+    justify-content: flex-end;
+  }
+
+  &__cta {
+    display: inline-flex;
+    align-items: center;
+    height: 36px;
+    padding: 0 spacing("lg");
+    border-radius: radius("pill");
+    font-size: font-size("sm");
+    font-weight: font-weight("semibold");
+    letter-spacing: 0.01em;
+    transition:
+      background 0.3s ease,
+      color 0.3s ease,
+      box-shadow 0.3s ease;
+  }
+
+  &__now {
+    font-size: font-size("xxs");
+    font-style: normal;
+    font-weight: font-weight("semibold");
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  // Paper: fine dark ink, light type.
+  &--classic {
+    .half__name {
+      font-weight: 300;
+      color: $paper-ink;
+    }
+
+    .half__note,
+    .half__now {
+      color: $paper-note;
+    }
+
+    .half__cta {
+      border: 1px solid $paper-ink;
+      color: $paper-ink;
+    }
+
+    &:hover .half__cta,
+    &:focus-visible .half__cta {
+      background: $paper-ink;
+      color: palette("neutral-0");
+    }
+  }
+
+  // Night: a neon sign.
+  &--midnight {
+    .half__name {
+      font-weight: 500;
+      color: $night-ink;
+      text-shadow:
+        0 0 2px rgba(#ffffff, 0.9),
+        0 0 8px rgba($neon-cyan, 0.95),
+        0 0 18px rgba($neon-cyan, 0.8),
+        0 0 36px rgba($neon-blue, 0.7),
+        0 0 72px rgba($neon-violet, 0.55);
+    }
+
+    .half__note,
+    .half__now {
+      color: $night-note;
+    }
+
+    .half__cta {
+      border: 1px solid rgba($neon-cyan, 0.9);
+      color: $night-ink;
+      box-shadow:
+        0 0 10px rgba($neon-cyan, 0.45),
+        inset 0 0 10px rgba($neon-cyan, 0.25);
+      text-shadow: 0 0 8px rgba($neon-cyan, 0.8);
+    }
+
+    &:hover .half__cta,
+    &:focus-visible .half__cta {
+      background: rgba($neon-cyan, 0.16);
+      box-shadow:
+        0 0 18px rgba($neon-cyan, 0.75),
+        0 0 42px rgba($neon-violet, 0.45),
+        inset 0 0 14px rgba($neon-cyan, 0.35);
+    }
+  }
+}
+
+.split--ready .half--midnight .half__name {
+  animation:
+    neon-on 1.8s linear 0.3s both,
+    neon-hum 5s ease-in-out 2.1s infinite;
+}
+
+// On wide screens the bar's language switch sits on the night half.
+.entry--look .entry__langs {
+  background: rgba(midnight(800), 0.7);
+  border-color: rgba($neon-cyan, 0.25);
+}
+
+.entry--look .entry__lang {
+  color: $night-note;
+
+  &:hover,
+  &--on {
+    color: $night-ink;
+  }
+
+  &--on {
+    background: rgba($neon-cyan, 0.16);
+    box-shadow: 0 0 10px rgba($neon-cyan, 0.35);
+  }
+}
+
+// A neon tube coming on: a few flickers, then steady.
+@keyframes neon-on {
+  0% {
+    opacity: 0;
+  }
+  7% {
+    opacity: 0.75;
+  }
+  11% {
+    opacity: 0.1;
+  }
+  20% {
+    opacity: 0.9;
+  }
+  24% {
+    opacity: 0.3;
+  }
+  38%,
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes neon-hum {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.84;
   }
 }
 
@@ -418,8 +641,12 @@
 }
 
 @include respond-to("tablet") {
-  .looks__grid {
-    gap: spacing("xl");
+  .half {
+    padding: 32px;
+  }
+
+  .split__head {
+    left: 32px;
   }
 }
 
@@ -436,33 +663,53 @@
     font-size: font-size("sm");
   }
 
-  .looks {
-    justify-content: flex-start;
-    gap: spacing("xl");
-    padding: 64px spacing("lg") spacing("xl");
+  // Phones: the same left / right split as on wide screens, with smaller type.
+  .split {
+    &__head {
+      top: 52px;
+      left: 16px;
+      max-width: calc(var(--split) - 24px);
+    }
 
-    &__grid {
-      grid-template-columns: minmax(0, 1fr);
-      gap: spacing("lg");
-      width: 100%;
+    &__title {
+      font-size: 1.375rem;
+    }
+
+    &__subtitle {
+      font-size: font-size("xs");
     }
   }
 
-  .look {
-    padding: spacing("sm");
+  .half {
+    padding: 16px 14px;
+
+    &__body {
+      gap: spacing("xs");
+    }
 
     &__name {
-      font-size: font-size("md");
+      font-size: 1.5rem;
+    }
+
+    &__note {
+      font-size: font-size("xs");
+    }
+
+    &__foot {
+      flex-wrap: wrap;
+      gap: spacing("xs");
+    }
+
+    &__cta {
+      height: 30px;
+      padding: 0 spacing("md");
+      font-size: font-size("xs");
     }
   }
 
   .seamap {
     &__head {
       top: 48px;
-    }
-
-    &__subtitle {
-      display: none;
     }
 
     &__dock {
@@ -497,16 +744,18 @@
 
 @media (prefers-reduced-motion: reduce) {
   .entry,
-  .looks,
-  .seamap {
-    animation: none;
+  .seamap,
+  .split__map,
+  .split__night,
+  .split__divider,
+  .split__head,
+  .half {
+    animation: none !important;
+    transition: none !important;
   }
 
-  .look {
-    transition: none;
-
-    &:hover {
-      transform: none;
-    }
+  .split--ready .split__glow,
+  .split--ready .half--midnight .half__name {
+    animation: none;
   }
 }

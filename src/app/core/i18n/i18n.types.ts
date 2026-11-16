@@ -277,6 +277,8 @@ export interface Dict {
   /** Short name of each sea (picker, loading note). */
   seaNames: Record<SeaId, string>;
   changeSea: string;
+  /** Accessible name of the sea tab in the header. */
+  changeSeaAria: (sea: string) => string;
   chooseSea: string;
   pickerTitle: string;
   pickerSubtitle: string;
@@ -295,8 +297,8 @@ export interface Dict {
   lookSubtitle: string;
   lookNames: Record<Look, string>;
   lookNotes: Record<Look, string>;
-  /** Alt text of a look's example picture. */
-  lookExample: (name: string) => string;
+  /** Call to action on each look. */
+  lookPick: string;
   lookCurrent: string;
   /** Label of the look button on the map step ("Look: …"), and its accessible name. */
   lookLabel: string;
