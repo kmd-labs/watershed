@@ -24,6 +24,7 @@
         [showLabels]="showLabels()"
         [showFlow]="showFlow()"
         [showRelief]="showRelief()"
+        [glow]="look.midnight()"
         [basinLabel]="basinLabel()"
         [subNames]="t.subNames"
         (pick)="onPick($event)"
@@ -111,7 +112,7 @@
       <section class="dock dock--list glass-panel" [class.dock--collapsed]="!panelOpen()">
         <header class="dock__head">
           <h2 class="dock__title">
-            <button type="button" class="sea-switch" [title]="t.changeSea" (click)="seas.pickerOpen.set(true)">
+            <button type="button" class="sea-switch" [title]="t.changeSea" (click)="seas.openPicker()">
               <span>{{ t.panelTitle }}</span>
               <lucide-icon [img]="chevronDownIcon" [size]="14"></lucide-icon>
             </button>
@@ -357,11 +358,11 @@
     </div>
   }
 
-  <!-- Sea picker: at the first visit (before any data) and on "Change sea…"; its code and
-       silhouettes load only when it opens -->
+  <!-- Entry: every visit starts by choosing a look, then a sea on the map of Europe (before any
+       map data); "Change sea…" opens it at the map. Its code and map load only when it opens. -->
   @defer (when seas.pickerOpen()) {
     @if (seas.pickerOpen()) {
-      <app-sea-picker></app-sea-picker>
+      <app-entry></app-entry>
     }
   }
 </main>

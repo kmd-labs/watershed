@@ -168,7 +168,7 @@ export class PosterStudioComponent implements OnDestroy {
     const cssW = Math.min(w, (h * A2_MM.w) / A2_MM.h);
     const pxW = Math.max(240, Math.round(cssW * dpr));
     const dpi = pxW / (A2_MM.w / 25.4);
-    const key = JSON.stringify([o.palette, o.by, o.focus, o.seaNames, this.i18n.lang(), pxW]);
+    const key = JSON.stringify([o.palette, o.by, o.focus, o.seaNames, o.seaFit, this.i18n.lang(), pxW]);
     if (key !== this.mapKey || !this.mapCanvas) {
       this.preparing.set(true);
       globe.printBegin(this.printStyle(o));
@@ -251,6 +251,7 @@ export class PosterStudioComponent implements OnDestroy {
       ink: !family,
       seaLabel: dark ? this.tok('print-black-sea-label', '#b4c0d0') : this.tok('print-ink-soft', '#64748b'),
       seaNames: o.seaNames,
+      seaNameFit: o.seaFit,
       // On black with white rivers the lakes (dark water on black) get a faint outline.
       lakeLine: o.palette === 'black-white' ? this.tok('print-black-lake-line', '#1a2433') : undefined
     };

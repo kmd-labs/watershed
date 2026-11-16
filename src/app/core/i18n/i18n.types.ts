@@ -1,5 +1,6 @@
 import { PosterPalette } from '../../poster/poster-options';
 import { SeaId } from '../sea';
+import { Look } from '../look';
 
 /** A river's share of the drainage basin's water (or land), for story and poster texts. */
 export interface RiverShare {
@@ -168,6 +169,9 @@ export interface Dict {
   posterShow: string;
   posterShowFacts: string;
   posterShowSeas: string;
+  posterSeaLayout: string;
+  posterSeaStraight: string;
+  posterSeaFit: string;
   posterFormat: string;
   posterSize: (wMm: number, hMm: number, wPx: string, hPx: string, dpi: number) => string;
   posterDownload: string;
@@ -280,6 +284,23 @@ export interface Dict {
   pickerStats: (area: string, mouths: string) => string;
   pickerPeople: (pop: string) => string;
   pickerCurrent: string;
+  /** The sea of the last visit, marked on the entry map. */
+  pickerLast: string;
+  /** Under the entry map while no sea is pointed at. */
+  pickerHint: string;
+  // ─── entry: a look first, then the sea ───
+  /** "Step 1 of 2". */
+  entryStep: (n: number, of: number) => string;
+  lookTitle: string;
+  lookSubtitle: string;
+  lookNames: Record<Look, string>;
+  lookNotes: Record<Look, string>;
+  /** Alt text of a look's example picture. */
+  lookExample: (name: string) => string;
+  lookCurrent: string;
+  /** Label of the look button on the map step ("Look: …"), and its accessible name. */
+  lookLabel: string;
+  lookChange: string;
   seaLoading: (sea: string) => string;
   millionPeople: (n: string) => string;
   /** Poster figures of the whole basin (new seas; the Baltic's are built in the poster maker). */

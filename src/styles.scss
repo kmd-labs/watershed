@@ -67,6 +67,15 @@ $sea-dark: (
   palette("danger-400"),
 );
 
+// Entry map of Europe: one colour per sea (picker order).
+$entry-seas: (
+  "baltic": palette("primary-500"),
+  "north": palette("success-500"),
+  "med": palette("warning-500"),
+  "black": palette("purple-500"),
+  "caspian": palette("danger-500"),
+);
+
 :root {
   // Water
   --color-globe-ocean: #{palette("primary-100")};
@@ -170,4 +179,57 @@ $sea-dark: (
 
   // Panels
   --color-share-bar: #{palette("warning-200")};
+
+  // Entry map of Europe (src/app/entry): the five seas' watersheds on a quiet ground.
+  --color-entry-sea: #{palette("neutral-50")};
+  --color-entry-land: #{palette("neutral-200")};
+  @each $id, $c in $entry-seas {
+    --color-entry-#{$id}: #{color.adjust($c, $lightness: -6%)};
+  }
+}
+
+// ─── Midnight City Neons (opt-in DS dark theme, the app's default look) ───────────────────────
+// "River veins at night": a night-blue sea darker than the land, river basins lifted a touch
+// towards blue, rivers luminous (the globe adds a soft glow to the larger ones), picks in amber.
+$night-land: midnight(850);
+$night-sea: color.mix(midnight(900), midnight(950), 40%);
+
+:root[data-theme="dark"] {
+  --color-globe-bg: #{midnight(950)};
+  --color-globe-ocean: #{$night-sea};
+  --color-globe-lake: #{color.mix(palette("primary-900"), midnight(900), 22%)};
+  --color-globe-land-fill: #{$night-land};
+  --color-globe-sea-label: #{midnight(300)};
+
+  --color-globe-catchment: #{color.mix(palette("primary-500"), $night-land, 10%)};
+  --color-globe-catchment-active: #{color.mix(palette("warning-500"), $night-land, 26%)};
+  --color-globe-coast: #{color.mix(midnight(700), $night-land, 35%)};
+  --color-globe-outline: #{midnight(400)};
+
+  --color-globe-river: #{color.mix(palette("info-300"), palette("primary-400"), 55%)};
+  --color-globe-river-active: #{palette("warning-300")};
+
+  @each $i, $c in (0: "info-400", 1: "primary-400", 2: "purple-400", 3: "success-400", 4: "warning-400", 5: "danger-400") {
+    --color-sub-#{$i}: #{color.mix(palette($c), $night-land, 20%)};
+  }
+
+  // Black ground (mosaic, story): night blue instead of black.
+  --color-globe-dark-bg: #{midnight(950)};
+  --color-globe-dark-ground: #{midnight(950)};
+  --color-globe-dark-land: #{$night-land};
+  --color-globe-dark-ocean: #{$night-sea};
+  --color-globe-dark-lake: #{color.mix(palette("primary-900"), midnight(950), 25%)};
+  --color-globe-dark-outline: #{midnight(500)};
+  --color-globe-story-ghost: #{midnight(600)};
+  --color-globe-dark-story-ghost: #{midnight(700)};
+
+  --color-globe-flow-glint: #{palette("neutral-0")};
+  --color-globe-drop-halo: #{midnight(950)};
+  --color-share-bar: #{color.mix(palette("warning-500"), midnight(800), 30%)};
+
+  --color-entry-sea: #{$night-sea};
+  --color-entry-land: #{midnight(800)};
+  @each $id, $c in $entry-seas {
+    --color-entry-#{$id}: #{$c};
+  }
 }

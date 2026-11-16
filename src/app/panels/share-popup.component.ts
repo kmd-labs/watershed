@@ -46,7 +46,8 @@ export class SharePopupComponent implements OnInit {
       const svg = await QRCode.toString(this.viewUrl || this.appUrl, {
         type: 'svg',
         margin: 1,
-        color: { dark: this.theme.getTokenColor('text-main', '#1e293b'), light: '#ffffff' }
+        // Dark modules on its white card in both looks (scanners need dark on light).
+        color: { dark: this.theme.getTokenColor('neutral-800', '#1e293b'), light: '#ffffff' }
       });
       this.qrSvg.set(this.sanitizer.bypassSecurityTrustHtml(svg));
     } catch (err) {

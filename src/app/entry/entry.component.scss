@@ -1,0 +1,512 @@
+@use "variables" as *;
+
+// Full screen, above the splash (z-index 300), which waits behind it for the chosen sea.
+.entry {
+  position: fixed;
+  inset: 0;
+  z-index: 400;
+  display: flex;
+  flex-direction: column;
+  background: color("bg-deep");
+  color: color("text-main");
+  outline: none;
+  overflow: hidden;
+  animation: entry-in 0.4s ease-out;
+
+  &__bar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: spacing("lg") spacing("xl");
+    pointer-events: none;
+
+    > * {
+      pointer-events: auto;
+    }
+  }
+
+  &__logo {
+    display: block;
+    height: 20px;
+    width: auto;
+  }
+
+  &__tools {
+    display: flex;
+    align-items: center;
+    gap: spacing("xs");
+  }
+
+  &__langs {
+    display: flex;
+    padding: 2px;
+    border-radius: radius("pill");
+    background: color("btn-bg");
+    border: 1px solid color("line");
+  }
+
+  &__lang {
+    min-width: 34px;
+    height: calc(#{$control-height} - 6px);
+    padding: 0 spacing("xs");
+    border: 0;
+    border-radius: radius("pill");
+    background: transparent;
+    color: color("text-desc");
+    font: inherit;
+    font-size: font-size("xs");
+    font-weight: font-weight("semibold");
+    letter-spacing: 0.04em;
+    cursor: pointer;
+
+    &:hover {
+      color: color("text-bright");
+    }
+
+    &--on {
+      background: color("switcher-active-bg");
+      color: color("text-bright");
+    }
+
+    &:focus-visible {
+      outline: 2px solid color("accent");
+      outline-offset: 1px;
+    }
+  }
+
+  &__close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: $control-height;
+    height: $control-height;
+    border: 1px solid color("line");
+    border-radius: radius("pill");
+    background: color("btn-bg");
+    color: color("text-main");
+    cursor: pointer;
+
+    &:hover {
+      background: color("btn-hover");
+    }
+
+    &:focus-visible {
+      outline: 2px solid color("accent");
+      outline-offset: 2px;
+    }
+  }
+
+  &__step {
+    display: block;
+    font-size: font-size("xxs");
+    font-weight: font-weight("semibold");
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    // The accent's readable shade on either ground (the brand orange is too light on white).
+    color: color("warning-text");
+  }
+
+  &__title {
+    margin: spacing("xs") 0 0;
+    font-size: 1.75rem;
+    font-weight: font-weight("semibold");
+    letter-spacing: -0.01em;
+    color: color("text-bright");
+  }
+
+  &__subtitle {
+    margin: spacing("xs") auto 0;
+    max-width: 58ch;
+    font-size: font-size("base");
+    line-height: 1.55;
+    color: color("text-desc");
+  }
+}
+
+@keyframes entry-in {
+  from {
+    opacity: 0;
+  }
+}
+
+// ─── step 1: the look ────────────────────────────────────────────────────────
+
+.looks {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: spacing("3xl");
+  padding: 72px spacing("3xl") spacing("3xl");
+  overflow-y: auto;
+  animation: entry-in 0.35s ease-out;
+
+  &__head {
+    text-align: center;
+  }
+
+  &__grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 460px));
+    gap: spacing("3xl");
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+}
+
+.look {
+  display: flex;
+  flex-direction: column;
+  gap: spacing("xs");
+  width: 100%;
+  padding: spacing("md");
+  border: 1px solid color("line");
+  border-radius: radius("panel");
+  background: color("panel-bg");
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    transform transition("base"),
+    border-color transition("base"),
+    box-shadow transition("base");
+
+  &:hover {
+    transform: translateY(-3px);
+    border-color: color("line-strong");
+    box-shadow: 0 12px 32px color("shadow-panel");
+  }
+
+  &:focus-visible {
+    outline: 2px solid color("accent");
+    outline-offset: 3px;
+  }
+
+  &--current {
+    border-color: color("accent");
+  }
+
+  &__frame {
+    display: block;
+    overflow: hidden;
+    border-radius: calc(#{radius("panel")} - 4px);
+    aspect-ratio: 16 / 10;
+    // The examples are themselves light or dark, whatever the page's look.
+    background: palette("neutral-200");
+  }
+
+  &--midnight &__frame {
+    background: midnight(950);
+  }
+
+  &__frame img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  &__name {
+    display: flex;
+    align-items: baseline;
+    gap: spacing("xs");
+    margin-top: spacing("xxs");
+    font-size: font-size("lg");
+    font-weight: font-weight("semibold");
+    color: color("text-bright");
+  }
+
+  &__now {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: font-size("xxs");
+    font-style: normal;
+    font-weight: font-weight("medium");
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: color("text-dim");
+
+    &::before {
+      content: "";
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: color("accent");
+    }
+  }
+
+  &__note {
+    font-size: font-size("sm");
+    line-height: 1.5;
+    color: color("text-desc");
+  }
+}
+
+// ─── step 2: the sea ─────────────────────────────────────────────────────────
+
+.seamap {
+  position: absolute;
+  inset: 0;
+  animation: entry-in 0.5s ease-out;
+
+  &__canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    touch-action: manipulation;
+  }
+
+  &__tip {
+    position: absolute;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    transform: translate(14px, 14px);
+    padding: spacing("xs") spacing("md");
+    border-radius: radius("sm");
+    background: color("tooltip-bg");
+    box-shadow: 0 4px 16px color("shadow-panel");
+    font-size: font-size("xs");
+    color: color("text-desc");
+    pointer-events: none;
+    white-space: nowrap;
+
+    b {
+      font-size: font-size("sm");
+      color: color("text-bright");
+    }
+  }
+
+  &__head {
+    position: absolute;
+    top: 56px;
+    left: 50%;
+    z-index: 1;
+    width: min(640px, calc(100% - 32px));
+    transform: translateX(-50%);
+    text-align: center;
+    pointer-events: none;
+  }
+
+  &__dock {
+    position: absolute;
+    bottom: spacing("lg");
+    left: 50%;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    gap: spacing("xs");
+    width: max-content;
+    max-width: calc(100% - 32px);
+    padding: spacing("md");
+    transform: translateX(-50%);
+    border-radius: radius("panel");
+  }
+
+  &__foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: spacing("md");
+    padding: 0 spacing("xxs");
+  }
+
+  &__stats {
+    margin: 0;
+    min-height: 1.5em;
+    font-size: font-size("xs");
+    line-height: 1.5;
+    color: color("text-desc");
+
+    b {
+      color: color("text-bright");
+      font-weight: font-weight("semibold");
+    }
+  }
+
+  &__look {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    gap: 6px;
+    height: 26px;
+    padding: 0 spacing("sm");
+    border: 1px solid color("line");
+    border-radius: radius("pill");
+    background: color("btn-bg");
+    color: color("text-main");
+    font: inherit;
+    font-size: font-size("xs");
+    cursor: pointer;
+
+    &:hover {
+      background: color("btn-hover");
+    }
+
+    &:focus-visible {
+      outline: 2px solid color("accent");
+      outline-offset: 2px;
+    }
+  }
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: spacing("xs");
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: spacing("xs");
+  height: $control-height + 4px;
+  padding: 0 spacing("base");
+  border: 1px solid color("line");
+  border-radius: radius("pill");
+  background: color("btn-bg");
+  color: color("text-main");
+  font: inherit;
+  font-size: font-size("sm");
+  font-weight: font-weight("medium");
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    border-color transition("base"),
+    background transition("base");
+
+  &:hover,
+  &--hot {
+    border-color: var(--chip);
+    background: color-mix(in srgb, var(--chip) 14%, transparent);
+    color: color("text-bright");
+  }
+
+  &:focus-visible {
+    outline: 2px solid color("accent");
+    outline-offset: 2px;
+  }
+
+  &__dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: var(--chip);
+    box-shadow: 0 0 8px var(--chip);
+  }
+
+  &__mark {
+    font-size: font-size("xxs");
+    font-style: normal;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: color("text-dim");
+  }
+}
+
+@include respond-to("tablet") {
+  .looks__grid {
+    gap: spacing("xl");
+  }
+}
+
+@include respond-to("mobile") {
+  .entry__bar {
+    padding: spacing("md") spacing("lg");
+  }
+
+  .entry__title {
+    font-size: 1.375rem;
+  }
+
+  .entry__subtitle {
+    font-size: font-size("sm");
+  }
+
+  .looks {
+    justify-content: flex-start;
+    gap: spacing("xl");
+    padding: 64px spacing("lg") spacing("xl");
+
+    &__grid {
+      grid-template-columns: minmax(0, 1fr);
+      gap: spacing("lg");
+      width: 100%;
+    }
+  }
+
+  .look {
+    padding: spacing("sm");
+
+    &__name {
+      font-size: font-size("md");
+    }
+  }
+
+  .seamap {
+    &__head {
+      top: 48px;
+    }
+
+    &__subtitle {
+      display: none;
+    }
+
+    &__dock {
+      bottom: spacing("xs");
+      width: calc(100% - 16px);
+      max-width: none;
+      padding: spacing("sm");
+    }
+
+    &__foot {
+      flex-direction: column;
+      align-items: stretch;
+      gap: spacing("xs");
+      text-align: center;
+    }
+
+    &__look {
+      align-self: center;
+    }
+  }
+
+  .seamap__head .entry__subtitle {
+    display: none;
+  }
+
+  .chip {
+    height: $control-height;
+    padding: 0 spacing("md");
+    font-size: font-size("xs");
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .entry,
+  .looks,
+  .seamap {
+    animation: none;
+  }
+
+  .look {
+    transition: none;
+
+    &:hover {
+      transform: none;
+    }
+  }
+}

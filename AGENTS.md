@@ -8,9 +8,11 @@ This document defines the mandatory UI, architectural, and engineering conventio
 
 - **Immediate Immersion:** The interactive visualization (3D globe, canvas, simulation, or chart) occupies `100vw × 100vh` and is immediately interactive upon page load.
 - **No Settings Bloat:** Never add settings modals, preferences drawers, theme switchers, or onboarding popups that block or distract from the visualization.
-- **Single Light Theme:** KMD applications use a single, cohesive **Light Theme** defined in `_variables.scss` (`neutral-50` `#f5f7fb` airy background with frosted glass panels).
-  - Do **not** implement dark mode, light/dark toggle buttons, or theme persistence in `localStorage`.
-  - Canvas/WebGL renderers read design tokens at runtime via `ThemeService.getTokenColor(token)` from `:root` CSS custom properties (`--color-*`).
+- **Light Theme Default & Optional Midnight Dark Theme:** KMD applications use the canonical **Light Theme** defined in `_variables.scss` (`neutral-50` `#f5f7fb` airy background with frosted glass panels) by default.
+  - An opt-in blue **"Midnight"** dark theme is available under `:root[data-theme="dark"]` via `ThemeService.setMode('dark')`, keeping the signature `#D37400` orange accent and automatically switching brand/splash/about logotypes to `kmd-white-orange.svg`.
+  - Apps that opt in must expose the theme preference **only inside an existing Settings popup** (never as a standalone header theme toggle button) and persist under `<app-slug>.theme` in `localStorage`.
+  - Canvas/WebGL renderers read design tokens at runtime via `ThemeService.getTokenColor(token)` and re-apply them inside an `effect()` watching `ThemeService.mode()`.
+  - **Watershed (product decision):** Midnight ("Midnight City Neons") is the default look, and the look is chosen on the entry screen, with examples, before the sea (`LookService`, `watershed.theme`; set before the first paint in `index.html`). There is still no header toggle.
 - **Unified Typography (`Inter`):** All UI elements and `<canvas>` 2D/3D text labels use a single font family (`$font-family: "Inter", sans-serif;` emitted as `--font-family` on `:root`). Canvas renderers must use `ThemeService.getFontFamily()` instead of hardcoding system font stacks like `"Segoe UI"`.
   - The splash uses the official `assets/design-system/logo/kmd-black-orange.svg` logotype with a left-to-right clip reveal. Numeric readouts use the monospaced face (`$font-family-mono`, emitted as `--font-family-mono`); all other text remains Inter.
 

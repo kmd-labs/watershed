@@ -23,13 +23,21 @@
   <meta name="twitter:description" content="Every river that ends in the Baltic Sea, its catchment and the sea it flows into.">
   <meta name="twitter:image" content="https://kmd-labs.github.io/watershed/assets/design-system/og-image.png">
 
-  <!-- The map data is needed right after boot: start the download together with the scripts. -->
+  <!-- Before the first paint: the look (Midnight unless White & Classy was chosen before) and,
+       for a link to a sea, that sea's data. A plain visit downloads no map data until a sea is
+       picked on the entry map. -->
   <script>
-    // Preload only the chosen sea's data (from the link or the last visit); a first visit
-    // downloads no map data until a sea is picked.
     (function () {
       try {
-        var s = new URLSearchParams(location.search).get('sea') || localStorage.getItem('watershed.sea');
+        if (localStorage.getItem('watershed.theme') !== 'light') {
+          document.documentElement.setAttribute('data-theme', 'dark');
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0b1526');
+        }
+      } catch (e) {
+        document.documentElement.setAttribute('data-theme', 'dark');
+      }
+      try {
+        var s = new URLSearchParams(location.search).get('sea');
         if (['baltic', 'north', 'med', 'black', 'caspian'].indexOf(s) < 0) return;
         var l = document.createElement('link');
         l.rel = 'preload'; l.as = 'fetch'; l.type = 'application/json'; l.crossOrigin = 'anonymous';

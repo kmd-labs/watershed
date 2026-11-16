@@ -51,8 +51,9 @@
   }
 }
 
-// Black-ground mosaic: light labels with a dark halo.
-.globe--dark .globe-label {
+// Black-ground mosaic and the Midnight look: light labels with a dark halo.
+.globe--dark .globe-label,
+:root[data-theme="dark"] .globe-label {
   color: color("neutral-100");
   text-shadow:
     0 0 3px color("neutral-950"),

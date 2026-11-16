@@ -10,7 +10,7 @@ npm start          # http://localhost:4200
 
 ## Seas
 
-A **sea picker** opens at the first visit (no map data is downloaded until a sea is chosen) and from **Change sea…** in the view menu or the drainage-basin panel's title. The choice is remembered (`localStorage`, `watershed.sea`) and carried by links (`?sea=north`). Each sea's data — `<sea>.json`, `<sea>.streams.json` and `<sea>.relief.webp` in `src/assets/data/` — is fetched only when that sea is chosen; `index.html` preloads only the remembered or linked sea's. The picker itself (code and basin silhouettes) is a lazy chunk.
+Every visit starts at the **entry** (`src/app/entry`): first a **look** — *White & Classy* (the design system's light theme) or *Midnight City Neons* (its Midnight dark theme, tuned in `src/styles.scss`; the default) — each shown with an example (`src/assets/entry/`); then the **sea**, on a map of Europe with the five drainage basins (`src/assets/data/seas-map.json`, built by `python -I scripts/build-seas-map.py`). No sea data is downloaded before the choice. **Change sea…** in the view menu or the drainage-basin panel's title opens the entry at the map (and back to the look). Links carry the sea (`?sea=north`) and open it directly; the look is kept in `localStorage` (`watershed.theme`), the last sea is marked on the map (`watershed.sea`). Each sea's data — `<sea>.json`, `<sea>.streams.json` and `<sea>.relief.webp` in `src/assets/data/` — is fetched only when that sea is chosen; `index.html` sets the look before the first paint and preloads only a linked sea's data. The entry's code is a lazy chunk.
 
 | Sea | Basin shown | River mouths | Sub-basins |
 | --- | --- | --- | --- |
@@ -48,7 +48,7 @@ Colours are theme tokens defined in [`src/styles.scss`](src/styles.scss) from th
 | Population (new seas) | GHSL GHS-POP R2023A, 2025 (European Commission, JRC) |
 | Towns at river mouths (new seas) | GeoNames |
 
-`src/assets/data/<sea>.json` and `<sea>.streams.json` are built by `node scripts/build-data.mjs <sea>` from `data/<sea>.source.json` (the Baltic's also from `data/rivers.hr.json`); `node scripts/build-sea-thumbs.mjs` writes the picker's silhouettes.
+`src/assets/data/<sea>.json` and `<sea>.streams.json` are built by `node scripts/build-data.mjs <sea>` from `data/<sea>.source.json` (the Baltic's also from `data/rivers.hr.json`).
 
 The new seas' sources come from `python -I scripts/build-sea.py north|black|caspian|med` (raw inputs: `sh data/raw/download.sh` — HydroBASINS level 12, HydroRIVERS, Natural Earth, GeoNames — plus the GHSL GHS-POP 2025 grid; all git-ignored). Every HydroRIVERS outlet whose mouth lies on the sea's water within a rough polygon of the sea belongs to it; its catchment is made of the HydroBASINS units whose largest reach is in that river system, simplified as one coverage. Names: Wikidata rivers whose mouth (P403) is the sea or part of it, matched by mouth coordinates and drainage area (snapshot in `data/wikidata/`), else Natural Earth river lines along the lower main stem. Nearest towns from GeoNames, country shares from Natural Earth, populations from GHSL. Relief: `python -I scripts/build-relief.py <sea>` (ETOPO1 via ERDDAP for the sea's cut-out box).
 

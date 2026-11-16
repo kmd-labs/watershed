@@ -44,7 +44,8 @@ export function readLink(search: string): Partial<LinkState> & { lang?: string }
   const out: Partial<LinkState> & { lang?: string } = {};
   const view = p.get('view')?.toLowerCase() as MapView | undefined;
   if (view && VIEWS.includes(view)) out.view = view;
-  if (p.get('ground') === 'dark') out.ground = 'dark';
+  const ground = p.get('ground');
+  if (ground === 'dark' || ground === 'light') out.ground = ground;
   const basin = int(p.get('basin'), 0, 100_000);
   if (basin !== null) out.basin = basin;
   const step = int(p.get('step'), 0, 50);
@@ -71,7 +72,8 @@ export function writeLink(url: URL, s: LinkState): URL {
   for (const k of ['sea', 'view', 'ground', 'basin', 'step', 'top', 'drop', 'palette', 'by']) p.delete(k);
   if (s.sea) p.set('sea', s.sea);
   if (s.view !== START_VIEW) p.set('view', s.view);
-  if ((s.view === 'mosaic' || s.view === 'story') && s.ground === 'dark') p.set('ground', 'dark');
+  // Both grounds are written: the default one depends on the viewer's look.
+  if (s.view === 'mosaic' || s.view === 'story') p.set('ground', s.ground);
   if ((s.view === 'catchments' || s.view === 'seas' || s.view === 'mosaic') && s.basin >= 0) p.set('basin', String(s.basin));
   if ((s.view === 'top' || s.view === 'story') && s.step > 0) p.set('step', String(s.step));
   if (s.view === 'raindrop' && s.drop) p.set('drop', `${s.drop[0].toFixed(3)},${s.drop[1].toFixed(3)}`);

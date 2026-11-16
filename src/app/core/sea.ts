@@ -10,42 +10,52 @@ export const isSeaId = (v: unknown): v is SeaId => SEA_IDS.includes(v as SeaId);
 
 const STORAGE_KEY = 'watershed.sea';
 
+/** Where the entry opens: the choice of look first, or straight at the map of seas. */
+export type EntryStep = 'look' | 'sea';
+
 /**
- * The chosen sea. Resolved from the link (`?sea=`), then the last choice (localStorage), else
- * unknown — and then the sea picker opens before anything is downloaded: each sea's data is
- * fetched only once it is chosen.
+ * The chosen sea. Every visit starts at the entry — pick a look, then a sea on the map of
+ * Europe — before any map data is downloaded; only the chosen sea's data is then fetched. A link
+ * to a sea (`?sea=`, e.g. a shared view) opens that sea directly.
  */
 @Injectable({ providedIn: 'root' })
 export class SeaService {
-  readonly sea = signal<SeaId | null>(this.initial());
-  /** The picker is shown at entry (no sea known yet) and whenever the user asks to change sea. */
+  readonly sea = signal<SeaId | null>(this.fromLink());
+  /** The entry is shown at the start of a visit and whenever the user asks to change sea. */
   readonly pickerOpen = signal<boolean>(this.sea() === null);
+  readonly entryStep = signal<EntryStep>('look');
+  /** The sea of the last visit, marked on the entry map. */
+  readonly last = signal<SeaId | null>(this.stored());
+
+  /** Opens the entry at the map of seas (from the view menu or the panel title). */
+  openPicker() {
+    this.entryStep.set('sea');
+    this.pickerOpen.set(true);
+  }
 
   choose(sea: SeaId) {
     this.sea.set(sea);
+    this.last.set(sea);
     this.pickerOpen.set(false);
     try {
       localStorage.setItem(STORAGE_KEY, sea);
     } catch {
-      // localStorage unavailable: the choice lasts for this visit
+      // localStorage unavailable
     }
   }
 
-  private initial(): SeaId | null {
-    if (typeof location !== 'undefined') {
-      const fromLink = new URLSearchParams(location.search).get('sea');
-      if (isSeaId(fromLink)) {
-        // A link to a sea counts as choosing it: the next plain visit opens it too.
-        try { localStorage.setItem(STORAGE_KEY, fromLink); } catch { /* unavailable */ }
-        return fromLink;
-      }
-    }
+  private fromLink(): SeaId | null {
+    if (typeof location === 'undefined') return null;
+    const s = new URLSearchParams(location.search).get('sea');
+    return isSeaId(s) ? s : null;
+  }
+
+  private stored(): SeaId | null {
     try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (isSeaId(stored)) return stored;
+      const s = localStorage.getItem(STORAGE_KEY);
+      return isSeaId(s) ? s : null;
     } catch {
-      // localStorage unavailable
+      return null;
     }
-    return null;
   }
 }

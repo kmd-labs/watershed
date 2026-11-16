@@ -1,0 +1,137 @@
+@let t = i18n.t();
+
+<div
+  #dialog
+  class="entry entry--{{ step() }}"
+  role="dialog"
+  aria-modal="true"
+  [attr.aria-labelledby]="step() === 'look' ? 'entry-look-title' : 'entry-sea-title'"
+  tabindex="-1">
+  <!-- Logotype, language and (once a sea is open) close, above both steps -->
+  <div class="entry__bar">
+    <img class="entry__logo" [src]="theme.logoSrc()" alt="KMD" width="72" height="20" />
+    <div class="entry__tools">
+      <div class="entry__langs" role="group" [attr.aria-label]="t.changeLanguage">
+        @for (o of langs(); track o.l) {
+          <button
+            type="button"
+            class="entry__lang"
+            [class.entry__lang--on]="i18n.lang() === o.l"
+            [attr.aria-pressed]="i18n.lang() === o.l"
+            [attr.aria-label]="o.name"
+            [lang]="o.l"
+            (click)="setLang(o.l)">
+            {{ o.label }}
+          </button>
+        }
+      </div>
+      @if (closable()) {
+        <button type="button" class="entry__close" [attr.aria-label]="t.pickerClose" [title]="t.pickerClose" (click)="close()">
+          <lucide-icon [img]="closeIcon" [size]="16"></lucide-icon>
+        </button>
+      }
+    </div>
+  </div>
+
+  @if (step() === 'look') {
+    <!-- Step 1: the look, each with an example of the map in it -->
+    <section class="looks">
+      <header class="looks__head">
+        <span class="entry__step">{{ t.entryStep(1, 2) }}</span>
+        <h1 class="entry__title" id="entry-look-title">{{ t.lookTitle }}</h1>
+        <p class="entry__subtitle">{{ t.lookSubtitle }}</p>
+      </header>
+      <ul class="looks__grid">
+        @for (l of looks; track l) {
+          <li>
+            <button
+              type="button"
+              class="look look--{{ l }}"
+              [class.look--current]="look.look() === l"
+              [attr.aria-current]="look.look() === l ? 'true' : null"
+              (click)="chooseLook(l)">
+              <span class="look__frame">
+                <img
+                  [src]="'assets/entry/look-' + l + '.webp'"
+                  [alt]="t.lookExample(t.lookNames[l])"
+                  width="800"
+                  height="500"
+                  decoding="async" />
+              </span>
+              <span class="look__name">
+                {{ t.lookNames[l] }}
+                @if (look.look() === l) {
+                  <em class="look__now">{{ t.lookCurrent }}</em>
+                }
+              </span>
+              <span class="look__note">{{ t.lookNotes[l] }}</span>
+            </button>
+          </li>
+        }
+      </ul>
+    </section>
+  } @else {
+    <!-- Step 2: the sea, on the map of Europe -->
+    <div class="seamap">
+      <canvas
+        #map
+        class="seamap__canvas"
+        aria-hidden="true"
+        (pointermove)="onMove($event)"
+        (pointerleave)="onLeave()"
+        (click)="onClick($event)"></canvas>
+      @if (tip(); as tp) {
+        <div class="seamap__tip" [style.left.px]="tp.x" [style.top.px]="tp.y" aria-hidden="true">
+          <b>{{ t.seaNames[tp.id] }}</b>
+          <span>{{ stats(tp.id) }}</span>
+        </div>
+      }
+    </div>
+
+    <header class="seamap__head" #head>
+      <span class="entry__step">{{ t.entryStep(2, 2) }}</span>
+      <h1 class="entry__title" id="entry-sea-title">{{ t.pickerTitle }}</h1>
+      <p class="entry__subtitle">{{ t.pickerSubtitle }}</p>
+    </header>
+
+    <nav class="seamap__dock glass-panel" #dock [attr.aria-label]="t.pickerTitle">
+      <ul class="chips">
+        @for (c of cards(); track c.id) {
+          <li>
+            <button
+              type="button"
+              class="chip"
+              [class.chip--hot]="hot() === c.id"
+              [style.--chip]="'var(--color-entry-' + c.id + ')'"
+              [attr.aria-current]="seas.sea() === c.id ? 'true' : null"
+              [attr.aria-describedby]="'entry-stats'"
+              (mouseenter)="hot.set(c.id)"
+              (mouseleave)="hot.set(null)"
+              (focus)="hot.set(c.id)"
+              (blur)="hot.set(null)"
+              (click)="chooseSea(c.id)">
+              <i class="chip__dot" aria-hidden="true"></i>
+              <span>{{ c.name }}</span>
+              @if (c.mark) {
+                <em class="chip__mark">{{ c.mark }}</em>
+              }
+            </button>
+          </li>
+        }
+      </ul>
+      <div class="seamap__foot">
+        <p class="seamap__stats" id="entry-stats" aria-live="polite">
+          @if (hot(); as h) {
+            <b>{{ t.seaNames[h] }}</b> · {{ stats(h) }}
+          } @else {
+            {{ t.pickerHint }}
+          }
+        </p>
+        <button type="button" class="seamap__look" [attr.aria-label]="t.lookChange" (click)="step.set('look')">
+          <lucide-icon [img]="lookIcon" [size]="14"></lucide-icon>
+          <span>{{ t.lookLabel }}: {{ t.lookNames[look.look()] }}</span>
+        </button>
+      </div>
+    </nav>
+  }
+</div>

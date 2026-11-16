@@ -75,6 +75,16 @@
       </div>
     </div>
 
+    @if (o.seaNames) {
+      <div class="studio__group">
+        <span class="studio__label" id="poster-sea-layout">{{ t.posterSeaLayout }}</span>
+        <div class="studio__toggles" role="group" aria-labelledby="poster-sea-layout">
+          <app-button variant="toggle" size="sm" [active]="!o.seaFit" (btnClick)="set({ seaFit: false })">{{ t.posterSeaStraight }}</app-button>
+          <app-button variant="toggle" size="sm" [active]="o.seaFit" (btnClick)="set({ seaFit: true })">{{ t.posterSeaFit }}</app-button>
+        </div>
+      </div>
+    }
+
     <div class="studio__group">
       <span class="studio__label" id="poster-format">{{ t.posterFormat }}</span>
       <div class="studio__toggles" role="group" aria-labelledby="poster-format">

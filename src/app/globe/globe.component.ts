@@ -9,6 +9,7 @@ import {
   inject,
   input,
   output,
+  untracked,
   viewChild
 } from '@angular/core';
 import * as THREE from 'three';
@@ -48,6 +49,8 @@ export interface PrintStyle {
   ink: boolean;
   seaLabel: string;
   seaNames: boolean;
+  /** Sea names laid along the shape of their water instead of straight at their label point. */
+  seaNameFit?: boolean;
   /** Hairline around lakes (subtler than the divide along the coast); none when absent. */
   lakeLine?: string;
 }
@@ -72,6 +75,12 @@ const RIVER_WIDTH = [0.5, 0.85, 1.35, 2.0, 2.8];
 const RIVER_OPACITY = [0.3, 0.5, 0.75, 0.9, 0.95];
 /** In the mosaic the rivers are the colour, so even the smallest streams stay legible. */
 const MOSAIC_RIVER_OPACITY = [0.6, 0.75, 0.9, 1, 1];
+/** Midnight look: a soft additive glow under the larger rivers — from this class, × their width,
+ * at this opacity per class (on the river maps, and on the plain ground of the mosaic and story). */
+const GLOW_MIN_CLASS = 2;
+const GLOW_WIDTH = 3.2;
+const GLOW_OPACITY = [0, 0, 0.07, 0.09, 0.11];
+const GLOW_PLAIN_OPACITY = [0, 0, 0.1, 0.13, 0.16];
 /** How far other basins' rivers fade toward the ground: with a selection, and on hover alone. */
 const MOSAIC_FADE = 0.8;
 const MOSAIC_HOVER_FADE = 0.4;
@@ -268,6 +277,9 @@ interface RiverLayer {
   line: LineSegments2;
   mat: LineMaterial;
   distances: boolean;
+  /** The Midnight glow under the larger rivers (same geometry, wider, added light). */
+  halo?: LineSegments2;
+  haloMat?: LineMaterial;
 }
 
 /** A small texture-mapped sector over one basin, used for the selection and hover highlights. */
@@ -327,6 +339,8 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
   readonly showLabels = input(true);
   readonly showFlow = input(false);
   readonly showRelief = input(true);
+  /** Midnight look: the larger rivers glow (off on white ground and on posters). */
+  readonly glow = input(false);
   /** Localized label for a river basin (dataset names are Polish). */
   readonly basinLabel = input<(b: Basin) => string>(b => b.name ?? '');
   readonly subNames = input<string[]>([]);
@@ -428,7 +442,17 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
     effect(() => {
       this.view();
       this.ground();
+      this.glow();
       if (this.ready && !this.printSaved) void this.restyle();
+    });
+    // Another look: the map's colours are design tokens, read again from the new theme.
+    effect(() => {
+      this.theme.mode();
+      if (!this.ready || this.printSaved) return;
+      untracked(() => {
+        this.readColors();
+        void this.restyle();
+      });
     });
     effect(() => {
       const img = this.relief();
@@ -681,7 +705,8 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
     const tablet = isAtMost('tablet');
     this.readColors();
 
-    this.renderer = new THREE.WebGLRenderer({ canvas, antialias: !mobile, powerPreference: 'high-performance' });
+    // Stencil: the river glow lights each pixel once (see addRiverLayer).
+    this.renderer = new THREE.WebGLRenderer({ canvas, antialias: !mobile, stencil: true, powerPreference: 'high-performance' });
     // 1.5 looks nearly as crisp as 2–3 on HiDPI screens at a fraction of the fragment cost.
     this.restDpr = Math.min(devicePixelRatio || 1, MAX_DPR);
     this.renderer.setPixelRatio(this.restDpr);
@@ -777,6 +802,7 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
     this.drawContext();
     const uploaded = this.drawRegion();
     this.setRiverOpacity();
+    this.applyGlow();
     if (this.view() === 'story') this.startStoryStep(this.storyStep());
     if (this.borderMat) this.borderMat.color.set(this.dark() ? this.colors['light'] : this.colors['border']);
     this.updateBasinColours();
@@ -1107,7 +1133,31 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
     line.renderOrder = 2 + rc.cls;
     this.rivers.add(line);
     const layer: RiverLayer = { cls: rc.cls, line, mat, distances: false };
+    if (rc.cls >= GLOW_MIN_CLASS) {
+      // Shares the geometry: only the larger rivers, so the extra draw stays light.
+      const haloMat = new LineMaterial({
+        vertexColors: true,
+        linewidth: RIVER_WIDTH[rc.cls] * GLOW_WIDTH,
+        transparent: true,
+        opacity: GLOW_OPACITY[rc.cls],
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+        // Each pixel glows once: overlapping segment ends would otherwise add up into beads.
+        stencilWrite: true,
+        stencilRef: 1,
+        stencilFunc: THREE.NotEqualStencilFunc,
+        stencilZPass: THREE.ReplaceStencilOp
+      });
+      patchBasinColours(haloMat, this.basinTex, this.ghost, this.glint, this.glintMix);
+      haloMat.resolution.copy(mat.resolution);
+      const halo = new LineSegments2(geo, haloMat);
+      halo.frustumCulled = false;
+      halo.renderOrder = 1.5;
+      this.rivers.add(halo);
+      Object.assign(layer, { halo, haloMat });
+    }
     this.riverLayers.push(layer);
+    this.applyGlow();
     if (this.ready && this.showFlow()) this.setFlow(true);
     this.invalidate();
   }
@@ -1210,6 +1260,18 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
   private setRiverOpacity() {
     const full = this.plain() || this.topActive();
     this.riverLayers.forEach(l => (l.mat.opacity = (full ? MOSAIC_RIVER_OPACITY : RIVER_OPACITY)[l.cls]));
+  }
+
+  /** The Midnight glow: on dark ground only (added light would vanish on white), never in print. */
+  private applyGlow() {
+    const on = this.glow() && !this.printSaved && !(this.plain() && this.ground() === 'light');
+    const plain = this.plain() || this.topActive();
+    for (const l of this.riverLayers) {
+      if (!l.halo || !l.haloMat) continue;
+      l.halo.visible = on;
+      l.haloMat.opacity = (plain ? GLOW_PLAIN_OPACITY : GLOW_OPACITY)[l.cls];
+    }
+    this.invalidate();
   }
 
   /**
@@ -1621,7 +1683,10 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
       lut[(BASIN_TEX + i) * 4 + 1] = 0;
     });
     this.basinTex.needsUpdate = true;
-    for (const l of this.riverLayers) l.mat.dashed = false;
+    for (const l of this.riverLayers) {
+      l.mat.dashed = false;
+      if (l.halo) l.halo.visible = false;
+    }
   }
 
   /**
@@ -1717,8 +1782,10 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
     }
     ctx.globalCompositeOperation = 'source-over';
 
-    // ── sea names: spaced italic caps ──
-    if (style.seaNames) {
+    // ── sea names: spaced italic caps (straight, or along their water) ──
+    if (style.seaNames && style.seaNameFit) {
+      this.drawFittedSeaNames(ctx, width, height, dx, px, style);
+    } else if (style.seaNames) {
       const size = px(2.6);
       ctx.font = `italic 300 ${size}px ${this.theme.getFontFamily()}`;
       ctx.letterSpacing = `${size * 0.22}px`;
@@ -1796,9 +1863,11 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
     return this.cam.alt;
   }
 
-  /** Sea, land, lakes and the drainage divide as vectors, projected through the print camera. */
-  private drawPrintBase(ctx: CanvasRenderingContext2D, W: number, H: number, style: PrintStyle, px: (mm: number) => number) {
-    const data = this.data();
+  /**
+   * A path-ring writer for `ctx` (W × H px) through the current print camera: lon/lat rings become
+   * closed sub-paths; long straight lon/lat edges are subdivided, since they curve on the globe.
+   */
+  private printRing(ctx: CanvasRenderingContext2D, W: number, H: number): (r: ArrayLike<number>) => void {
     this.camera.updateMatrixWorld();
     const m = new THREE.Matrix4().multiplyMatrices(this.camera.projectionMatrix, this.camera.matrixWorldInverse).elements;
     let first = true;
@@ -1827,6 +1896,258 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
       if (r.length >= 4) edge(r[r.length - 2], r[r.length - 1], r[0], r[1]);
       ctx.closePath();
     };
+    return ring;
+  }
+
+  /**
+   * Sea names laid along their water. Each sub-basin's sea is the water nearest to its own coast
+   * (water nearest to land outside the drainage basin belongs to none), found on a coarse raster of
+   * the frame; the name follows a gentle curve along that water's main axis — bottom to top when it
+   * runs north–south — spaced out over most of its length and sized to its width.
+   */
+  private drawFittedSeaNames(ctx: CanvasRenderingContext2D, width: number, height: number, dx: number, px: (mm: number) => number, style: PrintStyle) {
+    const subs = this.data().subs.length;
+    const GW = 360, GH = Math.max(1, Math.round((GW * height) / width)), N = GW * GH;
+    const k = width / GW;
+    const sea = this.labels.filter(L => L.kind === 'sea');
+
+    // The grid sees the frame exactly as the poster does (composition shift included).
+    this.camera.setViewOffset(width, height, -dx, 0, width, height);
+    this.camera.updateProjectionMatrix();
+    const grid = () => {
+      const c = document.createElement('canvas');
+      c.width = GW; c.height = GH;
+      return c.getContext('2d', { willReadFrequently: true })!;
+    };
+    const mctx = grid();
+    this.drawPrintBase(mctx, GW, GH, { ...style, paper: '#000000', sea: '#ffffff', divide: 'rgba(0,0,0,0)', focus: -1 }, () => 0);
+    const water = mctx.getImageData(0, 0, GW, GH).data;
+    const octx = grid();
+    octx.fillStyle = '#000000';
+    octx.fillRect(0, 0, GW, GH);
+    const ring = this.printRing(octx, GW, GH);
+    const soft = this.softOutlines();
+    for (let s = 0; s < subs; s++) {
+      octx.fillStyle = `rgb(${(s + 1) * 36},0,0)`;
+      octx.beginPath();
+      for (const r of soft[s]) ring(r);
+      octx.fill('evenodd');
+    }
+    const land = octx.getImageData(0, 0, GW, GH).data;
+    const seeds = sea.map(L => {
+      const p = L.p.clone().project(this.camera);
+      return [((p.x + 1) / 2) * GW, ((1 - p.y) / 2) * GH];
+    });
+    this.camera.clearViewOffset();
+    this.camera.updateProjectionMatrix();
+
+    // Every water cell takes the owner of the nearest land (multi-source breadth-first search).
+    // Sources: land cells fully inside one sub-basin's outline (anti-aliased edges would decode to
+    // the wrong sub-basin), and foreign land well away from the basin (the Natural Earth coast and
+    // the HydroBASINS outlines differ by a cell or two). Land in between neither spreads nor counts.
+    const near = new Uint8Array(N);
+    for (let i = 0; i < N; i++) if (land[i * 4] > 0) near[i] = 1;
+    for (let pass = 0; pass < 3; pass++) {
+      const grow = near.slice();
+      for (let i = 0; i < N; i++) {
+        if (near[i]) continue;
+        const x = i % GW;
+        if ((x > 0 && near[i - 1]) || (x < GW - 1 && near[i + 1]) || (i >= GW && near[i - GW]) || (i + GW < N && near[i + GW])) grow[i] = 1;
+      }
+      near.set(grow);
+    }
+    const owner = new Int8Array(N).fill(-2);
+    const dist = new Float32Array(N).fill(1e9);
+    for (let i = 0; i < N; i++) {
+      if (water[i * 4] > 127) continue;
+      const r = land[i * 4], s = Math.round(r / 36) - 1;
+      if (r > 0 && s >= 0 && s < subs && Math.abs(r - (s + 1) * 36) <= 4) { owner[i] = s; dist[i] = 0; }
+      else if (!near[i]) { owner[i] = -1; dist[i] = 0; }
+    }
+    // Two-pass chamfer distance (1, √2): each cell takes the owner of its nearest source.
+    const relax = (i: number, j: number, w: number) => {
+      if (dist[j] + w < dist[i]) { dist[i] = dist[j] + w; owner[i] = owner[j]; }
+    };
+    for (let y = 0; y < GH; y++) for (let x = 0; x < GW; x++) {
+      const i = y * GW + x;
+      if (x > 0) relax(i, i - 1, 1);
+      if (y > 0) { relax(i, i - GW, 1); if (x > 0) relax(i, i - GW - 1, Math.SQRT2); if (x < GW - 1) relax(i, i - GW + 1, Math.SQRT2); }
+    }
+    for (let y = GH - 1; y >= 0; y--) for (let x = GW - 1; x >= 0; x--) {
+      const i = y * GW + x;
+      if (x < GW - 1) relax(i, i + 1, 1);
+      if (y < GH - 1) { relax(i, i + GW, 1); if (x < GW - 1) relax(i, i + GW + 1, Math.SQRT2); if (x > 0) relax(i, i + GW - 1, Math.SQRT2); }
+    }
+    // Each sub-basin's water: the sea reached from its label point before any other label's
+    // (breadth-first through water, 8 neighbours), leaving out water nearest to land outside the
+    // basin. A gulf then keeps its own water, not the open sea off its coast.
+    const seedOf = new Int8Array(N).fill(-1);
+    const wq = new Int32Array(N);
+    let wh = 0, wt = 0;
+    const open = (i: number) => water[i * 4] > 127 && owner[i] !== -1;
+    seeds.forEach(([sx, sy], s) => {
+      const cx = Math.round(sx), cy = Math.round(sy);
+      for (let rad = 0; rad <= 40; rad++) {
+        for (let yy = cy - rad; yy <= cy + rad; yy++) for (let xx = cx - rad; xx <= cx + rad; xx++) {
+          if (xx < 0 || yy < 0 || xx >= GW || yy >= GH || Math.max(Math.abs(xx - cx), Math.abs(yy - cy)) !== rad) continue;
+          const i = yy * GW + xx;
+          if (open(i) && seedOf[i] < 0) { seedOf[i] = s; wq[wt++] = i; return; }
+        }
+      }
+    });
+    while (wh < wt) {
+      const i = wq[wh++], x = i % GW;
+      for (let dy = -GW; dy <= GW; dy += GW) for (let dx = -1; dx <= 1; dx++) {
+        if ((dx < 0 && x === 0) || (dx > 0 && x === GW - 1)) continue;
+        const j = i + dy + dx;
+        if (j >= 0 && j < N && seedOf[j] < 0 && open(j)) { seedOf[j] = seedOf[i]; wq[wt++] = j; }
+      }
+    }
+    const isSea = (i: number, s: number) => seedOf[i] === s;
+
+    const font = this.theme.getFontFamily();
+    ctx.fillStyle = style.seaLabel;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.letterSpacing = '0px';
+    const straight = (text: string, x: number, y: number) => {
+      const size = px(2.6);
+      ctx.font = `italic 300 ${size}px ${font}`;
+      ctx.letterSpacing = `${size * 0.22}px`;
+      ctx.fillText(text, x, y);
+      ctx.letterSpacing = '0px';
+    };
+
+    sea.forEach((L, s) => {
+      const text = L.text.toUpperCase();
+      const [sx, sy] = seeds[s];
+      if (sx < 0 || sy < 0 || sx >= GW || sy >= GH) return; // off the frame
+      // The sub-basin's water around its label point.
+      let seed = -1;
+      for (let rad = 0; rad <= 40 && seed < 0; rad++) {
+        for (let yy = Math.round(sy) - rad; yy <= Math.round(sy) + rad && seed < 0; yy++) {
+          for (let xx = Math.round(sx) - rad; xx <= Math.round(sx) + rad; xx++) {
+            if (xx < 0 || yy < 0 || xx >= GW || yy >= GH) continue;
+            if (Math.max(Math.abs(xx - Math.round(sx)), Math.abs(yy - Math.round(sy))) !== rad) continue;
+            if (isSea(yy * GW + xx, s)) { seed = yy * GW + xx; break; }
+          }
+        }
+      }
+      const pts: number[] = [];
+      if (seed >= 0) {
+        const seen = new Uint8Array(N);
+        const stack = [seed];
+        seen[seed] = 1;
+        while (stack.length) {
+          const i = stack.pop()!, x = i % GW;
+          pts.push(x, (i / GW) | 0);
+          for (const j of [x > 0 ? i - 1 : -1, x < GW - 1 ? i + 1 : -1, i - GW, i + GW]) {
+            if (j >= 0 && j < N && !seen[j] && isSea(j, s)) { seen[j] = 1; stack.push(j); }
+          }
+        }
+      }
+      const n = pts.length / 2;
+      if (n < 40) { straight(text, sx * k, sy * k); return; }
+
+      // Main axis (principal component); reading left to right, or bottom to top if steep.
+      let mx = 0, my = 0;
+      for (let i = 0; i < pts.length; i += 2) { mx += pts[i]; my += pts[i + 1]; }
+      mx /= n; my /= n;
+      let sxx = 0, syy = 0, sxy = 0;
+      for (let i = 0; i < pts.length; i += 2) {
+        const ax = pts[i] - mx, ay = pts[i + 1] - my;
+        sxx += ax * ax; syy += ay * ay; sxy += ax * ay;
+      }
+      const ang = 0.5 * Math.atan2(2 * sxy, sxx - syy);
+      let ux = Math.cos(ang), uy = Math.sin(ang);
+      if (Math.abs(ux) >= Math.abs(uy) ? ux < 0 : uy > 0) { ux = -ux; uy = -uy; }
+      const vx = -uy, vy = ux;
+      const ts = new Float32Array(n), ss = new Float32Array(n);
+      for (let i = 0, q = 0; i < pts.length; i += 2, q++) {
+        const ax = pts[i] - mx, ay = pts[i + 1] - my;
+        ts[q] = ax * ux + ay * uy;
+        ss[q] = ax * vx + ay * vy;
+      }
+      const sorted = Float32Array.from(ts).sort();
+      const t0 = sorted[Math.floor(n * 0.05)], t1 = sorted[Math.floor(n * 0.95)], span = Math.max(1e-3, t1 - t0);
+
+      // Mid-line of the water in slices along the axis, then a least-squares parabola through it.
+      const B = 16, lo = new Float32Array(B).fill(1e9), hi = new Float32Array(B).fill(-1e9), cnt = new Int32Array(B);
+      for (let q = 0; q < n; q++) {
+        const b = Math.floor(((ts[q] - t0) / span) * B);
+        if (b < 0 || b >= B) continue;
+        lo[b] = Math.min(lo[b], ss[q]); hi[b] = Math.max(hi[b], ss[q]); cnt[b]++;
+      }
+      const M = [0, 0, 0, 0, 0, 0, 0, 0, 0], V = [0, 0, 0];
+      const widths: number[] = [];
+      for (let b = 0; b < B; b++) {
+        if (cnt[b] < 3) continue;
+        const t = t0 + ((b + 0.5) / B) * span, mid = (lo[b] + hi[b]) / 2, w = cnt[b];
+        widths.push(hi[b] - lo[b]);
+        const row = [t * t, t, 1];
+        for (let r = 0; r < 3; r++) { V[r] += w * row[r] * mid; for (let c = 0; c < 3; c++) M[r * 3 + c] += w * row[r] * row[c]; }
+      }
+      let qa = 0, qb = 0, qc = 0;
+      const det = (m: number[]) => m[0] * (m[4] * m[8] - m[5] * m[7]) - m[1] * (m[3] * m[8] - m[5] * m[6]) + m[2] * (m[3] * m[7] - m[4] * m[6]);
+      const D = det(M);
+      if (Math.abs(D) > 1e-9) {
+        const col = (c: number) => { const m = M.slice(); for (let r = 0; r < 3; r++) m[r * 3 + c] = V[r]; return det(m) / D; };
+        qa = col(0); qb = col(1); qc = col(2);
+      }
+      // Gentle curves only: the ends sag at most ~6% of the length.
+      const amax = 0.25 / span;
+      qa = Math.max(-amax, Math.min(amax, qa));
+
+      // The name spans the middle 80% of the water, in output pixels.
+      const ta = t0 + span * 0.1, tb = t1 - span * 0.1, S = 120;
+      const cx: number[] = [], cy: number[] = [], acc: number[] = [0];
+      for (let i = 0; i <= S; i++) {
+        const t = ta + ((tb - ta) * i) / S, o = qa * t * t + qb * t + qc;
+        cx.push((mx + t * ux + o * vx) * k);
+        cy.push((my + t * uy + o * vy) * k);
+        if (i) acc.push(acc[i - 1] + Math.hypot(cx[i] - cx[i - 1], cy[i] - cy[i - 1]));
+      }
+      const total = acc[S];
+      widths.sort((a, b) => a - b);
+      let size = Math.max(px(2.4), Math.min(px(7.5), (widths[widths.length >> 1] ?? 4) * k * 0.3));
+      const chars = [...text];
+      let cw: number[] = [], natural = 0;
+      const measure = () => {
+        ctx.font = `italic 300 ${size}px ${font}`;
+        cw = chars.map(c => ctx.measureText(c).width);
+        natural = cw.reduce((a, b) => a + b, 0);
+      };
+      measure();
+      for (let i = 0; i < 4 && natural + size * 0.15 * (chars.length - 1) > total && size > px(2); i++) {
+        size = Math.max(px(2), size * Math.max(0.6, total / (natural + size * 0.15 * (chars.length - 1))));
+        measure();
+      }
+      // A long name in a narrow strip of water would shrink below the straight label: keep it straight.
+      if (size < px(2.4)) { straight(text, sx * k, sy * k); return; }
+      const gap = Math.min(size * 1.6, Math.max(size * 0.15, (total - natural) / Math.max(1, chars.length - 1)));
+      let a = (total - (natural + gap * (chars.length - 1))) / 2;
+      const at = (len: number) => {
+        let i = 1;
+        while (i < S && acc[i] < len) i++;
+        const f = (len - acc[i - 1]) / Math.max(1e-6, acc[i] - acc[i - 1]);
+        return { x: cx[i - 1] + (cx[i] - cx[i - 1]) * f, y: cy[i - 1] + (cy[i] - cy[i - 1]) * f, r: Math.atan2(cy[i] - cy[i - 1], cx[i] - cx[i - 1]) };
+      };
+      chars.forEach((c, i) => {
+        const p = at(Math.max(0, Math.min(total, a + cw[i] / 2)));
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.r);
+        ctx.fillText(c, 0, 0);
+        ctx.restore();
+        a += cw[i] + gap;
+      });
+    });
+  }
+
+  /** Sea, land, lakes and the drainage divide as vectors, projected through the print camera. */
+  private drawPrintBase(ctx: CanvasRenderingContext2D, W: number, H: number, style: PrintStyle, px: (mm: number) => number) {
+    const data = this.data();
+    const ring = this.printRing(ctx, W, H);
     const fill = (polys: ArrayLike<number>[][], colour: string) => {
       ctx.fillStyle = colour;
       for (const poly of polys) { ctx.beginPath(); for (const r of poly) ring(r); ctx.fill('evenodd'); }
@@ -1887,7 +2208,10 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
     else if (w > 960) this.camera.setViewOffset(w, h, -Math.min(170, w * 0.11), h * 0.16, w, h);
     else this.camera.setViewOffset(w, h, 0, h * 0.08, w, h);
     this.camera.updateProjectionMatrix();
-    for (const l of this.riverLayers) l.mat.resolution.set(w, h);
+    for (const l of this.riverLayers) {
+      l.mat.resolution.set(w, h);
+      l.haloMat?.resolution.set(w, h);
+    }
     this.borderMat?.resolution.set(w, h);
     for (const l of [this.dropLine, this.dropHalo]) (l?.material as LineMaterial | undefined)?.resolution.set(w, h);
   }
@@ -1936,6 +2260,7 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
     const pxWorld = (alt * 2 * Math.tan((VFOV / 2) * DEG)) / Math.max(1, el.clientHeight);
     for (const l of this.riverLayers) {
       l.mat.linewidth = RIVER_WIDTH[l.cls] * wf;
+      if (l.haloMat) l.haloMat.linewidth = RIVER_WIDTH[l.cls] * wf * GLOW_WIDTH;
       if (l.mat.dashed) {
         l.mat.dashScale = 1 / (pxWorld * FLOW_DASH_PX * (1 + FLOW_CLASS_STRETCH * l.cls));
         l.mat.dashOffset = this.flowOffset;

@@ -1,6 +1,7 @@
 import { Component, computed, effect, inject, signal, untracked, viewChild } from '@angular/core';
 import { SeaId, SeaService } from './core/sea';
-import { SeaPickerComponent } from './sea/sea-picker.component';
+import { LookService } from './core/look';
+import { EntryComponent } from './entry/entry.component';
 import {
   LucideAngularModule,
   Globe,
@@ -100,7 +101,7 @@ interface LegendItem {
     BasinDetailComponent,
     CountryListComponent,
     SeaListComponent,
-    SeaPickerComponent,
+    EntryComponent,
     PosterStudioComponent
   ],
   templateUrl: './app.component.html',
@@ -109,6 +110,7 @@ interface LegendItem {
 export class AppComponent {
   readonly i18n = inject(I18nService);
   readonly seas = inject(SeaService);
+  readonly look = inject(LookService);
   readonly bp = inject(BreakpointService);
   readonly popup = inject(PopupService);
   readonly tooltip = inject(TooltipService);
@@ -143,7 +145,8 @@ export class AppComponent {
   readonly homeIcon = House;
 
   readonly view = signal<MapView>(START_VIEW);
-  readonly ground = signal<MosaicGround>('light');
+  /** Mosaic and story ground: follows the look (black under Midnight) until the user picks one. */
+  readonly ground = signal<MosaicGround>(this.look.midnight() ? 'dark' : 'light');
   readonly selected = signal<number>(-1);
   /** The rivers / countries / seas panel starts folded; the map comes first. */
   readonly panelOpen = signal<boolean>(false);
@@ -293,6 +296,13 @@ export class AppComponent {
 
   constructor() {
     this.applyLinkNow();
+    // Another look brings its own ground (the link's ground counts for the first one only).
+    let lookSeen = false;
+    effect(() => {
+      const midnight = this.look.midnight();
+      if (lookSeen) untracked(() => this.ground.set(midnight ? 'dark' : 'light'));
+      lookSeen = true;
+    });
     effect(() => {
       // Without the map the tours have nothing to show: land on their maps' lists instead.
       if (!this.mapFailed()) return;
@@ -375,7 +385,7 @@ export class AppComponent {
 
   /** The view menu also opens the sea picker (its last entry). */
   onViewChange(v: MapView | 'sea') {
-    if (v === 'sea') this.seas.pickerOpen.set(true);
+    if (v === 'sea') this.seas.openPicker();
     else this.setView(v);
   }
 
