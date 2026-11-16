@@ -4,7 +4,11 @@
 <div class="studio">
   <!-- Live preview: the poster as it will print, scaled to the space left by the panel -->
   <div class="studio__stage" #frame>
-    <div class="studio__sheet" [class.studio__sheet--busy]="preparing()">
+    <div
+      class="studio__sheet"
+      [class.studio__sheet--busy]="preparing()"
+      [style.width.px]="sheetSize().w"
+      [style.height.px]="sheetSize().h">
       <canvas #preview class="studio__canvas" role="img" [attr.aria-label]="t.posterPreviewLabel"></canvas>
       @if (preparing()) {
         <div class="studio__preparing" aria-live="polite">{{ t.posterPreparing }}</div>
@@ -84,6 +88,18 @@
         </div>
       </div>
     }
+
+    <div class="studio__group">
+      <span class="studio__label" id="poster-orientation">{{ t.posterOrientation }}</span>
+      <div class="studio__toggles" role="group" aria-labelledby="poster-orientation">
+        @for (r of orientations; track r) {
+          <app-button variant="toggle" size="sm" [active]="o.orientation === r" (btnClick)="set({ orientation: r })">
+            <i class="orient orient--{{ r }}" aria-hidden="true"></i>
+            <span>{{ r === 'portrait' ? t.posterPortrait : t.posterLandscape }}</span>
+          </app-button>
+        }
+      </div>
+    </div>
 
     <div class="studio__group">
       <span class="studio__label" id="poster-format">{{ t.posterFormat }}</span>

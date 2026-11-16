@@ -5,7 +5,7 @@ import { I18nService } from '../core/i18n/i18n.service';
 import { BalticDataService } from '../core/data/baltic-data.service';
 import { MOSAIC_COUNT, SUB_COUNT } from '../core/data/views';
 import { cssToHex } from '../core/color';
-import { A2_MM, PosterLayout, a2Pixels, drawPoster, posterPng } from '../core/poster';
+import { A2_MM, PosterLayout, a2Pixels, a2Sheet, drawPoster, posterPng } from '../core/poster';
 import { GlobeComponent, PrintStyle } from '../globe/globe.component';
 import {
   BALTIC_SEA_KM2,
@@ -13,6 +13,7 @@ import {
   POSTER_PALETTES,
   PosterFormat,
   PosterOptions,
+  PosterOrientation,
   PosterPalette,
   colourFamily,
   isDarkPalette
@@ -44,6 +45,7 @@ export class PosterStudioComponent implements OnDestroy {
 
   readonly palettes = POSTER_PALETTES;
   readonly formats: PosterFormat[] = ['A4', 'A3', 'A2'];
+  readonly orientations: PosterOrientation[] = ['portrait', 'landscape'];
   readonly downloadIcon = Download;
 
   private readonly frame = viewChild.required<ElementRef<HTMLElement>>('frame');
@@ -63,13 +65,22 @@ export class PosterStudioComponent implements OnDestroy {
   private destroyed = false;
 
   readonly coloured = computed(() => colourFamily(this.options().palette) !== null);
+  /** The preview sheet's size on screen (CSS px): as large as the stage allows, either way up. */
+  readonly sheetSize = computed(() => {
+    const { w, h } = this.frameSize();
+    const sheet = a2Sheet(this.options().orientation);
+    const cw = Math.max(0, Math.min(w, (h * sheet.w) / sheet.h));
+    return { w: Math.round(cw), h: Math.round((cw * sheet.h) / sheet.w) };
+  });
   /** Print resolution: 300 dpi; phones and tablets stop at 150 (canvas size limits). */
   readonly printDpi = computed(() => (this.bp.tablet() ? 150 : 300));
   readonly sizeText = computed(() => {
-    const f = POSTER_FORMATS[this.options().format];
+    const o = this.options(), f = POSTER_FORMATS[o.format];
+    // Lying, the sheet's long side runs across.
+    const [w, h] = o.orientation === 'landscape' ? [f.h, f.w] : [f.w, f.h];
     const dpi = this.printDpi();
     const px = (mm: number) => Math.round((mm * dpi) / 25.4);
-    return this.i18n.t().posterSize(f.w, f.h, this.i18n.num(px(f.w)), this.i18n.num(px(f.h)), dpi);
+    return this.i18n.t().posterSize(w, h, this.i18n.num(px(w)), this.i18n.num(px(h)), dpi);
   });
   readonly progressText = computed(() => {
     const p = this.progress();
@@ -165,14 +176,15 @@ export class PosterStudioComponent implements OnDestroy {
     const o = this.options();
     const { w, h } = this.frameSize();
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    const cssW = Math.min(w, (h * A2_MM.w) / A2_MM.h);
+    const sheet = a2Sheet(o.orientation);
+    const cssW = Math.min(w, (h * sheet.w) / sheet.h);
     const pxW = Math.max(240, Math.round(cssW * dpr));
-    const dpi = pxW / (A2_MM.w / 25.4);
-    const key = JSON.stringify([o.palette, o.by, o.focus, o.seaNames, o.seaFit, this.i18n.lang(), pxW]);
+    const dpi = pxW / (sheet.w / 25.4);
+    const key = JSON.stringify([o.palette, o.by, o.focus, o.seaNames, o.seaFit, o.orientation, this.i18n.lang(), pxW]);
     if (key !== this.mapKey || !this.mapCanvas) {
       this.preparing.set(true);
       globe.printBegin(this.printStyle(o));
-      const { map } = a2Pixels(dpi);
+      const { map } = a2Pixels(dpi, o.orientation);
       this.mapCanvas = await globe.printRender(map.w, map.h, dpi, { glow: o.palette === 'black-neon' });
       this.mapKey = key;
     }
@@ -200,9 +212,10 @@ export class PosterStudioComponent implements OnDestroy {
     const o = this.options();
     const sheet = POSTER_FORMATS[o.format];
     const printDpi = this.printDpi();
+    // The A2 grid at the dpi that prints this sheet at `printDpi` (same scale either way up).
     const dpi = (printDpi * sheet.w) / A2_MM.w;
     globe.printBegin(this.printStyle(o));
-    const { map } = a2Pixels(dpi);
+    const { map } = a2Pixels(dpi, o.orientation);
     const mapCanvas = await globe.printRender(map.w, map.h, dpi, {
       glow: o.palette === 'black-neon',
       onProgress: p => this.progress.set(p * 0.85)
@@ -216,7 +229,7 @@ export class PosterStudioComponent implements OnDestroy {
     const slug = name.replace(/ł/g, 'l').replace(/Ł/g, 'L').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-zA-Z0-9]+/g, '-').toLowerCase();
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = `watershed-${slug}-${o.palette}-${o.format}.png`;
+    a.download = `watershed-${slug}-${o.palette}-${o.format}${o.orientation === 'landscape' ? '-landscape' : ''}.png`;
     a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 30_000);
   }
@@ -264,6 +277,7 @@ export class PosterStudioComponent implements OnDestroy {
     const a = this.auto();
     return {
       dpi,
+      orientation: o.orientation,
       paper: this.tok(`${p}paper`, dark ? '#040812' : '#ffffff'),
       ink: this.tok(`${p}ink`, dark ? '#f5f7fb' : '#0f172a'),
       inkSoft: this.tok(`${p}ink-soft`, '#64748b'),

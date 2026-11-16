@@ -16,8 +16,8 @@ import { isAtMost } from '@kmd/design-system/utils/breakpoints';
 import { I18nService } from '../core/i18n/i18n.service';
 import { Lang } from '../core/i18n/i18n.types';
 import { LOOKS, Look, LookService } from '../core/look';
-import { SEA_IDS, SeaId, SeaService } from '../core/sea';
-import { EntryMap, EntryStyle, Rgb, SeasMap, parseRgb } from './entry-map';
+import { EntryStep, SEA_IDS, SeaId, SeaService } from '../core/sea';
+import { EntryMap, EntryStyle, Fit, Insets, Rgb, SeasMap, parseRgb } from './entry-map';
 
 /** The entry map file, fetched once per visit (the entry opens again on "Change sea…"). */
 let seasMap: Promise<SeasMap> | null = null;
@@ -29,13 +29,24 @@ const loadSeasMap = () =>
 
 /** At most this many device pixels per map canvas (keeps big, dense screens light). */
 const MAX_PIXELS = 4.5e6;
+/** The shared move between the split map and the full map (ms; matches the SCSS). */
+const MOVE_MS = 800;
+/** After a sea is clicked on the split map, its half fills the screen (zooming into the sea)
+ * before the sea opens. */
+const OPEN_MS = 650;
+const OPEN_ZOOM = 1.6;
+/** The full map is the split map brought a little closer (on phones, whose split map is a
+ * cropped close-up, the whole basins a little closer than fitting). */
+const SEA_ZOOM = 1.15;
 
 /**
- * The entry, at the start of every visit: first a look — one map of Europe, half on paper
- * (White & Classy), half in neon at night (Midnight City Neons) — then a sea on that map in the
- * chosen look. Nothing of the seas' own data is downloaded before the choice
- * (BalticDataService.load); the map itself is one file, fetched when the entry opens.
- * "Change sea…" opens it at the map.
+ * The entry, at the start of every visit: one map of Europe with the five seas' drainage basins,
+ * split in two — light mode on paper (left), dark mode in neon at night (right). A click on a sea
+ * opens it in the mode of its half; a click elsewhere in a half (or its button) moves on to the
+ * full map in that mode — the divider sweeps aside while the map glides to its new place — where
+ * the sea is chosen with names, numbers and buttons. "Change sea…" opens the full map directly.
+ * Nothing of the seas' own data is downloaded before the choice (BalticDataService.load); the
+ * map itself is one file, fetched when the entry opens.
  */
 @Component({
   selector: 'app-entry',
@@ -53,34 +64,46 @@ export class EntryComponent {
   private readonly destroyRef = inject(DestroyRef);
 
   readonly closeIcon = X;
-  readonly lookIcon = Palette;
-  readonly step = this.seas.entryStep;
+  readonly modeIcon = Palette;
   readonly looks = LOOKS;
+  /** 'look': the split map; 'sea': the full map in the chosen mode. */
+  readonly step = this.seas.entryStep;
 
   /** Closing is possible once a sea is on screen; at the start of a visit a choice is needed. */
   readonly closable = computed(() => this.seas.sea() !== null);
 
   private readonly dialog = viewChild.required<ElementRef<HTMLElement>>('dialog');
-  // Step 1: the same map on paper and at night (its glow on a layer of its own, so it can hum).
-  private readonly paperRef = viewChild<ElementRef<HTMLCanvasElement>>('paper');
-  private readonly nightRef = viewChild<ElementRef<HTMLCanvasElement>>('night');
-  private readonly glowRef = viewChild<ElementRef<HTMLCanvasElement>>('glow');
-  // Step 2: the map to choose on, and the panels it leaves room for.
-  private readonly canvasRef = viewChild<ElementRef<HTMLCanvasElement>>('map');
-  private readonly headRef = viewChild<ElementRef<HTMLElement>>('head');
-  private readonly dockRef = viewChild<ElementRef<HTMLElement>>('dock');
+  private readonly stageRef = viewChild.required<ElementRef<HTMLElement>>('stage');
+  private readonly paperRef = viewChild.required<ElementRef<HTMLCanvasElement>>('paper');
+  private readonly nightRef = viewChild.required<ElementRef<HTMLCanvasElement>>('night');
+  private readonly glowRef = viewChild.required<ElementRef<HTMLCanvasElement>>('glow');
+  private readonly headRef = viewChild.required<ElementRef<HTMLElement>>('head');
+  private readonly dockRef = viewChild.required<ElementRef<HTMLElement>>('dock');
 
   readonly geo = signal<SeasMap | null>(null);
-  /** Step 1: the look the pointer (or focus) leans to; the divider moves its way. */
+  /** The maps are drawn (they fade in). */
+  readonly ready = signal(false);
+  /** Split map: the half the pointer (or focus) is in; the divider leans its way. */
   readonly lean = signal<Look | null>(null);
-  /** Step 1 is drawn (the maps fade in). */
-  readonly looksReady = signal(false);
-  /** Step 2: the sea under the pointer or keyboard focus. */
+  /** A sea was clicked on the split map: its half fills the screen, then the sea opens. */
+  readonly opening = signal<Look | null>(null);
+  /** The map is gliding between the split and the full map. */
+  readonly moving = signal(false);
+  /** The sea under the pointer or keyboard focus. */
   readonly hot = signal<SeaId | null>(null);
-  /** Hover note next to the mouse pointer. */
-  readonly tip = signal<{ x: number; y: number; id: SeaId } | null>(null);
+  /** Hover note next to the mouse pointer (with the mode a click opens, on the split map). */
+  readonly tip = signal<{ x: number; y: number; id: SeaId; look: Look | null } | null>(null);
   private map?: EntryMap;
   private size = { w: 0, h: 0 };
+
+  /** Where the divider stands: leaning on the split map, aside on the full map. */
+  readonly split = computed(() => {
+    const opening = this.opening();
+    const side = opening ?? (this.step() === 'sea' ? this.look.look() : null);
+    if (side) return side === 'classic' ? 100 : 0;
+    const lean = this.lean();
+    return lean === 'classic' ? 60 : lean === 'midnight' ? 40 : 50;
+  });
 
   readonly cards = computed(() => {
     const t = this.i18n.t();
@@ -104,51 +127,51 @@ export class EntryComponent {
   readonly langs = computed(() => this.i18n.langs.map(l => ({ l, label: l.toUpperCase(), name: this.i18n.dicts[l].langName })));
 
   constructor() {
-    // The map file loads at once (both steps draw it).
     loadSeasMap()
       .then(g => this.geo.set(g))
       .catch(() => {
-        // Without the map the looks' names and the sea buttons still work.
+        // Without the map the modes' buttons and the sea buttons still work.
       });
 
     afterNextRender(() => this.dialog().nativeElement.focus());
 
-    // (Re)fit the maps when they appear, when their frame resizes, or at the other step.
+    // Fit the maps once the data is in, and again whenever the stage resizes.
     let obs: ResizeObserver | null = null;
     effect(() => {
-      const step = this.step();
-      const canvas = (step === 'look' ? this.paperRef() : this.canvasRef())?.nativeElement;
       const geo = this.geo();
-      obs?.disconnect();
-      obs = null;
-      if (!canvas || !geo) return;
-      this.map ??= new EntryMap(geo);
-      obs = new ResizeObserver(() => this.layout());
-      obs.observe(canvas);
-      untracked(() => this.layout());
+      if (!geo) return;
+      untracked(() => {
+        this.map ??= new EntryMap(geo);
+        obs = new ResizeObserver(() => !this.moving() && this.layout());
+        obs.observe(this.stageRef().nativeElement);
+        this.layout();
+      });
     });
     this.destroyRef.onDestroy(() => obs?.disconnect());
 
-    // Step 2 redraws on pointing, another look (colours) or language (names).
+    // Redraw on pointing, language (names) or another mode (the page around the full map).
     effect(() => {
       this.hot();
       this.i18n.t();
-      this.theme.mode();
-      untracked(() => this.step() === 'sea' && this.drawSea());
+      this.look.look();
+      untracked(() => !this.moving() && this.draw());
     });
   }
 
-  chooseLook(l: Look) {
+  // ─── choices ────────────────────────────────────────────────────────────
+
+  /** On to the full map of seas in a mode (the shared move). */
+  toMap(l: Look) {
+    if (this.moving() || this.opening()) return;
     this.look.set(l);
     this.lean.set(null);
-    this.step.set('sea');
-    // The map step's heading takes the focus, for keyboard and screen-reader users.
-    setTimeout(() => this.dialog().nativeElement.focus());
+    this.glide('sea');
   }
 
-  backToLooks() {
-    this.looksReady.set(false);
-    this.step.set('look');
+  /** Back to the split map. */
+  toModes() {
+    if (this.moving()) return;
+    this.glide('look');
   }
 
   chooseSea(id: SeaId) {
@@ -156,71 +179,160 @@ export class EntryComponent {
     else this.seas.choose(id);
   }
 
+  /** A sea clicked on the split map: that half's mode, that sea — the map zooms in on it. */
+  private openFromSplit(l: Look, id: SeaId, x: number, y: number) {
+    this.look.set(l);
+    this.opening.set(l);
+    this.tip.set(null);
+    if (this.reduced()) {
+      this.chooseSea(id);
+      return;
+    }
+    for (const c of this.canvases()) {
+      c.style.transformOrigin = `${x}px ${y}px`;
+      c.style.transition = `transform ${OPEN_MS}ms cubic-bezier(0.5, 0, 0.75, 0)`;
+      c.style.transform = `scale(${OPEN_ZOOM})`;
+    }
+    setTimeout(() => this.chooseSea(id), OPEN_MS);
+  }
+
+  private canvases() {
+    return [this.paperRef(), this.nightRef(), this.glowRef()].map(c => c.nativeElement);
+  }
+
   close() {
-    if (this.closable()) this.seas.pickerOpen.set(false);
+    if (this.closable() && !this.opening()) this.seas.pickerOpen.set(false);
   }
 
   setLang(l: Lang) {
     this.i18n.setLang(l);
   }
 
-  // ─── drawing ────────────────────────────────────────────────────────────
+  // ─── pointer ────────────────────────────────────────────────────────────
 
-  private dprFor(w: number, h: number) {
-    return Math.min(2, devicePixelRatio || 1, Math.sqrt(MAX_PIXELS / Math.max(1, w * h)));
+  private at(e: PointerEvent | MouseEvent) {
+    const r = this.stageRef().nativeElement.getBoundingClientRect();
+    const x = e.clientX - r.left, y = e.clientY - r.top;
+    const i = this.map?.pick(x, y) ?? -1;
+    // The half under the pointer: by where the divider stands now (it leans away from the pointer).
+    const half: Look = x < (r.width * this.split()) / 100 ? 'classic' : 'midnight';
+    return { x, y, id: i >= 0 ? SEA_IDS[i] : null, half };
   }
 
-  private fit(canvas: HTMLCanvasElement, w: number, h: number, dpr: number) {
-    canvas.width = Math.round(w * dpr);
-    canvas.height = Math.round(h * dpr);
+  onMove(e: PointerEvent) {
+    if (this.moving() || this.opening()) return;
+    const p = this.at(e);
+    const onSplit = this.step() === 'look';
+    if (onSplit) this.lean.set(p.half);
+    (e.currentTarget as HTMLElement).style.cursor = p.id || onSplit ? 'pointer' : 'default';
+    if (p.id !== this.hot()) this.hot.set(p.id);
+    this.tip.set(p.id && e.pointerType === 'mouse' ? { x: p.x, y: p.y, id: p.id, look: onSplit ? p.half : null } : null);
+  }
+
+  onLeave() {
+    this.hot.set(null);
+    this.tip.set(null);
+    if (this.step() === 'look') this.lean.set(null);
+  }
+
+  onClick(e: MouseEvent) {
+    if (this.moving() || this.opening()) return;
+    const p = this.at(e);
+    if (this.step() === 'sea') {
+      if (p.id) this.chooseSea(p.id);
+    } else if (p.id) {
+      this.openFromSplit(p.half, p.id, p.x, p.y);
+    } else {
+      this.toMap(p.half);
+    }
+  }
+
+  // ─── drawing ────────────────────────────────────────────────────────────
+
+  private reduced() {
+    return typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  }
+
+  /** Where the basins go: between the halves' words (split) or the heading and the dock (full). */
+  private target(step: EntryStep): { inset: Insets; zoom: number } {
+    const phone = isAtMost('mobile');
+    // On a tall phone the split map is drawn larger, cropped at the sides.
+    const split = phone
+      ? { inset: { top: 70, right: 0, bottom: 230, left: 0 }, zoom: 2.1 }
+      : { inset: { top: 64, right: 24, bottom: 150, left: 24 }, zoom: 1.04 };
+    if (step === 'look') return split;
+    const stage = this.stageRef().nativeElement.getBoundingClientRect();
+    const head = this.headRef().nativeElement.getBoundingClientRect();
+    const dock = this.dockRef().nativeElement.getBoundingClientRect();
+    const pad = phone ? 8 : 32;
+    const inset = { top: head.bottom - stage.top + pad, bottom: Math.max(0, stage.bottom - dock.top) + pad, left: pad, right: pad };
+    if (phone || !this.map) return { inset, zoom: SEA_ZOOM };
+    // Centred between the heading and the buttons, at the split map's scale × SEA_ZOOM.
+    const kSplit = this.map.fit(stage.width, stage.height, split.inset, split.zoom).k;
+    const kFit = this.map.fit(stage.width, stage.height, inset, 1).k;
+    return { inset, zoom: (kSplit * SEA_ZOOM) / kFit };
   }
 
   private layout() {
+    const stage = this.stageRef().nativeElement;
     if (!this.map) return;
-    if (this.step() === 'look') this.layoutLooks();
-    else this.layoutSea();
-  }
-
-  /** Step 1: one map across the screen, under both halves. */
-  private layoutLooks() {
-    const paper = this.paperRef()?.nativeElement, night = this.nightRef()?.nativeElement, glow = this.glowRef()?.nativeElement;
-    if (!paper || !night || !glow || !this.map) return;
-    const w = paper.clientWidth, h = paper.clientHeight;
+    const w = stage.clientWidth, h = stage.clientHeight;
     if (!w || !h) return;
-    const dpr = this.dprFor(w, h);
-    for (const c of [paper, night, glow]) this.fit(c, w, h, dpr);
-    const phone = isAtMost('mobile');
-    // On a tall phone the map is drawn larger, cropped at the sides, between the heading and the names.
-    this.map.layout(w, h, dpr, phone ? { top: 130, right: 0, bottom: 230, left: 0 } : { top: 80, right: 24, bottom: 120, left: 24 }, phone ? 2.1 : 1.04, false);
-    this.map.render(paper.getContext('2d')!, this.style(false));
-    const st = this.style(true);
-    this.map.render(night.getContext('2d')!, st, { layer: 'base' });
-    this.map.render(glow.getContext('2d')!, st, { layer: 'glow' });
-    this.looksReady.set(true);
-  }
-
-  /** Step 2: the map between the heading and the sea buttons, in the chosen look. */
-  private layoutSea() {
-    const canvas = this.canvasRef()?.nativeElement;
-    if (!canvas || !this.map) return;
-    const w = canvas.clientWidth, h = canvas.clientHeight;
-    if (!w || !h) return;
-    const dpr = this.dprFor(w, h);
-    this.fit(canvas, w, h, dpr);
-    const head = this.headRef()?.nativeElement.getBoundingClientRect();
-    const dock = this.dockRef()?.nativeElement.getBoundingClientRect();
-    const pad = isAtMost('mobile') ? 8 : 32;
-    this.map.layout(w, h, dpr, {
-      top: (head ? head.bottom : 0) + pad,
-      bottom: (dock ? h - dock.top : 0) + pad,
-      left: pad,
-      right: pad
-    });
+    const dpr = Math.min(2, devicePixelRatio || 1, Math.sqrt(MAX_PIXELS / Math.max(1, w * h)));
+    for (const c of [this.paperRef(), this.nightRef(), this.glowRef()]) {
+      c.nativeElement.width = Math.round(w * dpr);
+      c.nativeElement.height = Math.round(h * dpr);
+    }
+    const { inset, zoom } = this.target(this.step());
+    this.map.layout(w, h, dpr, inset, zoom);
     this.size = { w, h };
-    this.drawSea();
+    this.draw();
+    this.ready.set(true);
   }
 
-  /** The map's colours (design tokens), for either look. */
+  /**
+   * The shared move: the divider sweeps (CSS, on `split`) while the drawn maps glide and scale
+   * to where the other step puts them (a CSS transform from the current fit to the target fit);
+   * then they are drawn sharp in place.
+   */
+  private glide(step: EntryStep) {
+    const map = this.map;
+    const canvases = this.canvases();
+    if (!map || !this.size.w || this.reduced()) {
+      this.step.set(step);
+      queueMicrotask(() => this.layout());
+      return;
+    }
+    this.moving.set(true);
+    this.hot.set(null);
+    this.tip.set(null);
+    // Both modes drawn where the map is now: on the way back the other half opens onto it.
+    this.draw(true);
+    this.step.set(step);
+    // The other step's panels are laid out (invisible) at once, so the target can be measured.
+    requestAnimationFrame(() => {
+      const from: Fit = map.current;
+      const { inset, zoom } = this.target(step);
+      const to = map.fit(this.size.w, this.size.h, inset, zoom);
+      const s = to.k / from.k, tx = to.ox - s * from.ox, ty = to.oy - s * from.oy;
+      for (const c of canvases) {
+        c.style.transformOrigin = '0 0';
+        c.style.transition = `transform ${MOVE_MS}ms cubic-bezier(0.22, 0.8, 0.24, 1)`;
+        c.style.transform = `translate(${tx}px, ${ty}px) scale(${s})`;
+      }
+      setTimeout(() => {
+        for (const c of canvases) {
+          c.style.transition = 'none';
+          c.style.transform = 'none';
+        }
+        this.moving.set(false);
+        this.layout();
+        if (step === 'sea') this.dialog().nativeElement.focus();
+      }, MOVE_MS + 20);
+    });
+  }
+
+  /** The map's colours (design tokens) for either mode, whatever the page's theme. */
   private style(night: boolean): EntryStyle {
     const tok = (k: string, fb: Rgb) => parseRgb(this.theme.getTokenColor(k), fb);
     const seas = {} as Record<SeaId, Rgb>;
@@ -236,38 +348,20 @@ export class EntryComponent {
     };
   }
 
-  private drawSea() {
-    const canvas = this.canvasRef()?.nativeElement;
-    if (!canvas || !this.map || !this.size.w) return;
+  /** Both halves on the split map (or `both`); on the full map only the chosen mode is seen. */
+  private draw(both = false) {
+    const map = this.map;
+    if (!map || !this.size.w) return;
     const hot = this.hot();
     const t = this.i18n.t();
-    this.map.render(canvas.getContext('2d')!, this.style(this.theme.isDark()), {
-      hot: hot ? SEA_IDS.indexOf(hot) : -1,
-      names: SEA_IDS.map(id => t.seaNames[id])
-    });
-  }
-
-  private seaAt(e: PointerEvent | MouseEvent): SeaId | null {
-    const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    const i = this.map?.pick(e.clientX - r.left, e.clientY - r.top) ?? -1;
-    return i >= 0 ? SEA_IDS[i] : null;
-  }
-
-  onMove(e: PointerEvent) {
-    const id = this.seaAt(e);
-    (e.currentTarget as HTMLElement).style.cursor = id ? 'pointer' : 'default';
-    if (id !== this.hot()) this.hot.set(id);
-    const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    this.tip.set(id && e.pointerType === 'mouse' ? { x: e.clientX - r.left, y: e.clientY - r.top, id } : null);
-  }
-
-  onLeave() {
-    this.hot.set(null);
-    this.tip.set(null);
-  }
-
-  onClick(e: MouseEvent) {
-    const id = this.seaAt(e);
-    if (id) this.chooseSea(id);
+    const o = { hot: hot ? SEA_IDS.indexOf(hot) : -1, names: SEA_IDS.map(id => t.seaNames[id]) };
+    const split = both || this.step() === 'look';
+    const night = this.look.midnight();
+    if (split || !night) map.render(this.paperRef().nativeElement.getContext('2d')!, this.style(false), o);
+    if (split || night) {
+      const st = this.style(true);
+      map.render(this.nightRef().nativeElement.getContext('2d')!, st, { ...o, layer: 'base' });
+      map.render(this.glowRef().nativeElement.getContext('2d')!, st, { ...o, layer: 'glow' });
+    }
   }
 }

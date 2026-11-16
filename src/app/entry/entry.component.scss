@@ -1,17 +1,29 @@
 @use "sass:color";
 @use "variables" as *;
 
+// Both modes' grounds and inks, whatever the page's theme (the split map shows them side by side).
+$paper-ink: palette("neutral-900");
+$paper-note: palette("neutral-600");
+$paper-bg: palette("neutral-50");
+$night-bg: color.mix(midnight(950), #000000, 75%);
+$night-ink: midnight(50);
+$night-note: midnight(200);
+$neon-cyan: color.scale(color.change(palette("info-400"), $saturation: 100%), $lightness: 8%);
+$neon-blue: color.scale(color.change(palette("primary-400"), $saturation: 100%), $lightness: 6%);
+$neon-violet: color.scale(color.change(palette("purple-400"), $saturation: 100%), $lightness: 6%);
+// The shared move (entry.component.ts MOVE_MS) and the divider's lean.
+$move: 0.8s cubic-bezier(0.22, 0.8, 0.24, 1);
+
 // Full screen, above the splash (z-index 300), which waits behind it for the chosen sea.
 .entry {
+  --split: 50%;
   position: fixed;
   inset: 0;
   z-index: 400;
-  display: flex;
-  flex-direction: column;
+  overflow: hidden;
   background: color("bg-deep");
   color: color("text-main");
   outline: none;
-  overflow: hidden;
   animation: entry-in 0.4s ease-out;
 
   &__bar {
@@ -19,7 +31,7 @@
     top: 0;
     left: 0;
     right: 0;
-    z-index: 3;
+    z-index: 4;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -101,32 +113,6 @@
       outline-offset: 2px;
     }
   }
-
-  &__step {
-    display: block;
-    font-size: font-size("xxs");
-    font-weight: font-weight("semibold");
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    // The accent's readable shade on either ground (the brand orange is too light on white).
-    color: color("warning-text");
-  }
-
-  &__title {
-    margin: spacing("xs") 0 0;
-    font-size: 1.75rem;
-    font-weight: font-weight("semibold");
-    letter-spacing: -0.01em;
-    color: color("text-bright");
-  }
-
-  &__subtitle {
-    margin: spacing("xs") auto 0;
-    max-width: 58ch;
-    font-size: font-size("base");
-    line-height: 1.55;
-    color: color("text-desc");
-  }
 }
 
 @keyframes entry-in {
@@ -135,35 +121,34 @@
   }
 }
 
-// ─── step 1: the look ────────────────────────────────────────────────────────
-// One map across the screen: paper on the left (top on phones), night on the right (bottom).
-// Both halves keep their own colours whatever the page's theme.
+// On the split map the language switch stands on the night half.
+.entry--look .entry__langs {
+  background: rgba(midnight(800), 0.7);
+  border-color: rgba($neon-cyan, 0.25);
+}
 
-$paper-ink: palette("neutral-900");
-$paper-note: palette("neutral-600");
-$paper-bg: palette("neutral-50");
-$night-bg: color.mix(midnight(950), #000000, 75%);
-$night-ink: midnight(50);
-$night-note: midnight(200);
-$neon-cyan: color.scale(color.change(palette("info-400"), $saturation: 100%), $lightness: 8%);
-$neon-blue: color.scale(color.change(palette("primary-400"), $saturation: 100%), $lightness: 6%);
-$neon-violet: color.scale(color.change(palette("purple-400"), $saturation: 100%), $lightness: 6%);
-$ease: cubic-bezier(0.22, 0.8, 0.24, 1);
+.entry--look .entry__lang {
+  color: $night-note;
 
-.split {
-  --split: 50%;
+  &:hover,
+  &--on {
+    color: $night-ink;
+  }
+
+  &--on {
+    background: rgba($neon-cyan, 0.16);
+    box-shadow: 0 0 10px rgba($neon-cyan, 0.35);
+  }
+}
+
+// ─── the map (both steps) ────────────────────────────────────────────────────
+
+.atlas {
   position: absolute;
   inset: 0;
   overflow: hidden;
   background: $paper-bg;
-
-  &--classic {
-    --split: 60%;
-  }
-
-  &--midnight {
-    --split: 40%;
-  }
+  touch-action: manipulation;
 
   &__map {
     position: absolute;
@@ -175,6 +160,7 @@ $ease: cubic-bezier(0.22, 0.8, 0.24, 1);
     transition:
       opacity 0.9s ease-out,
       filter 0.6s ease;
+    will-change: transform;
   }
 
   &--ready &__map {
@@ -187,7 +173,7 @@ $ease: cubic-bezier(0.22, 0.8, 0.24, 1);
     background: $night-bg;
     clip-path: inset(0 0 0 var(--split));
     transition:
-      clip-path 0.8s $ease,
+      clip-path $move,
       filter 0.6s ease;
   }
 
@@ -202,15 +188,6 @@ $ease: cubic-bezier(0.22, 0.8, 0.24, 1);
       neon-hum 5s ease-in-out 2.1s infinite;
   }
 
-  // The half not pointed at steps back.
-  &--classic &__night {
-    filter: brightness(0.6) saturate(0.8);
-  }
-
-  &--midnight &__map--paper {
-    filter: saturate(0.4) brightness(0.96);
-  }
-
   &__divider {
     position: absolute;
     top: 0;
@@ -222,75 +199,63 @@ $ease: cubic-bezier(0.22, 0.8, 0.24, 1);
     box-shadow:
       0 0 8px rgba($neon-cyan, 0.7),
       0 0 24px rgba($neon-violet, 0.45);
-    transition: left 0.8s $ease;
+    transition:
+      left $move,
+      opacity 0.4s ease;
     pointer-events: none;
   }
+}
 
-  &__head {
-    position: absolute;
-    top: 76px;
-    left: 48px;
-    z-index: 2;
-    max-width: min(420px, calc(var(--split) - 96px));
-    pointer-events: none;
-    transition: max-width 0.8s $ease;
-    // A paper halo keeps the words clear of the rivers under them.
-    text-shadow:
-      0 0 6px $paper-bg,
-      0 0 14px $paper-bg,
-      0 0 24px $paper-bg;
+// The half not pointed at steps back (split map only).
+.entry--lean-classic .atlas__night {
+  filter: brightness(0.6) saturate(0.8);
+}
 
-    .entry__step {
-      color: palette("warning-700");
-    }
-  }
+.entry--lean-midnight .atlas__map--paper {
+  filter: saturate(0.4) brightness(0.96);
+}
 
-  &__title {
-    margin: spacing("xs") 0 0;
-    font-size: 2rem;
-    font-weight: font-weight("semibold");
-    letter-spacing: -0.02em;
-    color: $paper-ink;
-  }
+// On the full map the divider has swept aside.
+.entry--sea .atlas__divider,
+.entry--opening .atlas__divider {
+  opacity: 0;
+}
 
-  &__subtitle {
-    margin: spacing("xs") 0 0;
-    font-size: font-size("base");
-    line-height: 1.55;
-    color: $paper-note;
-  }
+// ─── the split map's words ───────────────────────────────────────────────────
+
+.halves {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  transition: opacity 0.35s ease;
+}
+
+.entry--sea .halves,
+.entry--opening .halves {
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity 0.3s ease,
+    visibility 0s linear 0.3s;
 }
 
 .half {
   position: absolute;
   top: 0;
   bottom: 0;
-  z-index: 1;
   display: flex;
   align-items: flex-end;
   padding: 48px;
-  border: 0;
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
   transition:
-    left 0.8s $ease,
-    width 0.8s $ease;
-
-  &:focus-visible {
-    outline: none;
-
-    .half__cta {
-      outline: 2px solid palette("warning-500");
-      outline-offset: 3px;
-    }
-  }
+    left $move,
+    width $move;
 
   &--classic {
     left: 0;
     width: var(--split);
     // A soft scrim keeps the words clear of the rivers.
-    background: linear-gradient(to top, rgba($paper-bg, 0.94), rgba($paper-bg, 0) 36%);
+    background: linear-gradient(to top, rgba($paper-bg, 0.94), rgba($paper-bg, 0) 30%);
   }
 
   &--midnight {
@@ -298,7 +263,7 @@ $ease: cubic-bezier(0.22, 0.8, 0.24, 1);
     right: 0;
     justify-content: flex-end;
     text-align: right;
-    background: linear-gradient(to top, rgba($night-bg, 0.9), rgba($night-bg, 0) 36%);
+    background: linear-gradient(to top, rgba($night-bg, 0.9), rgba($night-bg, 0) 30%);
   }
 
   &__body {
@@ -309,18 +274,21 @@ $ease: cubic-bezier(0.22, 0.8, 0.24, 1);
   }
 
   &__name {
+    margin: 0;
     font-size: clamp(2rem, 3.6vw, 3.25rem);
     line-height: 1.08;
     letter-spacing: -0.02em;
   }
 
   &__note {
+    margin: 0;
     font-size: font-size("md");
     line-height: 1.5;
   }
 
   &__foot {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: spacing("md");
     margin-top: spacing("xs");
@@ -336,13 +304,22 @@ $ease: cubic-bezier(0.22, 0.8, 0.24, 1);
     height: 36px;
     padding: 0 spacing("lg");
     border-radius: radius("pill");
+    background: transparent;
+    font: inherit;
     font-size: font-size("sm");
     font-weight: font-weight("semibold");
     letter-spacing: 0.01em;
+    cursor: pointer;
+    pointer-events: auto;
     transition:
       background 0.3s ease,
       color 0.3s ease,
       box-shadow 0.3s ease;
+
+    &:focus-visible {
+      outline: 2px solid palette("warning-500");
+      outline-offset: 3px;
+    }
   }
 
   &__now {
@@ -368,12 +345,12 @@ $ease: cubic-bezier(0.22, 0.8, 0.24, 1);
     .half__cta {
       border: 1px solid $paper-ink;
       color: $paper-ink;
-    }
 
-    &:hover .half__cta,
-    &:focus-visible .half__cta {
-      background: $paper-ink;
-      color: palette("neutral-0");
+      &:hover,
+      &:focus-visible {
+        background: $paper-ink;
+        color: palette("neutral-0");
+      }
     }
   }
 
@@ -402,43 +379,23 @@ $ease: cubic-bezier(0.22, 0.8, 0.24, 1);
         0 0 10px rgba($neon-cyan, 0.45),
         inset 0 0 10px rgba($neon-cyan, 0.25);
       text-shadow: 0 0 8px rgba($neon-cyan, 0.8);
-    }
 
-    &:hover .half__cta,
-    &:focus-visible .half__cta {
-      background: rgba($neon-cyan, 0.16);
-      box-shadow:
-        0 0 18px rgba($neon-cyan, 0.75),
-        0 0 42px rgba($neon-violet, 0.45),
-        inset 0 0 14px rgba($neon-cyan, 0.35);
+      &:hover,
+      &:focus-visible {
+        background: rgba($neon-cyan, 0.16);
+        box-shadow:
+          0 0 18px rgba($neon-cyan, 0.75),
+          0 0 42px rgba($neon-violet, 0.45),
+          inset 0 0 14px rgba($neon-cyan, 0.35);
+      }
     }
   }
 }
 
-.split--ready .half--midnight .half__name {
+.atlas--ready ~ .halves .half--midnight .half__name {
   animation:
     neon-on 1.8s linear 0.3s both,
     neon-hum 5s ease-in-out 2.1s infinite;
-}
-
-// On wide screens the bar's language switch sits on the night half.
-.entry--look .entry__langs {
-  background: rgba(midnight(800), 0.7);
-  border-color: rgba($neon-cyan, 0.25);
-}
-
-.entry--look .entry__lang {
-  color: $night-note;
-
-  &:hover,
-  &--on {
-    color: $night-ink;
-  }
-
-  &--on {
-    background: rgba($neon-cyan, 0.16);
-    box-shadow: 0 0 10px rgba($neon-cyan, 0.35);
-  }
 }
 
 // A neon tube coming on: a few flickers, then steady.
@@ -474,57 +431,65 @@ $ease: cubic-bezier(0.22, 0.8, 0.24, 1);
   }
 }
 
-// ─── step 2: the sea ─────────────────────────────────────────────────────────
+// ─── the full map's panels ───────────────────────────────────────────────────
 
-.seamap {
+.full {
   position: absolute;
   inset: 0;
-  animation: entry-in 0.5s ease-out;
+  z-index: 2;
+  pointer-events: none;
+  opacity: 1;
+  transition: opacity 0.45s ease 0.45s;
 
-  &__canvas {
-    display: block;
-    width: 100%;
-    height: 100%;
-    touch-action: manipulation;
+  > * {
+    pointer-events: auto;
   }
+}
 
-  &__tip {
-    position: absolute;
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    transform: translate(14px, 14px);
-    padding: spacing("xs") spacing("md");
-    border-radius: radius("sm");
-    background: color("tooltip-bg");
-    box-shadow: 0 4px 16px color("shadow-panel");
-    font-size: font-size("xs");
-    color: color("text-desc");
-    pointer-events: none;
-    white-space: nowrap;
+.entry--look .full {
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity 0.25s ease,
+    visibility 0s linear 0.25s;
+}
 
-    b {
-      font-size: font-size("sm");
-      color: color("text-bright");
-    }
-  }
-
+.full {
   &__head {
     position: absolute;
     top: 56px;
     left: 50%;
-    z-index: 1;
     width: min(640px, calc(100% - 32px));
     transform: translateX(-50%);
     text-align: center;
     pointer-events: none;
+    // The closer map reaches under the heading: a halo of the ground keeps it legible.
+    text-shadow:
+      0 0 6px color("bg-deep"),
+      0 0 14px color("bg-deep"),
+      0 0 24px color("bg-deep");
+  }
+
+  &__title {
+    margin: 0;
+    font-size: 1.75rem;
+    font-weight: font-weight("semibold");
+    letter-spacing: -0.01em;
+    color: color("text-bright");
+  }
+
+  &__subtitle {
+    margin: spacing("xs") auto 0;
+    max-width: 58ch;
+    font-size: font-size("base");
+    line-height: 1.55;
+    color: color("text-desc");
   }
 
   &__dock {
     position: absolute;
     bottom: spacing("lg");
     left: 50%;
-    z-index: 1;
     display: flex;
     flex-direction: column;
     gap: spacing("xs");
@@ -556,7 +521,7 @@ $ease: cubic-bezier(0.22, 0.8, 0.24, 1);
     }
   }
 
-  &__look {
+  &__mode {
     display: inline-flex;
     flex: none;
     align-items: center;
@@ -640,13 +605,58 @@ $ease: cubic-bezier(0.22, 0.8, 0.24, 1);
   }
 }
 
+// ─── hover note ──────────────────────────────────────────────────────────────
+
+.tip {
+  position: absolute;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  transform: translate(14px, 14px);
+  padding: spacing("xs") spacing("md");
+  border-radius: radius("sm");
+  background: rgba(palette("neutral-0"), 0.96);
+  box-shadow: 0 4px 16px rgba(palette("neutral-900"), 0.12);
+  font-size: font-size("xs");
+  color: $paper-note;
+  pointer-events: none;
+  white-space: nowrap;
+
+  b {
+    font-size: font-size("sm");
+    color: $paper-ink;
+  }
+
+  em {
+    margin-top: 2px;
+    font-style: normal;
+    font-weight: font-weight("semibold");
+    color: palette("warning-700");
+  }
+
+  // Over the night half, or on the dark full map.
+  &--night,
+  :root[data-theme="dark"] .entry--sea & {
+    background: rgba(midnight(850), 0.96);
+    box-shadow: 0 4px 16px rgba(#000000, 0.4);
+    color: $night-note;
+
+    b {
+      color: $night-ink;
+    }
+
+    em {
+      color: $neon-cyan;
+    }
+  }
+}
+
+// ─── breakpoints ─────────────────────────────────────────────────────────────
+
 @include respond-to("tablet") {
   .half {
     padding: 32px;
-  }
-
-  .split__head {
-    left: 32px;
   }
 }
 
@@ -655,31 +665,7 @@ $ease: cubic-bezier(0.22, 0.8, 0.24, 1);
     padding: spacing("md") spacing("lg");
   }
 
-  .entry__title {
-    font-size: 1.375rem;
-  }
-
-  .entry__subtitle {
-    font-size: font-size("sm");
-  }
-
-  // Phones: the same left / right split as on wide screens, with smaller type.
-  .split {
-    &__head {
-      top: 52px;
-      left: 16px;
-      max-width: calc(var(--split) - 24px);
-    }
-
-    &__title {
-      font-size: 1.375rem;
-    }
-
-    &__subtitle {
-      font-size: font-size("xs");
-    }
-  }
-
+  // Phones: the same left / right split, with smaller type.
   .half {
     padding: 16px 14px;
 
@@ -696,7 +682,6 @@ $ease: cubic-bezier(0.22, 0.8, 0.24, 1);
     }
 
     &__foot {
-      flex-wrap: wrap;
       gap: spacing("xs");
     }
 
@@ -707,9 +692,17 @@ $ease: cubic-bezier(0.22, 0.8, 0.24, 1);
     }
   }
 
-  .seamap {
+  .full {
     &__head {
       top: 48px;
+    }
+
+    &__title {
+      font-size: 1.375rem;
+    }
+
+    &__subtitle {
+      display: none;
     }
 
     &__dock {
@@ -726,13 +719,9 @@ $ease: cubic-bezier(0.22, 0.8, 0.24, 1);
       text-align: center;
     }
 
-    &__look {
+    &__mode {
       align-self: center;
     }
-  }
-
-  .seamap__head .entry__subtitle {
-    display: none;
   }
 
   .chip {
@@ -744,18 +733,18 @@ $ease: cubic-bezier(0.22, 0.8, 0.24, 1);
 
 @media (prefers-reduced-motion: reduce) {
   .entry,
-  .seamap,
-  .split__map,
-  .split__night,
-  .split__divider,
-  .split__head,
-  .half {
+  .atlas__map,
+  .atlas__night,
+  .atlas__divider,
+  .half,
+  .halves,
+  .full {
     animation: none !important;
     transition: none !important;
   }
 
-  .split--ready .split__glow,
-  .split--ready .half--midnight .half__name {
+  .atlas--ready .atlas__glow,
+  .atlas--ready ~ .halves .half--midnight .half__name {
     animation: none;
   }
 }

@@ -145,6 +145,9 @@ const PRINT_TILE = 2048;
 const PRINT_MIN_LINE_PX = 0.8;
 /** The basin's mass sits left of centre; the print map shifts right by this share of its width. */
 const PRINT_SHIFT_X = 0.03;
+/** Towards the map's edges and those of the data's cut-out box the print map fades into the paper over this share
+ * of the map's shorter side, so a frame reaching past the box never shows a straight cut. */
+const PRINT_EDGE_FADE = 0.08;
 /** Pixel ratio at rest (sharp) and while the map moves (fast); back to rest after this idle time. */
 const MAX_DPR = 1.5;
 const MOTION_DPR = 1;
@@ -2182,6 +2185,46 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
   }
 
   /** Sea, land, lakes and the drainage divide as vectors, projected through the print camera. */
+  /**
+   * Paper over everything outside the data box and along the map's edges, fading in towards them: drawn small and
+   * stretched to the map's size (the stretch itself smooths it), so it costs next to nothing.
+   */
+  private printEdgeFade(W: number, H: number, paper: string, box: number[]): HTMLCanvasElement {
+    const fade = Math.max(2, Math.min(W, H) * PRINT_EDGE_FADE);
+    const k = Math.min(1, 8 / fade); // about 8 small pixels across the fade
+    const w = Math.max(8, Math.ceil(W * k)), h = Math.max(8, Math.ceil(H * k));
+    const inner = document.createElement('canvas');
+    inner.width = w; inner.height = h;
+    const ix = inner.getContext('2d')!;
+    ix.setTransform(k, 0, 0, k, 0, 0);
+    ix.beginPath();
+    this.printRing(ix, W, H)(box);
+    ix.fillStyle = '#000';
+    ix.fill();
+    // Shrink the box by half the fade, so the soft edge ends inside it…
+    ix.globalCompositeOperation = 'destination-out';
+    ix.lineWidth = fade;
+    ix.lineJoin = 'round';
+    ix.stroke();
+    // …and keep the same distance from the map's own edges: the land is paper already, so a sea
+    // cut by the frame would leave ragged grey shapes in the corners; it melts into the margin.
+    const e = fade / 2;
+    ix.fillRect(0, 0, W, e);
+    ix.fillRect(0, H - e, W, e);
+    ix.fillRect(0, 0, e, H);
+    ix.fillRect(W - e, 0, e, H);
+    const out = document.createElement('canvas');
+    out.width = w; out.height = h;
+    const ox = out.getContext('2d')!;
+    ox.fillStyle = paper;
+    ox.fillRect(0, 0, w, h);
+    ox.globalCompositeOperation = 'destination-out';
+    ox.filter = `blur(${(fade * k * 0.3).toFixed(2)}px)`;
+    ox.drawImage(inner, 0, 0);
+    ox.filter = 'none';
+    return out;
+  }
+
   private drawPrintBase(ctx: CanvasRenderingContext2D, W: number, H: number, style: PrintStyle, px: (mm: number) => number) {
     const data = this.data();
     const ring = this.printRing(ctx, W, H);
@@ -2197,17 +2240,11 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
       for (let i = N; i >= 0; i--) out.push(L0, A0 + ((A1 - A0) * i) / N);
       return out;
     };
-    // Beyond the cut-out box there is no data: a frame corner reaching past it reads as land.
-    ctx.fillStyle = style.paper;
-    ctx.fillRect(0, 0, W, H);
-    ctx.save();
-    ctx.beginPath();
-    ring(boxRing(data.worldBox));
-    ctx.clip();
+    // Sea and the coarse world outline; beyond the cut-out box there is no data, so the map fades
+    // into the paper before its edges (see the overlay below).
     ctx.fillStyle = style.sea;
     ctx.fillRect(0, 0, W, H);
     fill(data.world, style.paper);
-    ctx.restore();
     // Inside the data box the detailed coast and lakes replace the coarse world outline.
     ctx.save();
     ctx.beginPath();
@@ -2224,6 +2261,7 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
       for (const poly of data.lakes) { ctx.beginPath(); for (const r of poly) ring(r); ctx.stroke(); }
     }
     ctx.restore();
+    ctx.drawImage(this.printEdgeFade(W, H, style.paper, boxRing(data.worldBox)), 0, 0, W, H);
     ctx.strokeStyle = style.divide;
     ctx.lineWidth = Math.max(1, px(0.13));
     ctx.lineJoin = 'round';

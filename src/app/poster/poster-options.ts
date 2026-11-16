@@ -7,7 +7,10 @@ export const POSTER_PALETTES: PosterPalette[] = ['white-ink', 'white-pastel', 'b
 /** Coloured palettes colour each river by its basin (mosaic) or by the sea it ends in. */
 export type PosterColourBy = 'basin' | 'sea';
 
-/** ISO sheet sizes; all share the A2 layout (same proportions). */
+/** Upright sheet (map above the title) or lying (map left, title and figures in a column right). */
+export type PosterOrientation = 'portrait' | 'landscape';
+
+/** ISO sheet sizes (upright); all share the A2 layout (same proportions). */
 export type PosterFormat = 'A4' | 'A3' | 'A2';
 export const POSTER_FORMATS: Record<PosterFormat, { w: number; h: number }> = {
   A4: { w: 210, h: 297 },
@@ -21,6 +24,7 @@ export interface PosterOptions {
   /** River basin the poster is about, or −1 for the whole Baltic drainage basin. */
   focus: number;
   format: PosterFormat;
+  orientation: PosterOrientation;
   /** Figures row with numbered sources. */
   facts: boolean;
   seaNames: boolean;
@@ -37,6 +41,7 @@ export const DEFAULT_POSTER: PosterOptions = {
   by: 'basin',
   focus: -1,
   format: 'A2',
+  orientation: 'portrait',
   facts: true,
   seaNames: true,
   seaFit: false,

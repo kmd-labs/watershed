@@ -170,6 +170,10 @@ export interface Dict {
   posterShowFacts: string;
   posterShowSeas: string;
   posterSeaLayout: string;
+  /** Poster maker: the sheet upright or lying. */
+  posterOrientation: string;
+  posterPortrait: string;
+  posterLandscape: string;
   posterSeaStraight: string;
   posterSeaFit: string;
   posterFormat: string;
@@ -290,18 +294,15 @@ export interface Dict {
   pickerLast: string;
   /** Under the entry map while no sea is pointed at. */
   pickerHint: string;
-  // ─── entry: a look first, then the sea ───
-  /** "Step 1 of 2". */
-  entryStep: (n: number, of: number) => string;
-  lookTitle: string;
-  lookSubtitle: string;
+  // ─── entry: light or dark mode, and the sea ───
   lookNames: Record<Look, string>;
   lookNotes: Record<Look, string>;
-  /** Call to action on each look. */
+  /** On the split map: what a click on a sea does in each half. */
+  lookOpenIn: Record<Look, string>;
+  /** Call to action in each half: the full map of seas in that mode. */
   lookPick: string;
   lookCurrent: string;
-  /** Label of the look button on the map step ("Look: …"), and its accessible name. */
-  lookLabel: string;
+  /** On the full map: back to the choice of mode. */
   lookChange: string;
   seaLoading: (sea: string) => string;
   millionPeople: (n: string) => string;

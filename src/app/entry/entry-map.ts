@@ -29,6 +29,11 @@ export interface EntryStyle {
 /** The space the map must leave free for the panels around it (CSS px). */
 export interface Insets { top: number; right: number; bottom: number; left: number }
 
+/** Where the map sits: scale (CSS px per orthographic unit) and the box's top-left corner. Two
+ * fits differ by a uniform scale and a shift, so one can be animated into the other with a CSS
+ * transform of the drawn canvas. */
+export interface Fit { k: number; ox: number; oy: number }
+
 export interface RenderOptions {
   /** Sea under the pointer (index in SEA_IDS), or −1. */
   hot?: number;
@@ -160,11 +165,24 @@ export class EntryMap {
    * Fits the basins into the free part of a `w × h` CSS-px canvas, × `zoom` around its centre.
    * `pick` builds the hit-test grid (the interactive map only).
    */
-  layout(w: number, h: number, dpr: number, inset: Insets, zoom = 1, pick = true) {
+  /** Scale and offset (CSS px) that fit the basins into the free part of a `w × h` canvas. */
+  fit(w: number, h: number, inset: Insets, zoom = 1): Fit {
     const [x0, x1, y0, y1] = this.box;
     const aw = Math.max(80, w - inset.left - inset.right), ah = Math.max(80, h - inset.top - inset.bottom);
     const k = Math.min(aw / (x1 - x0), ah / (y1 - y0)) * zoom;
-    const ox = inset.left + (aw - k * (x1 - x0)) / 2, oy = inset.top + (ah - k * (y1 - y0)) / 2;
+    return { k, ox: inset.left + (aw - k * (x1 - x0)) / 2, oy: inset.top + (ah - k * (y1 - y0)) / 2 };
+  }
+
+  /** The current fit (see layout). */
+  get current(): Fit {
+    return this.fitNow;
+  }
+
+  private fitNow: Fit = { k: 1, ox: 0, oy: 0 };
+
+  layout(w: number, h: number, dpr: number, inset: Insets, zoom = 1, pick = true) {
+    const [x0, x1, y0, y1] = this.box;
+    const { k, ox, oy } = (this.fitNow = this.fit(w, h, inset, zoom));
     this.W = w; this.H = h; this.dpr = dpr; this.mapW = k * (x1 - x0);
     this.frame = {
       cx: (ox + (k * (x1 - x0)) / 2) * dpr,
