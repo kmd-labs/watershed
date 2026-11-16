@@ -1,5 +1,6 @@
 import { MapView, MosaicGround } from './data/views';
 import { POSTER_PALETTES, PosterColourBy, PosterPalette } from '../poster/poster-options';
+import { SeaId } from './sea';
 
 export const APP_CANONICAL_URL = 'https://kmd-labs.github.io/watershed/';
 
@@ -12,6 +13,7 @@ const VIEWS: MapView[] = ['top', 'catchments', 'story', 'seas', 'mosaic', 'raind
  * Everything a link can carry: `?view=mosaic&ground=dark`, `?view=catchments&basin=412`,
  * `?step=3` ("Where the rivers end", the start view), `?view=top&step=5`, `?view=raindrop&drop=22.6,50.2`,
  * `?view=poster&palette=black-neon&by=sea&basin=1` (poster maker: colours, and the basin it is about).
+ * `sea=` (baltic, north, med, black, caspian) picks the drainage basin; SeaService reads it.
  * Defaults are left out so the plain URL stays clean. Links from before the top 20 became a view
  * of its own (`?top=5`, `?top=off`, `?basin=412`) still open what they used to.
  */
@@ -23,6 +25,8 @@ export interface LinkState {
   /** Step of the running tour (top 20 or "Where the rivers end"). */
   step: number;
   drop: [number, number] | null;
+  /** The drainage basin shown (null before one is chosen). */
+  sea: SeaId | null;
   /** Poster maker colours. */
   palette: PosterPalette;
   by: PosterColourBy;
@@ -64,7 +68,8 @@ export function readLink(search: string): Partial<LinkState> & { lang?: string }
 /** Writes the map state into `url`'s query (defaults removed, unrelated parameters kept). */
 export function writeLink(url: URL, s: LinkState): URL {
   const p = url.searchParams;
-  for (const k of ['view', 'ground', 'basin', 'step', 'top', 'drop', 'palette', 'by']) p.delete(k);
+  for (const k of ['sea', 'view', 'ground', 'basin', 'step', 'top', 'drop', 'palette', 'by']) p.delete(k);
+  if (s.sea) p.set('sea', s.sea);
   if (s.view !== START_VIEW) p.set('view', s.view);
   if ((s.view === 'mosaic' || s.view === 'story') && s.ground === 'dark') p.set('ground', 'dark');
   if ((s.view === 'catchments' || s.view === 'seas' || s.view === 'mosaic') && s.basin >= 0) p.set('basin', String(s.basin));

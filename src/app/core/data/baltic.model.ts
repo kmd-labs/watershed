@@ -22,10 +22,17 @@ export interface RawGroup {
   lbl?: [number, number] | null;
   parea: number;
   ctry: [string, number][];
+  /** People in the catchment (GHSL; new seas only). */
+  pop?: number;
+  /** Cut short by the sea's clip (the Nile north of 22°N): area is the part shown. */
+  clipped?: boolean;
 }
 
 export interface RawSub {
   name: string;
+  /** English name (new seas; the Baltic's come from the dictionary). */
+  en?: string;
+  pop?: number;
   lbl: [number, number];
   parea: number;
   dis: number;
@@ -56,7 +63,11 @@ export interface RawBaltic {
   rivers: RawRiverClass[];
   groups: RawGroup[];
   subs: RawSub[];
-  total: { parea: number; dis: number; nout: number; nreach: number; rkm: number; ctry: [string, number][] };
+  total: { parea: number; dis: number; nout: number; nreach: number; rkm: number; ctry: [string, number][]; pop?: number };
+  /** Which sea (the Baltic's file predates the field). */
+  sea?: string;
+  /** Polish → English names of rivers and countries (new seas). */
+  names?: { rivers: Record<string, string>; countries: Record<string, string> };
   basinRings: number[][];
   basinXY: string;
   outlines: PackedPolys;

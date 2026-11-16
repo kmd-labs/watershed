@@ -82,10 +82,10 @@ export const PL: Dict = {
   storyTopRivers: 'Największe rzeki',
   storyCountries: 'Państwa',
   storyFinaleTitle: 'Sześć akwenów, jeden Bałtyk',
-  storyFinaleText: (sa, pa, sf, pf, neva) =>
-    `Najwięcej lądu zbiera ${sa} (${pa} zlewiska), a najwięcej wody rzecznej przyjmuje ${sf} (${pf}). Sama Newa dostarcza ${neva} całej wody, jaką rzeki wnoszą do Bałtyku.`,
-  storyFinaleTextSame: (sea, pa, pf, neva) =>
-    `${sea} zbiera zarówno najwięcej lądu (${pa} zlewiska), jak i najwięcej wody rzecznej (${pf}). Sama Newa dostarcza ${neva} całej wody, jaką rzeki wnoszą do Bałtyku.`,
+  storyFinaleText: (sa, pa, sf, pf, top) =>
+    `Najwięcej lądu zbiera ${sa} (${pa} zlewiska), a najwięcej wody rzecznej przyjmuje ${sf} (${pf}). Sama Newa dostarcza ${top[0]?.share ?? '–'} całej wody, jaką rzeki wnoszą do Bałtyku.`,
+  storyFinaleTextSame: (sea, pa, pf, top) =>
+    `${sea} zbiera zarówno najwięcej lądu (${pa} zlewiska), jak i najwięcej wody rzecznej (${pf}). Sama Newa dostarcza ${top[0]?.share ?? '–'} całej wody, jaką rzeki wnoszą do Bałtyku.`,
   topButton: 'Top 20',
   hintTop: 'Przechodź między rzekami strzałkami albo naciśnij odtwarzanie · przeciągnij, aby przesunąć · przewiń, aby przybliżyć',
   topHint: 'Przejdź przez 20 największych dorzeczy, od największego',
@@ -255,6 +255,23 @@ export const PL: Dict = {
     'Bałtyk Właściwy',
     'Cieśniny Duńskie i Kattegat'
   ],
+  seaNames: {
+    baltic: 'Morze Bałtyckie',
+    north: 'Morze Północne',
+    med: 'Morze Śródziemne',
+    black: 'Morze Czarne',
+    caspian: 'Morze Kaspijskie'
+  },
+  changeSea: 'Zmień morze…',
+  chooseSea: 'Wybierz morze',
+  pickerTitle: 'Które zlewisko pokazać?',
+  pickerSubtitle: 'Każde morze to inna mapa rzek. Dane wczytają się dopiero po wyborze; morze możesz zmienić w każdej chwili w menu widoków.',
+  pickerClose: 'Zamknij',
+  pickerStats: (area, mouths) => `${area} · ${mouths} ujść rzek`,
+  pickerPeople: pop => `${pop} mieszkańców`,
+  pickerCurrent: 'teraz',
+  seaLoading: sea => `Wczytuję: ${sea}…`,
+  millionPeople: n => `${n} mln`,
   countries: {},
   riverNames: {}
 };

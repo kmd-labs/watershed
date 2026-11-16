@@ -24,7 +24,20 @@
   <meta name="twitter:image" content="https://kmd-labs.github.io/watershed/assets/design-system/og-image.png">
 
   <!-- The map data is needed right after boot: start the download together with the scripts. -->
-  <link rel="preload" href="assets/data/baltic.json" as="fetch" type="application/json" crossorigin>
+  <script>
+    // Preload only the chosen sea's data (from the link or the last visit); a first visit
+    // downloads no map data until a sea is picked.
+    (function () {
+      try {
+        var s = new URLSearchParams(location.search).get('sea') || localStorage.getItem('watershed.sea');
+        if (['baltic', 'north', 'med', 'black', 'caspian'].indexOf(s) < 0) return;
+        var l = document.createElement('link');
+        l.rel = 'preload'; l.as = 'fetch'; l.type = 'application/json'; l.crossOrigin = 'anonymous';
+        l.href = 'assets/data/' + s + '.json';
+        document.head.appendChild(l);
+      } catch (e) {}
+    })();
+  </script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">

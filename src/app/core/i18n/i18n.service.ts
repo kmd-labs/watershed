@@ -1,9 +1,14 @@
-import { Injectable, computed, effect, signal } from '@angular/core';
-import { Dict, Lang } from './i18n.types';
+import { Injectable, computed, effect, inject, signal } from '@angular/core';
+import { Dict, Lang, SeaOverlay } from './i18n.types';
 import { EN } from './en';
 import { PL } from './pl';
+import { SEAS_EN } from './seas.en';
+import { SEAS_PL } from './seas.pl';
+import { SeaId, SeaService } from '../sea';
 
 const DICTS: Record<Lang, Dict> = { en: EN, pl: PL };
+/** Per-sea texts laid over the base dictionary (which is the Baltic's). */
+const SEA_OVERLAYS: Record<Lang, Partial<Record<SeaId, SeaOverlay>>> = { en: SEAS_EN, pl: SEAS_PL };
 const STORAGE_KEY = 'watershed.lang';
 
 /**
@@ -15,8 +20,17 @@ const STORAGE_KEY = 'watershed.lang';
 export class I18nService {
   readonly dicts = DICTS;
   readonly langs: Lang[] = ['en', 'pl'];
+  private readonly seas = inject(SeaService);
   readonly lang = signal<Lang>(this.resolveInitialLang());
-  readonly t = computed(() => DICTS[this.lang()]);
+  /** The current language's texts for the current sea. */
+  readonly t = computed(() => {
+    const base = DICTS[this.lang()];
+    const sea = this.seas.sea();
+    const overlay = sea ? SEA_OVERLAYS[this.lang()][sea] : undefined;
+    return overlay ? { ...base, ...overlay(base) } : base;
+  });
+  /** English names of the loaded sea's rivers and countries (its data names them in Polish). */
+  readonly dataNames = signal<{ rivers: Record<string, string>; countries: Record<string, string> } | null>(null);
 
   constructor() {
     effect(() => {
@@ -36,11 +50,11 @@ export class I18nService {
 
   /** Localized river name (dataset names are Polish exonyms). */
   river(name: string): string {
-    return this.t().riverNames[name] ?? name;
+    return this.t().riverNames[name] ?? (this.lang() === 'en' ? this.dataNames()?.rivers[name] : undefined) ?? name;
   }
 
   country(name: string): string {
-    return this.t().countries[name] ?? name;
+    return this.t().countries[name] ?? (this.lang() === 'en' ? this.dataNames()?.countries[name] : undefined) ?? name;
   }
 
   num(v: number, digits = 0): string {

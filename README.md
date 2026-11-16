@@ -1,12 +1,26 @@
-# Watershed — Baltic Sea Drainage Basin
+# Watershed — Sea Drainage Basins
 
-Interactive 3D globe of the Baltic Sea drainage basin: every river catchment that drains to the Baltic, the sea sub-basins they feed and the countries they cross. Built on the KMD design system (`src/design-system` submodule); follow [AGENTS.md](AGENTS.md).
+Interactive 3D globe of a sea's drainage basin — the Baltic, the North Sea, the Mediterranean, the Black Sea or the Caspian: every river catchment that drains to it, the sea sub-basins they feed and the countries they cross. Built on the KMD design system (`src/design-system` submodule); follow [AGENTS.md](AGENTS.md).
 
 ```bash
 git clone --recurse-submodules https://github.com/kmd-labs/watershed.git
 npm install
 npm start          # http://localhost:4200
 ```
+
+## Seas
+
+A **sea picker** opens at the first visit (no map data is downloaded until a sea is chosen) and from **Change sea…** in the view menu or the drainage-basin panel's title. The choice is remembered (`localStorage`, `watershed.sea`) and carried by links (`?sea=north`). Each sea's data — `<sea>.json`, `<sea>.streams.json` and `<sea>.relief.webp` in `src/assets/data/` — is fetched only when that sea is chosen; `index.html` preloads only the remembered or linked sea's. The picker itself (code and basin silhouettes) is a lazy chunk.
+
+| Sea | Basin shown | River mouths | Sub-basins |
+| --- | --- | --- | --- |
+| Baltic | 1.75 million km² | 1,573 | Bothnian Bay … Danish Straits & Kattegat |
+| North Sea | 0.68 million km² (without the English Channel and the Kattegat) | 1,611 | Skagerrak, northern, German Bight & Wadden Sea, southern, western |
+| Mediterranean | 1.94 million km² (the Nile north of 22°N only) | 4,206 | Adriatic, Tyrrhenian, Aegean & Marmara, Levantine, western basin, Ionian & central |
+| Black Sea | 2.38 million km² (with the Sea of Azov) | 850 | Sea of Azov, north-western shelf, eastern, western, southern |
+| Caspian | 2.51 million km² (land that reaches it by river) | 816 | North, Middle, South Caspian |
+
+Texts that name the sea are per-sea overlays on the Baltic dictionary (`src/app/core/i18n/seas.*.ts`), including each sea's sourced poster figures.
 
 ## What's on the map
 
@@ -30,8 +44,13 @@ Colours are theme tokens defined in [`src/styles.scss`](src/styles.scss) from th
 | --- | --- |
 | River network, catchments, discharge | HydroRIVERS v1.0 / HydroBASINS v1c (Lehner & Grill 2013, WWF / HydroSHEDS), WaterGAP mean flow 1971–2000 |
 | Land, lakes, borders | Natural Earth |
+| River names (new seas) | Wikidata, Natural Earth |
+| Population (new seas) | GHSL GHS-POP R2023A, 2025 (European Commission, JRC) |
+| Towns at river mouths (new seas) | GeoNames |
 
-`src/assets/data/baltic.json` and `streams.json` are built by `node scripts/build-data.mjs` from `data/baltic.source.json` and `data/rivers.hr.json`.
+`src/assets/data/<sea>.json` and `<sea>.streams.json` are built by `node scripts/build-data.mjs <sea>` from `data/<sea>.source.json` (the Baltic's also from `data/rivers.hr.json`); `node scripts/build-sea-thumbs.mjs` writes the picker's silhouettes.
+
+The new seas' sources come from `python -I scripts/build-sea.py north|black|caspian|med` (raw inputs: `sh data/raw/download.sh` — HydroBASINS level 12, HydroRIVERS, Natural Earth, GeoNames — plus the GHSL GHS-POP 2025 grid; all git-ignored). Every HydroRIVERS outlet whose mouth lies on the sea's water within a rough polygon of the sea belongs to it; its catchment is made of the HydroBASINS units whose largest reach is in that river system, simplified as one coverage. Names: Wikidata rivers whose mouth (P403) is the sea or part of it, matched by mouth coordinates and drainage area (snapshot in `data/wikidata/`), else Natural Earth river lines along the lower main stem. Nearest towns from GeoNames, country shares from Natural Earth, populations from GHSL. Relief: `python -I scripts/build-relief.py <sea>` (ETOPO1 via ERDDAP for the sea's cut-out box).
 
 River geometry: `python scripts/build-rivers.py` matches every reach of the source export to the original HydroRIVERS v1.0 (download the Europe shapefile into `data/hydrorivers/`, see the script header) by its end points, smooths the 15″ grid staircase (two Chaikin passes) and simplifies at 80 m. The export had cut reaches down to ~3 vertices each — straight chords km long. Checked against OpenStreetMap, streams draining under 100 km² are often off the real channel in flat land, so the build leaves out streams under 50 km² upstream, unnamed river systems under 100 km² and rivers on islands under 500 km² (constants at the top of `build-data.mjs`).
 

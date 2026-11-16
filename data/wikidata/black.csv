@@ -1,0 +1,566 @@
+river,en,pl,mouth,coord,links,area
+http://www.wikidata.org/entity/Q82308,Kuban,Kubań,Point(37.4031 45.3392),Point(42.0961 43.4611),71,57900.0
+http://www.wikidata.org/entity/Q82308,Kuban,Kubań,Point(37.4031 45.3392),Point(37.4031 45.3392),71,57900.0
+http://www.wikidata.org/entity/Q70970,Çoruh,Çoruh,Point(41.572944444 41.603305555),Point(41.572944444 41.603305555),39,22000.0
+http://www.wikidata.org/entity/Q70970,Çoruh,Çoruh,Point(41.572944444 41.603305555),Point(40.9997 40.3074),39,22000.0
+http://www.wikidata.org/entity/Q1229,Don,Don,Point(39.2386 47.0864),Point(38.2778 54.0122),109,422000.0
+http://www.wikidata.org/entity/Q131210,Dniester,Dniestr,Point(30.2736 46.3041),Point(30.233333333 46.35),105,72100.0
+http://www.wikidata.org/entity/Q188940,Southern Bug,Bug,Point(31.9796 46.9866),Point(26.4289 49.6313),67,63700.0
+http://www.wikidata.org/entity/Q188940,Southern Bug,Bug,Point(31.9796 46.9866),Point(31.9796 46.9866),67,63700.0
+http://www.wikidata.org/entity/Q131210,Dniester,Dniestr,Point(30.2736 46.3041),Point(22.8883 49.1755),105,72100.0
+http://www.wikidata.org/entity/Q1229,Don,Don,Point(39.2386 47.0864),Point(39.2386 47.0864),109,422000.0
+http://www.wikidata.org/entity/Q131210,Dniester,Dniestr,Point(30.2736 46.3041),Point(30.2736 46.3041),105,72100.0
+http://www.wikidata.org/entity/Q203409,Rioni,Rioni,Point(41.636111111 42.184166666),Point(43.36448 42.8682),67,13400.0
+http://www.wikidata.org/entity/Q14916634,Kintrishi River,Kintriszi,Point(41.770402 41.803982),Point(42.1391022 41.7314415),14,291.0
+http://www.wikidata.org/entity/Q203409,Rioni,Rioni,Point(41.636111111 42.184166666),Point(41.636111111 42.184166666),67,13400.0
+http://www.wikidata.org/entity/Q14916634,Kintrishi River,Kintriszi,Point(41.770402 41.803982),Point(41.770402 41.803982),14,291.0
+http://www.wikidata.org/entity/Q864843,Alma,Alma,Point(33.5939 44.8458),Point(33.5939 44.8458),38,635.0
+http://www.wikidata.org/entity/Q737640,Salhyr,Sałhir,Point(35.0058 45.648),Point(35.0058 45.648),40,3750.0
+http://www.wikidata.org/entity/Q864843,Alma,Alma,Point(33.5939 44.8458),Point(33.5928 44.8458),38,635.0
+http://www.wikidata.org/entity/Q864843,Alma,Alma,Point(33.5939 44.8458),Point(34.2695 44.6732),38,635.0
+http://www.wikidata.org/entity/Q737640,Salhyr,Sałhir,Point(35.0058 45.648),Point(34.3012 44.856),40,3750.0
+http://www.wikidata.org/entity/Q217466,Sakarya River,Sakarya,Point(30.648827 41.126807),Point(31.058789 39.352846),54,65000.0
+http://www.wikidata.org/entity/Q217466,Sakarya River,Sakarya,Point(30.648827 41.126807),Point(30.648827 41.126807),54,65000.0
+http://www.wikidata.org/entity/Q40855,Dnieper,Dniepr,Point(32.2872 46.4964),Point(33.7239 55.8721),126,503500.0
+http://www.wikidata.org/entity/Q1653,Danube,Dunaj,Point(29.743333333 45.221944444),Point(8.154888888 48.095111111),200,801463.0
+http://www.wikidata.org/entity/Q504388,Enguri,Inguri,Point(41.5595 42.3907),Point(43.0849 42.9547),48,4060.0
+http://www.wikidata.org/entity/Q592260,Danube – Black Sea Canal,Kanał Dunaj–Morze Czarne,,Point(28.3983 44.198),33,
+http://www.wikidata.org/entity/Q40855,Dnieper,Dniepr,Point(32.2872 46.4964),Point(32.2872 46.4964),126,503500.0
+http://www.wikidata.org/entity/Q1653,Danube,Dunaj,Point(29.743333333 45.221944444),Point(29.743333333 45.221944444),200,801463.0
+http://www.wikidata.org/entity/Q504388,Enguri,Inguri,Point(41.5595 42.3907),Point(41.5595 42.3907),48,4060.0
+http://www.wikidata.org/entity/Q280796,Kalmius,Kalmius,Point(37.5753 47.0861),Point(37.5753 47.0861),43,5070.0
+http://www.wikidata.org/entity/Q501454,Psou,Psou,Point(40.0101 43.3861),Point(40.4226 43.5534),39,421.0
+http://www.wikidata.org/entity/Q501454,Psou,Psou,Point(40.0101 43.3861),Point(40.0101 43.3861),39,421.0
+http://www.wikidata.org/entity/Q1048890,Kodori River,Kodori,Point(41.130277777 42.819444444),Point(41.130277777 42.819444444),39,2051.0
+http://www.wikidata.org/entity/Q280796,Kalmius,Kalmius,Point(37.5753 47.0861),Point(37.8685 48.1186),43,5070.0
+http://www.wikidata.org/entity/Q1048890,Kodori River,Kodori,Point(41.130277777 42.819444444),Point(41.821666666 43.106111111),39,2051.0
+http://www.wikidata.org/entity/Q1048890,Kodori River,Kodori,Point(41.130277777 42.819444444),Point(41.131944444 42.820555555),39,2051.0
+http://www.wikidata.org/entity/Q1145293,Yeşilırmak River,Yeşilırmak,Point(36.66 41.3816),Point(36.66 41.3816),36,36100.0
+http://www.wikidata.org/entity/Q257785,Kızılırmak River,Kızılırmak,Point(35.956388888 41.734166666),Point(38.407388888 39.853277777),70,77100.0
+http://www.wikidata.org/entity/Q1165587,Mius,Mius,Point(38.809722222 47.2775),Point(38.537777777 48.278888888),37,6680.0
+http://www.wikidata.org/entity/Q257785,Kızılırmak River,Kızılırmak,Point(35.956388888 41.734166666),Point(35.956388888 41.734166666),70,77100.0
+http://www.wikidata.org/entity/Q1165587,Mius,Mius,Point(38.809722222 47.2775),Point(38.809722222 47.2775),37,6680.0
+http://www.wikidata.org/entity/Q1145293,Yeşilırmak River,Yeşilırmak,Point(36.66 41.3816),Point(36.6603 41.3816),36,36100.0
+http://www.wikidata.org/entity/Q1165587,Mius,Mius,Point(38.809722222 47.2775),Point(38.537708333 48.279016666),37,6680.0
+http://www.wikidata.org/entity/Q2862423,Supsa River,Supsa,Point(41.7525 42.019166666),Point(42.655833333 41.84),20,1100.0
+http://www.wikidata.org/entity/Q2671391,Korolistskali,Korolisckali,Point(41.683333333 41.665),Point(41.765 41.598611111),16,159.0
+http://www.wikidata.org/entity/Q2671391,Korolistskali,Korolisckali,Point(41.683333333 41.665),Point(41.683333333 41.666666666),16,159.0
+http://www.wikidata.org/entity/Q2784789,Tesmes,Cemes,Point(37.774444444 44.728333333),Point(37.628055555 44.779722222),6,82.6
+http://www.wikidata.org/entity/Q2011766,Kacha,Kacza,Point(33.5486 44.7254),Point(33.5486 44.7254),10,573.0
+http://www.wikidata.org/entity/Q2011766,Kacha,Kacza,Point(33.5486 44.7254),Point(33.5782 44.727),10,573.0
+http://www.wikidata.org/entity/Q2671391,Korolistskali,Korolisckali,Point(41.683333333 41.665),Point(41.683333333 41.665),16,159.0
+http://www.wikidata.org/entity/Q2011766,Kacha,Kacza,Point(33.5486 44.7254),Point(34.2468 44.6355),10,573.0
+http://www.wikidata.org/entity/Q2784789,Tesmes,Cemes,Point(37.774444444 44.728333333),Point(37.774444444 44.728333333),6,82.6
+http://www.wikidata.org/entity/Q2044660,Chorna River,Czorna,Point(33.598333333 44.608055555),Point(33.598333333 44.608055555),22,436.0
+http://www.wikidata.org/entity/Q2862423,Supsa River,Supsa,Point(41.7525 42.019166666),Point(41.7525 42.019166666),20,1100.0
+http://www.wikidata.org/entity/Q2492856,Tylihul,Tylihuł,Point(30.964556 47.071189),Point(30.964556 47.071189),18,3550.0
+http://www.wikidata.org/entity/Q2890912,Rezovska,Rezowska reka,Point(28.029444444 41.983055555),Point(27.555 41.881388888),28,738.0
+http://www.wikidata.org/entity/Q2890912,Rezovska,Rezowska reka,Point(28.029444444 41.983055555),Point(28.029444444 41.983055555),28,738.0
+http://www.wikidata.org/entity/Q2044660,Chorna River,Czorna,Point(33.598333333 44.608055555),Point(33.85 44.46666667),22,436.0
+http://www.wikidata.org/entity/Q2044660,Chorna River,Czorna,Point(33.598333333 44.608055555),Point(33.860157 44.463482),22,436.0
+http://www.wikidata.org/entity/Q2492856,Tylihul,Tylihuł,Point(30.964556 47.071189),Point(30.956777777 47.087138888),18,3550.0
+http://www.wikidata.org/entity/Q2385642,Reprua River,Reprua,,Point(40.204722222 43.330833333),25,
+http://www.wikidata.org/entity/Q2079182,Batova,Batowa reka,Point(28.072222222 43.346111111),Point(28.08333 43.36667),9,339.0
+http://www.wikidata.org/entity/Q2119511,Ropotamo,Ropotamo,Point(27.755556 42.327778),Point(27.4467 42.1861),25,249.0
+http://www.wikidata.org/entity/Q2087154,Karaagach,Kitenska reka,Point(27.7775 42.225555555),Point(27.7775 42.225555555),12,182.0
+http://www.wikidata.org/entity/Q2079182,Batova,Batowa reka,Point(28.072222222 43.346111111),Point(27.774454 43.310292),9,339.0
+http://www.wikidata.org/entity/Q2087154,Karaagach,Kitenska reka,Point(27.7775 42.225555555),Point(27.77833333 42.22611111),12,182.0
+http://www.wikidata.org/entity/Q2119511,Ropotamo,Ropotamo,Point(27.755556 42.327778),Point(27.755556 42.327778),25,249.0
+http://www.wikidata.org/entity/Q2079182,Batova,Batowa reka,Point(28.072222222 43.346111111),Point(27.900833333 43.376388888),9,339.0
+http://www.wikidata.org/entity/Q2079182,Batova,Batowa reka,Point(28.072222222 43.346111111),Point(28.072222222 43.346111111),9,339.0
+http://www.wikidata.org/entity/Q1668781,Sfântu Gheorghe branch,Święty Jerzy (ramię Dunaju),,Point(29.591944 44.896389),16,
+http://www.wikidata.org/entity/Q1461510,Kamchiya,Kamczija,Point(27.88981 43.022722),Point(27.4425 43.044444444),22,5358.0
+http://www.wikidata.org/entity/Q2455088,Belbek,Belbek,Point(33.5444 44.6627),Point(33.54441667 44.6627),14,505.0
+http://www.wikidata.org/entity/Q1344617,Chilia branch,Kilia,Point(29.5867 45.3915),Point(28.736111111 45.228888888),23,
+http://www.wikidata.org/entity/Q1369180,Sulina branch,Brațul Sulina,,Point(29.652778 45.159444),17,
+http://www.wikidata.org/entity/Q1668781,Sfântu Gheorghe branch,Święty Jerzy (ramię Dunaju),,Point(29.6 44.883333333),16,
+http://www.wikidata.org/entity/Q2455311,Veleka,Weleka,Point(27.968333333 42.069444444),Point(27.968333333 42.069444444),26,955.0
+http://www.wikidata.org/entity/Q1344617,Chilia branch,Kilia,Point(29.5867 45.3915),Point(29.5867 45.3915),23,
+http://www.wikidata.org/entity/Q1461510,Kamchiya,Kamczija,Point(27.88981 43.022722),Point(27.88981 43.022722),22,5358.0
+http://www.wikidata.org/entity/Q1461510,Kamchiya,Kamczija,Point(27.88981 43.022722),Point(27.883333333 43.033333333),22,5358.0
+http://www.wikidata.org/entity/Q1344617,Chilia branch,Kilia,Point(29.5867 45.3915),Point(28.7429 45.233),23,
+http://www.wikidata.org/entity/Q2455311,Veleka,Weleka,Point(27.968333333 42.069444444),Point(27.2192 42.0589),26,955.0
+http://www.wikidata.org/entity/Q1972264,Bzyb River,Bzyp,Point(40.2809 43.188),Point(40.778425 43.291155),37,1510.0
+http://www.wikidata.org/entity/Q2455088,Belbek,Belbek,Point(33.5444 44.6627),Point(33.5444 44.6627),14,505.0
+http://www.wikidata.org/entity/Q2455088,Belbek,Belbek,Point(33.5444 44.6627),Point(34.0631 44.5392),14,505.0
+http://www.wikidata.org/entity/Q4084052,Berda,Berda,Point(36.899403 46.810964),Point(36.484908333 47.231225),14,1760.0
+http://www.wikidata.org/entity/Q4084052,Berda,Berda,Point(36.899403 46.810964),Point(36.49305556 47.22916667),14,1760.0
+http://www.wikidata.org/entity/Q4084052,Berda,Berda,Point(36.899403 46.810964),Point(36.886944444 46.796111111),14,1760.0
+http://www.wikidata.org/entity/Q4084052,Berda,Berda,Point(36.899403 46.810964),Point(36.899403 46.810964),14,1760.0
+http://www.wikidata.org/entity/Q13427286,Natanebi River,Natanebi,Point(41.77018 41.9108),Point(41.77018 41.9108),16,657.0
+http://www.wikidata.org/entity/Q13427286,Natanebi River,Natanebi,Point(41.77018 41.9108),Point(42.310555555 41.806388888),16,657.0
+http://www.wikidata.org/entity/Q4186560,West Bulganak,Bułhanak,Point(33.616666666 44.904166666),Point(33.616666666 44.904166666),8,180.0
+http://www.wikidata.org/entity/Q3623138,Aheloy,Achełoj,Point(27.640277777 42.634444444),Point(27.640277777 42.634444444),11,141.0
+http://www.wikidata.org/entity/Q3273319,Shakhe,Szache,Point(39.461227 43.788396),Point(40.03642 43.817289),15,553.0
+http://www.wikidata.org/entity/Q3623138,Aheloy,Achełoj,Point(27.640277777 42.634444444),Point(27.51805556 42.7075),11,141.0
+http://www.wikidata.org/entity/Q3623138,Aheloy,Achełoj,Point(27.640277777 42.634444444),Point(27.398055555 42.679166666),11,141.0
+http://www.wikidata.org/entity/Q3273319,Shakhe,Szache,Point(39.461227 43.788396),Point(39.461227 43.788396),15,553.0
+http://www.wikidata.org/entity/Q3273319,Shakhe,Szache,Point(39.461227 43.788396),Point(39.464 43.7885),15,553.0
+http://www.wikidata.org/entity/Q3651561,Kelasuri,,Point(41.066111111 42.971111111),Point(41.066111111 42.971111111),15,220.0
+http://www.wikidata.org/entity/Q2655934,Uchan-Su,,Point(34.1632 44.4893),Point(34.1667 44.4833),13,28.9
+http://www.wikidata.org/entity/Q2930184,,,,,1,
+http://www.wikidata.org/entity/Q814896,Beysug,,Point(38.5786 46.0422),Point(38.5786 46.0422),19,5190.0
+http://www.wikidata.org/entity/Q4060596,Albashi,,Point(38.597152 46.269821),Point(38.597152 46.269821),7,895.0
+http://www.wikidata.org/entity/Q2918526,Mokraya Chuburka,,Point(38.836111111 46.907083333),Point(38.838611111 46.905277777),5,
+http://www.wikidata.org/entity/Q1988475,Sochi,,Point(39.714632034 43.583437423),Point(39.714444444 43.583333333),24,296.0
+http://www.wikidata.org/entity/Q2655934,Uchan-Su,,Point(34.1632 44.4893),Point(34.077 44.4956),13,28.9
+http://www.wikidata.org/entity/Q2474516,Gumista River,,Point(40.9375 43.0075),Point(41.00277778 43.08833333),17,576.0
+http://www.wikidata.org/entity/Q810839,Batlama River,,Point(38.35620556 40.90940556),Point(38.35620556 40.90940556),3,
+http://www.wikidata.org/entity/Q1364317,Mzymta,,Point(39.924 43.4147),Point(39.924 43.4147),29,885.0
+http://www.wikidata.org/entity/Q3849781,Derekoyka,,,Point(34.169722222 44.5),7,44.0
+http://www.wikidata.org/entity/Q1781714,Konka,,Point(32.3065 46.4934),Point(32.3065 46.4934),9,
+http://www.wikidata.org/entity/Q3332921,Khosta,,Point(39.8683 43.5067),Point(39.8797 43.5456),6,
+http://www.wikidata.org/entity/Q2031904,Tuapse,,Point(39.080498 44.086302),Point(39.248978 44.271851),9,352.0
+http://www.wikidata.org/entity/Q2606919,Nebug,,Point(38.9976 44.1616),Point(39.0993 44.2718),12,
+http://www.wikidata.org/entity/Q3720501,Pauk,,Point(39.053754 44.097298),Point(39.053754 44.097298),10,42.0
+http://www.wikidata.org/entity/Q2641465,Shepsi,,Point(39.1416 44.0327),Point(39.141612 44.032739),9,
+http://www.wikidata.org/entity/Q2488636,Karamenderes River,,Point(26.22925 40.002361111),Point(26.9336 39.8368),17,2000.0
+http://www.wikidata.org/entity/Q3572165,Filyos Brook,,,Point(32.08718056 41.4245),7,13000.0
+http://www.wikidata.org/entity/Q2603642,Dzhubga,,Point(38.697757 44.309976),Point(38.697757 44.309976),12,100.0
+http://www.wikidata.org/entity/Q3332921,Khosta,,Point(39.8683 43.5067),Point(39.8683 43.5067),6,
+http://www.wikidata.org/entity/Q4064851,Anapka,,Point(37.3186 44.9056),Point(37.3186 44.9056),7,411.0
+http://www.wikidata.org/entity/Q3083661,Dyurso,,Point(37.561627777 44.678336111),Point(37.595222222 44.785702777),4,
+http://www.wikidata.org/entity/Q980504,Aderbiyevka,,Point(38.137983 44.511604),Point(38.137983 44.511604),8,
+http://www.wikidata.org/entity/Q3124588,Gülüç Çayı,,,Point(31.530749973 41.248875584),1,
+http://www.wikidata.org/entity/Q2997411,Kirpili,,Point(38.543732 45.747413),Point(38.543732 45.747413),16,2650.0
+http://www.wikidata.org/entity/Q2657626,Khobi,,Point(41.6335 42.2755),Point(41.6335 42.2755),18,1340.0
+http://www.wikidata.org/entity/Q3084171,Bzugu,,Point(39.751527777 43.562416666),Point(39.751527777 43.562416666),5,
+http://www.wikidata.org/entity/Q1088251,Sukko River,,Point(37.3783 44.7864),Point(37.5283 44.7526),10,89.2
+http://www.wikidata.org/entity/Q3272863,Agura,,Point(39.8044 43.5372),Point(39.80436112 43.53719445),4,30.0
+http://www.wikidata.org/entity/Q3391138,Kagalnik River,,Point(39.3062 47.0734),Point(40.6821 46.9332),11,5040.0
+http://www.wikidata.org/entity/Q3083661,Dyurso,,Point(37.561627777 44.678336111),Point(37.562222222 44.678611111),4,
+http://www.wikidata.org/entity/Q4073430,Ashe,,Point(39.262008 43.957685),Point(39.262008 43.957685),10,279.0
+http://www.wikidata.org/entity/Q2031904,Tuapse,,Point(39.080498 44.086302),Point(39.080498 44.086302),9,352.0
+http://www.wikidata.org/entity/Q2886191,Bartın River,,,Point(32.235833333 41.679444444),13,2059.0
+http://www.wikidata.org/entity/Q3391138,Kagalnik River,,Point(39.3062 47.0734),Point(39.306388888 47.073611111),11,5040.0
+http://www.wikidata.org/entity/Q2001006,Hryhorivsky Estuary,,,Point(31.019166666 46.623611111),7,
+http://www.wikidata.org/entity/Q2918526,Mokraya Chuburka,,Point(38.836111111 46.907083333),Point(39.563055555 46.711555555),5,
+http://www.wikidata.org/entity/Q2606919,Nebug,,Point(38.9976 44.1616),Point(38.99777901 44.16134601),12,
+http://www.wikidata.org/entity/Q2474516,Gumista River,,Point(40.9375 43.0075),Point(40.9375 43.0075),17,576.0
+http://www.wikidata.org/entity/Q2997411,Kirpili,,Point(38.543732 45.747413),Point(38.565277777 45.751111111),16,2650.0
+http://www.wikidata.org/entity/Q3013953,Chelbas,,Point(38.929 46.152),Point(40.8273 45.4811),7,3950.0
+http://www.wikidata.org/entity/Q133452,Yeya River,,Point(38.591222222 46.664361111),Point(40.684638888 45.930916666),24,8650.0
+http://www.wikidata.org/entity/Q3332921,Khosta,,Point(39.8683 43.5067),Point(39.79111111 43.50666667),6,
+http://www.wikidata.org/entity/Q735550,Psilis,,Point(29.066136 41.081349),Point(29.066136 41.081349),10,
+http://www.wikidata.org/entity/Q1088251,Sukko River,,Point(37.3783 44.7864),Point(37.378261 44.78638),10,89.2
+http://www.wikidata.org/entity/Q4072331,Atyukhta,,Point(40.1911 47.6759),Point(40.2189 47.7867),4,
+http://www.wikidata.org/entity/Q4058401,Azovka,,Point(39.4275 47.1166),Point(39.4275 47.1166),4,
+http://www.wikidata.org/entity/Q3651561,Kelasuri,,Point(41.066111111 42.971111111),Point(41.196111111 43.2375),15,220.0
+http://www.wikidata.org/entity/Q2084008,Black Sea undersea river,,,,9,
+http://www.wikidata.org/entity/Q4060596,Albashi,,Point(38.597152 46.269821),Point(39.272269444 46.301975),7,895.0
+http://www.wikidata.org/entity/Q3651645,Ghalidzga,,Point(41.4683 42.6983),Point(41.8519 42.915),12,483.0
+http://www.wikidata.org/entity/Q3391138,Kagalnik River,,Point(39.3062 47.0734),Point(39.310313 47.059089),11,5040.0
+http://www.wikidata.org/entity/Q3391138,Kagalnik River,,Point(39.3062 47.0734),Point(39.3062 47.0734),11,5040.0
+http://www.wikidata.org/entity/Q1753125,,,Point(40.221111111 43.324166666),Point(40.221111111 43.324166666),8,72.0
+http://www.wikidata.org/entity/Q3013953,Chelbas,,Point(38.929 46.152),Point(38.929 46.152),7,3950.0
+http://www.wikidata.org/entity/Q3013953,Chelbas,,Point(38.929 46.152),Point(38.981111111 46.099722222),7,3950.0
+http://www.wikidata.org/entity/Q3084171,Bzugu,,Point(39.751527777 43.562416666),Point(39.751388888 43.562222222),5,
+http://www.wikidata.org/entity/Q2641465,Shepsi,,Point(39.1416 44.0327),Point(39.1425 44.033888888),9,
+http://www.wikidata.org/entity/Q1088251,Sukko River,,Point(37.3783 44.7864),Point(37.379722222 44.786388888),10,89.2
+http://www.wikidata.org/entity/Q3272863,Agura,,Point(39.8044 43.5372),Point(39.80417 43.53722),4,30.0
+http://www.wikidata.org/entity/Q2655934,Uchan-Su,,Point(34.1632 44.4893),Point(34.1632 44.4893),13,28.9
+http://www.wikidata.org/entity/Q1781714,Konka,,Point(32.3065 46.4934),Point(32.7949 46.6725),9,
+http://www.wikidata.org/entity/Q684421,Thermodon,,,Point(37.025555555 41.211388888),7,
+http://www.wikidata.org/entity/Q2606919,Nebug,,Point(38.9976 44.1616),Point(38.9976 44.1616),12,
+http://www.wikidata.org/entity/Q2603642,Dzhubga,,Point(38.697757 44.309976),Point(38.7 44.308611111),12,100.0
+http://www.wikidata.org/entity/Q4064851,Anapka,,Point(37.3186 44.9056),Point(37.4658 44.8874),7,411.0
+http://www.wikidata.org/entity/Q133452,Yeya River,,Point(38.591222222 46.664361111),Point(38.591222222 46.664361111),24,8650.0
+http://www.wikidata.org/entity/Q3331294,Matsesta,,Point(39.791472222 43.543111111),Point(39.791472222 43.543111111),11,67.5
+http://www.wikidata.org/entity/Q1988475,Sochi,,Point(39.714632034 43.583437423),Point(39.714722222 43.583333333),24,296.0
+http://www.wikidata.org/entity/Q1364317,Mzymta,,Point(39.924 43.4147),Point(40.6257 43.5721),29,885.0
+http://www.wikidata.org/entity/Q814896,Beysug,,Point(38.5786 46.0422),Point(38.57861111 46.04222222),19,5190.0
+http://www.wikidata.org/entity/Q4072331,Atyukhta,,Point(40.1911 47.6759),Point(40.1911 47.6759),4,
+http://www.wikidata.org/entity/Q980504,Aderbiyevka,,Point(38.137983 44.511604),Point(38.133611111 44.498333333),8,
+http://www.wikidata.org/entity/Q2606926,Tu,,Point(38.884991 44.191305),Point(38.884991 44.191305),12,
+http://www.wikidata.org/entity/Q4058401,Azovka,,Point(39.4275 47.1166),Point(39.5328 47.0817),4,
+http://www.wikidata.org/entity/Q3272863,Agura,,Point(39.8044 43.5372),Point(39.8044 43.5372),4,30.0
+http://www.wikidata.org/entity/Q1988475,Sochi,,Point(39.714632034 43.583437423),Point(39.714632034 43.583437423),24,296.0
+http://www.wikidata.org/entity/Q2031904,Tuapse,,Point(39.080498 44.086302),Point(39.081666666 44.087777777),9,352.0
+http://www.wikidata.org/entity/Q4056476,Avunda,,Point(34.2789 44.5417),Point(34.27891 44.541712),5,24.0
+http://www.wikidata.org/entity/Q2488636,Karamenderes River,,Point(26.22925 40.002361111),Point(26.22925 40.002361111),17,2000.0
+http://www.wikidata.org/entity/Q3083661,Dyurso,,Point(37.561627777 44.678336111),Point(37.561627777 44.678336111),4,
+http://www.wikidata.org/entity/Q4064851,Anapka,,Point(37.3186 44.9056),Point(37.3175 44.905555555),7,411.0
+http://www.wikidata.org/entity/Q1088251,Sukko River,,Point(37.3783 44.7864),Point(37.3783 44.7864),10,89.2
+http://www.wikidata.org/entity/Q3651645,Ghalidzga,,Point(41.4683 42.6983),Point(41.47 42.698611111),12,483.0
+http://www.wikidata.org/entity/Q2641465,Shepsi,,Point(39.1416 44.0327),Point(39.1416 44.0327),9,
+http://www.wikidata.org/entity/Q2918526,Mokraya Chuburka,,Point(38.836111111 46.907083333),Point(38.836111111 46.907083333),5,
+http://www.wikidata.org/entity/Q3651645,Ghalidzga,,Point(41.4683 42.6983),Point(41.4683 42.6983),12,483.0
+http://www.wikidata.org/entity/Q1752145,,,Point(40.793866666 43.0818),Point(40.793866666 43.0818),2,38.9
+http://www.wikidata.org/entity/Q4060596,Albashi,,Point(38.597152 46.269821),Point(38.730555555 46.313888888),7,895.0
+http://www.wikidata.org/entity/Q1753125,,,Point(40.221111111 43.324166666),Point(40.340833333 43.404722222),8,72.0
+http://www.wikidata.org/entity/Q980504,Aderbiyevka,,Point(38.137983 44.511604),Point(38.081324 44.662667),8,
+http://www.wikidata.org/entity/Q3548106,Ulutan River,,,,1,
+http://www.wikidata.org/entity/Q2657626,Khobi,,Point(41.6335 42.2755),Point(42.2303 42.8115),18,1340.0
+http://www.wikidata.org/entity/Q2603642,Dzhubga,,Point(38.697757 44.309976),Point(38.647374 44.395117),12,100.0
+http://www.wikidata.org/entity/Q4056476,Avunda,,Point(34.2789 44.5417),Point(34.2789 44.5417),5,24.0
+http://www.wikidata.org/entity/Q814896,Beysug,,Point(38.5786 46.0422),Point(40.4678 45.4686),19,5190.0
+http://www.wikidata.org/entity/Q2997411,Kirpili,,Point(38.543732 45.747413),Point(39.833611111 45.360833333),16,2650.0
+http://www.wikidata.org/entity/Q2488636,Karamenderes River,,Point(26.22925 40.002361111),Point(26.22361111 40.00388889),17,2000.0
+http://www.wikidata.org/entity/Q4381840,Protoka,,Point(37.784444444 45.743888888),Point(38.213055555 45.185),6,
+http://www.wikidata.org/entity/Q4244419,Kudepsta,,,Point(39.883611111 43.493611111),13,85.4
+http://www.wikidata.org/entity/Q4209061,Kalancha,,Point(39.3428 47.162758),Point(39.456612 47.133221),2,
+http://www.wikidata.org/entity/Q4406455,Samarchik,,Point(33.680555555 45.843055555),Point(33.680555555 45.843055555),4,528.0
+http://www.wikidata.org/entity/Q4896022,Lycus,,,,5,
+http://www.wikidata.org/entity/Q4382863,Psezuapse,,Point(39.334875 43.897786),Point(39.334875 43.897786),9,290.0
+http://www.wikidata.org/entity/Q4474833,Ulu-Uzen,,Point(34.4137 44.6688),Point(34.41239 44.66946),6,60.0
+http://www.wikidata.org/entity/Q6067556,Melen River,,Point(30.9675 41.07331),Point(30.9675 41.07331),6,2317.0
+http://www.wikidata.org/entity/Q4156687,Dederkay,,Point(39.12465 44.050252),Point(39.12528 44.05083),8,
+http://www.wikidata.org/entity/Q4701849,Aksu Deresi,,,Point(38.213756 40.562299),10,
+http://www.wikidata.org/entity/Q4213436,Karadere Creek,,Point(40.058333333 40.931944444),Point(40.019722222 40.880555555),10,
+http://www.wikidata.org/entity/Q4300013,Mokra Bilosaraika,,Point(37.282651 46.937338),Point(37.282651 46.937338),4,
+http://www.wikidata.org/entity/Q4518367,Chukhukt,,Point(39.406066 43.849262),Point(39.406066 43.849262),4,
+http://www.wikidata.org/entity/Q4318309,Nechepsukho,,Point(38.8323 44.2403),Point(38.8323 44.2403),6,225.0
+http://www.wikidata.org/entity/Q4125342,Voron,,Point(34.826 44.8191),Point(34.826 44.8191),6,52.0
+http://www.wikidata.org/entity/Q4701349,Akkarzhanka,,Point(30.6275 46.340555555),Point(30.6275 46.340555555),5,
+http://www.wikidata.org/entity/Q4095342,Bocharov Ruchey,,Point(39.699224 43.621022),Point(39.699224 43.621022),3,
+http://www.wikidata.org/entity/Q6067556,Melen River,,Point(30.9675 41.07331),Point(30.96747 41.074037),6,2317.0
+http://www.wikidata.org/entity/Q4539892,Yashamba,,Point(37.979855555 44.576566666),Point(37.979855555 44.576566666),3,
+http://www.wikidata.org/entity/Q4445328,Sudak,,Point(34.9879 44.835),Point(34.9879 44.835),3,161.0
+http://www.wikidata.org/entity/Q4213436,Karadere Creek,,Point(40.058333333 40.931944444),Point(40.058333333 40.931944444),10,
+http://www.wikidata.org/entity/Q4474835,Ulu Ozen eastern,,Point(34.544824 44.748516),Point(34.544824 44.748516),5,33.5
+http://www.wikidata.org/entity/Q5048796,Casimcea River,,,Point(28.55 44.4),5,740.0
+http://www.wikidata.org/entity/Q4385077,Pshada,,Point(38.3347 44.3883),Point(38.4822 44.6183),11,358.0
+http://www.wikidata.org/entity/Q4474833,Ulu-Uzen,,Point(34.4137 44.6688),Point(34.4137 44.6688),6,60.0
+http://www.wikidata.org/entity/Q4381840,Protoka,,Point(37.784444444 45.743888888),Point(37.784722222 45.743055555),6,
+http://www.wikidata.org/entity/Q4520359,Shapsukho,,Point(38.7446 44.3031),Point(38.7446 44.3031),11,384.0
+http://www.wikidata.org/entity/Q5644057,Hamangia River,,,Point(28.7732 44.6947),2,
+http://www.wikidata.org/entity/Q4701849,Aksu Deresi,,,Point(38.440277777 40.913333333),10,
+http://www.wikidata.org/entity/Q4692480,Agi Cabul River,,,Point(28.2813 44.2501),3,
+http://www.wikidata.org/entity/Q4125342,Voron,,Point(34.826 44.8191),Point(34.8293 44.9285),6,52.0
+http://www.wikidata.org/entity/Q5049852,Castelu River,,,,3,
+http://www.wikidata.org/entity/Q4077678,Baraboy River,,Point(30.5815 46.1947),Point(30.581494 46.194656),8,
+http://www.wikidata.org/entity/Q4126604,Bulhanak-Skhidnyy,,Point(35.006386 45.357528),Point(35.006386 45.357528),4,485.0
+http://www.wikidata.org/entity/Q4518367,Chukhukt,,Point(39.406066 43.849262),Point(39.460526 43.897537),4,
+http://www.wikidata.org/entity/Q4518367,Chukhukt,,Point(39.406066 43.849262),Point(39.40694427 43.84749985),4,
+http://www.wikidata.org/entity/Q5048796,Casimcea River,,,Point(28.553 44.39),5,740.0
+http://www.wikidata.org/entity/Q4447253,Sukhyy Yelanchyk,,Point(38.4149 47.269),Point(38.41497 47.26919),5,515.0
+http://www.wikidata.org/entity/Q4077678,Baraboy River,,Point(30.5815 46.1947),Point(30.580833333 46.195),8,
+http://www.wikidata.org/entity/Q6077754,Mert River,,,Point(36.351944 41.278889),3,
+http://www.wikidata.org/entity/Q4329255,Obytichna River,,Point(36.196782 46.670185),Point(36.468258 47.179226),9,1430.0
+http://www.wikidata.org/entity/Q4329255,Obytichna River,,Point(36.196782 46.670185),Point(36.196782 46.670185),9,1430.0
+http://www.wikidata.org/entity/Q4710480,Telița River,,,Point(28.749 44.9424),2,
+http://www.wikidata.org/entity/Q4075379,Baybuha,,Point(35.387735 45.050494),Point(35.387735 45.050494),6,111.0
+http://www.wikidata.org/entity/Q5153735,Yağlıdere stream,,,Point(38.691725 40.947919),7,
+http://www.wikidata.org/entity/Q4318309,Nechepsukho,,Point(38.8323 44.2403),Point(38.836388888 44.239722222),6,225.0
+http://www.wikidata.org/entity/Q4518367,Chukhukt,,Point(39.406066 43.849262),Point(39.406944444 43.850277777),4,
+http://www.wikidata.org/entity/Q4692526,Agigea River,,,,4,13.0
+http://www.wikidata.org/entity/Q4520359,Shapsukho,,Point(38.7446 44.3031),Point(38.746666666 44.300833333),11,384.0
+http://www.wikidata.org/entity/Q4234281,Korsak river,,Point(35.8591 46.6418),Point(35.8591 46.6418),6,715.0
+http://www.wikidata.org/entity/Q5261731,Dereaua River,,,,3,
+http://www.wikidata.org/entity/Q4073430,Ashe,,Point(39.262008 43.957685),Point(39.26277778 43.9575),10,279.0
+http://www.wikidata.org/entity/Q4340190,Otuzka,,Point(35.1893 44.909),Point(35.1893 44.909),5,77.0
+http://www.wikidata.org/entity/Q4153960,Dagomys River,,Point(39.651944444 43.649722222),Point(39.653888888 43.6575),9,103.0
+http://www.wikidata.org/entity/Q4150590,Gruzsky Elanchik,,Point(38.064971 47.111911),Point(38.296668 47.659321),7,1250.0
+http://www.wikidata.org/entity/Q4209061,Kalancha,,Point(39.3428 47.162758),Point(39.236944444 47.134166666),2,
+http://www.wikidata.org/entity/Q4710437,Cocoș River,,,Point(28.3885 44.2173),4,65.0
+http://www.wikidata.org/entity/Q4406503,Sambek,,Point(39.0192 47.2672),Point(39.018611111 47.267777777),3,
+http://www.wikidata.org/entity/Q4385077,Pshada,,Point(38.3347 44.3883),Point(38.3378 44.3874),11,358.0
+http://www.wikidata.org/entity/Q4128303,Vulan,,Point(38.524051 44.357472),Point(38.524051 44.357472),8,
+http://www.wikidata.org/entity/Q4075379,Baybuha,,Point(35.387735 45.050494),Point(35.182275 45.032016),6,111.0
+http://www.wikidata.org/entity/Q4310518,Mertvy Donets,,,Point(39.221388888 47.268333333),7,
+http://www.wikidata.org/entity/Q4077678,Baraboy River,,Point(30.5815 46.1947),Point(30.5815 46.1947),8,
+http://www.wikidata.org/entity/Q4520359,Shapsukho,,Point(38.7446 44.3031),Point(38.9598 44.4278),11,384.0
+http://www.wikidata.org/entity/Q4385077,Pshada,,Point(38.3347 44.3883),Point(38.3347 44.3883),11,358.0
+http://www.wikidata.org/entity/Q4244419,Kudepsta,,,Point(39.88361111 43.49333333),13,85.4
+http://www.wikidata.org/entity/Q4209061,Kalancha,,Point(39.3428 47.162758),Point(39.3428 47.162758),2,
+http://www.wikidata.org/entity/Q4278998,Malyi Kuyalnyk,,Point(30.453963 46.86102),Point(30.453963 46.86102),7,1540.0
+http://www.wikidata.org/entity/Q5169793,Corbu River,,,,4,
+http://www.wikidata.org/entity/Q4073430,Ashe,,Point(39.262008 43.957685),Point(39.5826 44.0271),10,279.0
+http://www.wikidata.org/entity/Q4382863,Psezuapse,,Point(39.334875 43.897786),Point(39.334444444 43.898888888),9,290.0
+http://www.wikidata.org/entity/Q4234281,Korsak river,,Point(35.8591 46.6418),Point(36.1701 46.9584),6,715.0
+http://www.wikidata.org/entity/Q4382863,Psezuapse,,Point(39.334875 43.897786),Point(39.678065 43.97687),9,290.0
+http://www.wikidata.org/entity/Q4406503,Sambek,,Point(39.0192 47.2672),Point(39.1125 47.3797),3,
+http://www.wikidata.org/entity/Q5211579,Dalnyk River,,Point(30.5986 46.4174),Point(30.5986 46.4174),8,175.0
+http://www.wikidata.org/entity/Q4318309,Nechepsukho,,Point(38.8323 44.2403),Point(39.0135 44.4066),6,225.0
+http://www.wikidata.org/entity/Q4125342,Voron,,Point(34.826 44.8191),Point(34.82597 44.81931),6,52.0
+http://www.wikidata.org/entity/Q4406503,Sambek,,Point(39.0192 47.2672),Point(39.0192 47.2672),3,
+http://www.wikidata.org/entity/Q4075379,Baybuha,,Point(35.387735 45.050494),Point(35.3875 45.050555555),6,111.0
+http://www.wikidata.org/entity/Q4497307,Kherota,,Point(39.905277777 43.439722222),Point(39.924861111 43.457638888),11,
+http://www.wikidata.org/entity/Q4447253,Sukhyy Yelanchyk,,Point(38.4149 47.269),Point(38.4149 47.269),5,515.0
+http://www.wikidata.org/entity/Q4497307,Kherota,,Point(39.905277777 43.439722222),Point(39.905277777 43.439722222),11,
+http://www.wikidata.org/entity/Q4406455,Samarchik,,Point(33.680555555 45.843055555),Point(33.6816 45.8422),4,528.0
+http://www.wikidata.org/entity/Q5580939,Golovița River,,,,2,
+http://www.wikidata.org/entity/Q5530425,Gelevera Creek,,,Point(38.716666666 40.95),6,
+http://www.wikidata.org/entity/Q4300013,Mokra Bilosaraika,,Point(37.282651 46.937338),Point(37.2975 47.1645),4,
+http://www.wikidata.org/entity/Q4701349,Akkarzhanka,,Point(30.6275 46.340555555),Point(30.633333333 46.333333333),5,
+http://www.wikidata.org/entity/Q4381840,Protoka,,Point(37.784444444 45.743888888),Point(37.784444444 45.743888888),6,
+http://www.wikidata.org/entity/Q6089036,Istria River,,,Point(28.7379 44.5616),2,
+http://www.wikidata.org/entity/Q4156687,Dederkay,,Point(39.12465 44.050252),Point(39.12465 44.050252),8,
+http://www.wikidata.org/entity/Q4150590,Gruzsky Elanchik,,Point(38.064971 47.111911),Point(38.064971 47.111911),7,1250.0
+http://www.wikidata.org/entity/Q4507784,Chatyrlyk,,Point(33.801 45.8848),Point(33.801 45.8848),5,1593.0
+http://www.wikidata.org/entity/Q4406455,Samarchik,,Point(33.680555555 45.843055555),Point(33.715277777 45.7375),4,528.0
+http://www.wikidata.org/entity/Q5153735,Yağlıdere stream,,,Point(38.691944444 40.947777777),7,
+http://www.wikidata.org/entity/Q4289310,Melek-Chesme,,Point(36.47905 45.359292),Point(36.47905 45.359292),5,133.0
+http://www.wikidata.org/entity/Q4710322,Albești River,,,Point(28.5759 43.7998),4,
+http://www.wikidata.org/entity/Q4213436,Karadere Creek,,Point(40.058333333 40.931944444),Point(40.009722222 40.504166666),10,
+http://www.wikidata.org/entity/Q4713281,Biruința River,,,,3,
+http://www.wikidata.org/entity/Q4539892,Yashamba,,Point(37.979855555 44.576566666),Point(38.011786111 44.657786111),3,
+http://www.wikidata.org/entity/Q4153960,Dagomys River,,Point(39.651944444 43.649722222),Point(39.651944444 43.649722222),9,103.0
+http://www.wikidata.org/entity/Q14916545,Achkva,,Point(41.772222222 41.815277777),Point(41.945833333 41.813888888),4,37.0
+http://www.wikidata.org/entity/Q12101948,Domuzla,,Point(35.711111111 46.594722222),Point(35.711111111 46.594722222),6,568.0
+http://www.wikidata.org/entity/Q8083859,Șerplea River,,,,3,46.0
+http://www.wikidata.org/entity/Q14916545,Achkva,,Point(41.772222222 41.815277777),Point(41.772222222 41.815277777),4,37.0
+http://www.wikidata.org/entity/Q12101948,Domuzla,,Point(35.711111111 46.594722222),Point(35.681666666 46.7975),6,568.0
+http://www.wikidata.org/entity/Q14920274,,,Point(40.074444444 43.378055555),Point(40.074444444 43.378055555),3,23.1
+http://www.wikidata.org/entity/Q12168202,Tsareha,,Point(31.1379 46.9333),Point(31.1382 47.2891),5,
+http://www.wikidata.org/entity/Q14943292,Magri,,Point(39.157335 44.019208),Point(39.157335 44.019208),3,
+http://www.wikidata.org/entity/Q12168202,Tsareha,,Point(31.1379 46.9333),Point(31.1379 46.9333),5,
+http://www.wikidata.org/entity/Q12170157,Chetteke-Uzen,,Point(34.3459 44.5698),Point(34.3459 44.5698),2,4.8
+http://www.wikidata.org/entity/Q14916591,,,,,3,
+http://www.wikidata.org/entity/Q7910461,Valea Vadului River,,,Point(28.7364 44.4422),3,51.0
+http://www.wikidata.org/entity/Q14960558,Pobednaya,,Point(34.5179 45.8024),Point(34.3361 45.4944),4,3366.0
+http://www.wikidata.org/entity/Q12862618,Besleti,,Point(41.028611111 42.998611111),Point(41.028611111 42.998611111),4,81.5
+http://www.wikidata.org/entity/Q12116763,La-Ilya,,Point(34.3625 44.615277777),Point(34.282777777 44.618611111),3,23.0
+http://www.wikidata.org/entity/Q12106495,,,Point(37.1049 46.8992),Point(37.10503 46.89975),5,253.0
+http://www.wikidata.org/entity/Q13470018,Ayan-Uzen,,Point(34.347222222 44.573611111),Point(34.347222222 44.573611111),6,
+http://www.wikidata.org/entity/Q12154439,Solona,,Point(36.219722222 46.660277777),Point(36.219722222 46.660277777),3,22.6
+http://www.wikidata.org/entity/Q7299574,Razim River,,,Point(28.984722 44.826667),1,
+http://www.wikidata.org/entity/Q12871462,Khipsta,,Point(40.545 43.124444444),Point(40.701666666 43.3125),6,166.0
+http://www.wikidata.org/entity/Q12865587,Kaparcha,,Point(41.706666666 42.08),Point(41.706666666 42.08),6,535.0
+http://www.wikidata.org/entity/Q12106495,,,Point(37.1049 46.8992),Point(37.0694 47.0456),5,253.0
+http://www.wikidata.org/entity/Q13725930,Gagida,,Point(41.530833333 42.518333333),Point(41.530833333 42.518333333),0,270.0
+http://www.wikidata.org/entity/Q7539109,Slava River,,,Point(28.7856 44.7194),2,
+http://www.wikidata.org/entity/Q12871334,Churia,,Point(41.611111111 42.333333333),Point(41.725 42.317777777),3,296.0
+http://www.wikidata.org/entity/Q12116193,,,Point(36.6744 46.7799),Point(36.7323 46.9642),7,
+http://www.wikidata.org/entity/Q7666806,Săcele River,,,Point(28.709 44.4917),2,
+http://www.wikidata.org/entity/Q12081653,,,Point(37.97755 47.097656),Point(37.940037 47.336386),3,
+http://www.wikidata.org/entity/Q12297825,,,Point(27.8989 42.9575),Point(27.7025 42.9189),1,79.0
+http://www.wikidata.org/entity/Q12120796,Malyi Adzhalyk River,,Point(30.9442 46.6951),Point(30.9442 46.6951),4,
+http://www.wikidata.org/entity/Q6805335,Medgidia River,,,Point(28.2085 44.2588),3,
+http://www.wikidata.org/entity/Q12116050,Ksir-Pata,,Point(34.540277777 44.744722222),Point(34.460277777 44.776944444),3,144.0
+http://www.wikidata.org/entity/Q14920275,Mokvi,,Point(41.4139 42.7481),Point(41.412777777 42.749444444),10,336.0
+http://www.wikidata.org/entity/Q14920275,Mokvi,,Point(41.4139 42.7481),Point(41.4139 42.7481),10,336.0
+http://www.wikidata.org/entity/Q13723612,Gagripshi,,Point(40.244722222 43.315277777),Point(40.243888888 43.315833333),3,
+http://www.wikidata.org/entity/Q6940506,Loo,,,Point(39.583611111 43.701944444),7,
+http://www.wikidata.org/entity/Q6942318,Buu,,,Point(39.5475 43.72806),6,
+http://www.wikidata.org/entity/Q6939418,Khotetsay,,,Point(38.15188 44.462099),5,
+http://www.wikidata.org/entity/Q6938974,Agoy,,Point(39.024151 44.135888),Point(39.024151 44.135888),12,
+http://www.wikidata.org/entity/Q12871462,Khipsta,,Point(40.545 43.124444444),Point(40.545 43.124444444),6,166.0
+http://www.wikidata.org/entity/Q12862618,Besleti,,Point(41.028611111 42.998611111),Point(41.121666666 43.048888888),4,81.5
+http://www.wikidata.org/entity/Q10964416,Mezib,,,Point(38.14083 44.51056),9,
+http://www.wikidata.org/entity/Q11011705,River Machara,,Point(41.079166666 42.949666666),Point(41.259944444 43.025305555),5,110.0
+http://www.wikidata.org/entity/Q14920274,,,Point(40.074444444 43.378055555),Point(40.143055555 43.471666666),3,23.1
+http://www.wikidata.org/entity/Q13723612,Gagripshi,,Point(40.244722222 43.315277777),Point(40.244722222 43.315277777),3,
+http://www.wikidata.org/entity/Q12118318,"Lozuvatka River, tributary of Sea of Azov",,Point(35.99058 46.66515),Point(36.1677 47.0038),5,560.0
+http://www.wikidata.org/entity/Q12116050,Ksir-Pata,,Point(34.540277777 44.744722222),Point(34.540277777 44.744722222),3,144.0
+http://www.wikidata.org/entity/Q12809886,Harşit Brook,,Point(38.844421 41.009807),Point(38.844421 41.009807),9,3280.0
+http://www.wikidata.org/entity/Q12861292,Aapsta,,Point(40.6875 43.088055555),Point(40.807777777 43.277777777),13,243.0
+http://www.wikidata.org/entity/Q13725930,Gagida,,Point(41.530833333 42.518333333),Point(41.540277777 42.573888888),0,270.0
+http://www.wikidata.org/entity/Q12861715,Anaria,,Point(41.467777777 42.698333333),Point(41.563611111 42.696666666),3,103.0
+http://www.wikidata.org/entity/Q13726038,Dgamshi,,Point(41.373055555 42.764166666),Point(41.373055555 42.764166666),3,120.0
+http://www.wikidata.org/entity/Q12809886,Harşit Brook,,Point(38.844421 41.009807),Point(38.846388888 41.010277777),9,3280.0
+http://www.wikidata.org/entity/Q6937578,Dzhankhot,,,Point(38.192777777 44.434722222),6,
+http://www.wikidata.org/entity/Q12116193,,,Point(36.6744 46.7799),Point(36.6744 46.7799),7,
+http://www.wikidata.org/entity/Q12861715,Anaria,,Point(41.467777777 42.698333333),Point(41.467777777 42.698333333),3,103.0
+http://www.wikidata.org/entity/Q12154439,Solona,,Point(36.219722222 46.660277777),Point(36.300639568 46.690341746),3,22.6
+http://www.wikidata.org/entity/Q6940506,Loo,,,Point(39.5845 43.700102777),7,
+http://www.wikidata.org/entity/Q12100871,Dzhurla River,,Point(34.4999 44.7327),Point(34.4999 44.7327),5,19.8
+http://www.wikidata.org/entity/Q7040831,Nisipari River,,,Point(28.3695 44.2311),2,
+http://www.wikidata.org/entity/Q6506058,Lazu River,,,,3,25.0
+http://www.wikidata.org/entity/Q7909572,Valea Adâncă River,,,,3,17.0
+http://www.wikidata.org/entity/Q12080524,Balai,,Point(30.992673 46.928788),Point(30.992673 46.928788),5,586.0
+http://www.wikidata.org/entity/Q7517842,Siminoc River,,,,3,17.0
+http://www.wikidata.org/entity/Q12106495,,,Point(37.1049 46.8992),Point(37.1049 46.8992),5,253.0
+http://www.wikidata.org/entity/Q12865587,Kaparcha,,Point(41.706666666 42.08),Point(41.692222222 42.14),6,535.0
+http://www.wikidata.org/entity/Q12809886,Harşit Brook,,Point(38.844421 41.009807),Point(39.692219 40.387443),9,3280.0
+http://www.wikidata.org/entity/Q10964806,Tsuskhvadzh,,,Point(39.36843 43.8809),8,
+http://www.wikidata.org/entity/Q7235449,Potârnichea River,,,,3,34.0
+http://www.wikidata.org/entity/Q12116763,La-Ilya,,Point(34.3625 44.615277777),Point(34.3625 44.615277777),3,23.0
+http://www.wikidata.org/entity/Q12118318,"Lozuvatka River, tributary of Sea of Azov",,Point(35.99058 46.66515),Point(35.99058 46.66515),5,560.0
+http://www.wikidata.org/entity/Q11011705,River Machara,,Point(41.079166666 42.949666666),Point(41.079166666 42.949666666),5,110.0
+http://www.wikidata.org/entity/Q12861292,Aapsta,,Point(40.6875 43.088055555),Point(40.6875 43.088055555),13,243.0
+http://www.wikidata.org/entity/Q12116193,,,Point(36.6744 46.7799),Point(36.70817 46.92049),7,
+http://www.wikidata.org/entity/Q6945012,Ozereyka,,,Point(37.631111111 44.670833333),6,
+http://www.wikidata.org/entity/Q14960558,Pobednaya,,Point(34.5179 45.8024),Point(34.5179 45.8024),4,3366.0
+http://www.wikidata.org/entity/Q13726038,Dgamshi,,Point(41.373055555 42.764166666),Point(41.380833333 42.97),3,120.0
+http://www.wikidata.org/entity/Q13723612,Gagripshi,,Point(40.244722222 43.315277777),Point(40.347222222 43.351111111),3,
+http://www.wikidata.org/entity/Q14920275,Mokvi,,Point(41.4139 42.7481),Point(41.7664 42.9644),10,336.0
+http://www.wikidata.org/entity/Q12081653,,,Point(37.97755 47.097656),Point(37.97755 47.097656),3,
+http://www.wikidata.org/entity/Q12133504,Nerushai,,Point(29.487777777 45.566111111),Point(29.48265 45.56467),6,
+http://www.wikidata.org/entity/Q7229099,Popa Nica River,,,,3,13.0
+http://www.wikidata.org/entity/Q12116763,La-Ilya,,Point(34.3625 44.615277777),Point(34.2025 44.377777777),3,23.0
+http://www.wikidata.org/entity/Q7666885,Sărata River,,,Point(28.7604 44.6174),2,
+http://www.wikidata.org/entity/Q6983264,Nazarcea River,,,,3,65.0
+http://www.wikidata.org/entity/Q7909714,Valea Cișmelei River,,,,3,21.0
+http://www.wikidata.org/entity/Q7910165,Valea Plantației River,,,,3,41.0
+http://www.wikidata.org/entity/Q12133504,Nerushai,,Point(29.487777777 45.566111111),Point(29.487777777 45.566111111),6,
+http://www.wikidata.org/entity/Q6945378,Kuapse,,,Point(39.29738 43.94002),7,
+http://www.wikidata.org/entity/Q12120796,Malyi Adzhalyk River,,Point(30.9442 46.6951),Point(30.8632 46.8938),4,
+http://www.wikidata.org/entity/Q7910305,Valea Seacă River,,,,3,95.0
+http://www.wikidata.org/entity/Q12871334,Churia,,Point(41.611111111 42.333333333),Point(41.611111111 42.333333333),3,296.0
+http://www.wikidata.org/entity/Q7069917,Nuntași River,,,Point(28.6927 44.5255),2,
+http://www.wikidata.org/entity/Q6943082,Khobza,,,Point(39.569166666 43.713611111),7,
+http://www.wikidata.org/entity/Q12297825,,,Point(27.8989 42.9575),Point(27.8989 42.9575),1,79.0
+http://www.wikidata.org/entity/Q7688179,Tatlageacul Mare River,,,,2,
+http://www.wikidata.org/entity/Q7688181,Tatlageacul Mic River,,,,2,
+http://www.wikidata.org/entity/Q7690554,Tașaul River,,,,2,
+http://www.wikidata.org/entity/Q19945389,Creek Sernaya,,Point(36.2086 45.4714),Point(36.211 45.43616),3,
+http://www.wikidata.org/entity/Q16710508,Uskut River,,Point(34.6924 44.7983),Point(34.681 44.8933),5,751.0
+http://www.wikidata.org/entity/Q20582971,Chaoba,,,Point(41.490833333 42.650277777),2,24.0
+http://www.wikidata.org/entity/Q28937037,Ulu Qol,,Point(33.5733 44.8376),Point(33.5733 44.8376),2,
+http://www.wikidata.org/entity/Q16702885,Sudzhilka,,Point(35.0 45.3851),Point(34.751388888 45.368055555),3,102.0
+http://www.wikidata.org/entity/Q18401568,Makopse,,Point(39.210378 43.992075),Point(39.210277777 43.992777777),10,
+http://www.wikidata.org/entity/Q35548492,,,Point(37.823278 47.859556),Point(37.916111 47.274361),1,
+http://www.wikidata.org/entity/Q16701637,Stalnaya,,Point(34.6598 45.7952),Point(34.45 45.58),3,134.0
+http://www.wikidata.org/entity/Q19296191,Melet Cayi,,Point(37.933394 40.984533),Point(37.9339 40.98267),5,
+http://www.wikidata.org/entity/Q41295304,Ali-Bay,,Point(35.6428 45.3218),Point(35.64278 45.32167),3,182.0
+http://www.wikidata.org/entity/Q36540427,Mendelikha,,,Point(40.258333333 43.585833333),2,
+http://www.wikidata.org/entity/Q41504893,Krivaya,,,Point(35.81111 45.15),4,
+http://www.wikidata.org/entity/Q24686173,,,Point(40.534333333 43.132083333),Point(40.534333333 43.132083333),4,169.0
+http://www.wikidata.org/entity/Q18401568,Makopse,,Point(39.210378 43.992075),Point(39.29102 44.0669054),10,
+http://www.wikidata.org/entity/Q21209979,,,,,1,
+http://www.wikidata.org/entity/Q21210492,,,,,1,
+http://www.wikidata.org/entity/Q21211128,,,,,1,
+http://www.wikidata.org/entity/Q21211613,,,,,1,
+http://www.wikidata.org/entity/Q21589411,,,,,1,
+http://www.wikidata.org/entity/Q21695199,,,,,1,
+http://www.wikidata.org/entity/Q21696490,,,,,1,
+http://www.wikidata.org/entity/Q35322097,Rvach,,,Point(32.373055555 46.537222222),2,
+http://www.wikidata.org/entity/Q32361768,Velikoselskaya,,Point(34.8628 45.71411),Point(34.762 45.601),2,
+http://www.wikidata.org/entity/Q24686173,,,Point(40.534333333 43.132083333),Point(40.510833333 43.298333333),4,169.0
+http://www.wikidata.org/entity/Q18402036,Subash,,Point(35.3185 45.2503),Point(35.3185 45.2503),4,276.0
+http://www.wikidata.org/entity/Q24682281,Toumishi,,Point(41.33711 42.77211),Point(41.315277777 42.952222222),4,62.0
+http://www.wikidata.org/entity/Q16716666,Skurtianka,,Point(30.436111 46.244444),Point(30.436111 46.244444),2,
+http://www.wikidata.org/entity/Q28705486,Mokryy Yelanchik,,Point(38.3299 47.1384),Point(38.32559 47.13606),5,
+http://www.wikidata.org/entity/Q30962979,Kamyshevatka,,,Point(37.18395 46.92901),3,
+http://www.wikidata.org/entity/Q16710508,Uskut River,,Point(34.6924 44.7983),Point(34.6924 44.7983),5,751.0
+http://www.wikidata.org/entity/Q16716666,Skurtianka,,Point(30.436111 46.244444),Point(30.430278 46.286944),2,
+http://www.wikidata.org/entity/Q32361768,Velikoselskaya,,Point(34.8628 45.71411),Point(34.8628 45.71411),2,
+http://www.wikidata.org/entity/Q19308341,Sabuncular Deresi,,Point(40.710958 41.084098),Point(40.710958 41.084098),3,
+http://www.wikidata.org/entity/Q15039014,Malaya Cherepakha,,Point(38.935997 47.23102),Point(38.935997 47.23102),5,
+http://www.wikidata.org/entity/Q21043427,Putamish,,Point(34.306680555 44.554708333),Point(34.266666666 44.616666666),2,
+http://www.wikidata.org/entity/Q16702885,Sudzhilka,,Point(35.0 45.3851),Point(35.0 45.3851),3,102.0
+http://www.wikidata.org/entity/Q28705486,Mokryy Yelanchik,,Point(38.3299 47.1384),Point(38.3299 47.1384),5,
+http://www.wikidata.org/entity/Q17157251,Andus,,Point(34.5972 44.7684),Point(34.5104 44.828),5,52.0
+http://www.wikidata.org/entity/Q18402036,Subash,,Point(35.3185 45.2503),Point(35.0452 45.0935),4,276.0
+http://www.wikidata.org/entity/Q28705486,Mokryy Yelanchik,,Point(38.3299 47.1384),Point(38.4533 47.8008),5,
+http://www.wikidata.org/entity/Q19278152,Değirmendere Creek,,,Point(39.585 40.801388888),3,
+http://www.wikidata.org/entity/Q41382670,Sukhoy Ruchey,,,Point(35.463611111 45.28),2,
+http://www.wikidata.org/entity/Q16627181,Detlyashko,,,Point(39.523889 43.745556),1,
+http://www.wikidata.org/entity/Q23954746,Zagmata,,Point(34.074 44.422),Point(34.074 44.422),2,5.6
+http://www.wikidata.org/entity/Q19296191,Melet Cayi,,Point(37.933394 40.984533),Point(37.69655609 40.50611115),5,
+http://www.wikidata.org/entity/Q30889778,Syuertashskaya,,Point(36.1147 45.4569),Point(36.1147 45.4569),3,17.6
+http://www.wikidata.org/entity/Q19945389,Creek Sernaya,,Point(36.2086 45.4714),Point(36.2086 45.4714),3,
+http://www.wikidata.org/entity/Q15696390,Küçük Çatırlıq,,Point(33.78 45.875),Point(33.81021 45.7582),4,
+http://www.wikidata.org/entity/Q23960312,,,Point(40.814138888 43.083472222),Point(40.814138888 43.083472222),2,
+http://www.wikidata.org/entity/Q16701637,Stalnaya,,Point(34.6598 45.7952),Point(34.602777777 45.746388888),3,134.0
+http://www.wikidata.org/entity/Q16469935,Demerdji,,Point(34.41923 44.67568),Point(34.391 44.7711),6,53.4
+http://www.wikidata.org/entity/Q19931192,Bulhanak,,Point(36.485 45.361),Point(36.4833 45.411),4,
+http://www.wikidata.org/entity/Q18689526,Terme River,,Point(37.0267 41.2108),Point(37.0333 41.2),11,233.0
+http://www.wikidata.org/entity/Q24687771,,,Point(41.40372 42.75646),Point(41.40372 42.75646),6,61.0
+http://www.wikidata.org/entity/Q16676684,Mirnovka,,Point(34.518 45.802),Point(34.23 45.62),4,270.0
+http://www.wikidata.org/entity/Q24687771,,,Point(41.40372 42.75646),Point(41.410555555 42.993333333),6,61.0
+http://www.wikidata.org/entity/Q15696390,Küçük Çatırlıq,,Point(33.78 45.875),Point(33.75614 45.92694),4,
+http://www.wikidata.org/entity/Q41295304,Ali-Bay,,Point(35.6428 45.3218),Point(35.6428 45.3218),3,182.0
+http://www.wikidata.org/entity/Q30918838,Kalanchak,,Point(33.224465 46.216284),Point(33.224465 46.216284),4,
+http://www.wikidata.org/entity/Q21589275,Desermen Creek,,,Point(39.38121 40.669151666),1,
+http://www.wikidata.org/entity/Q16378066,Chakvistsqali,,Point(41.723611111 41.715277777),Point(41.897222222 41.727777777),3,176.0
+http://www.wikidata.org/entity/Q19278152,Değirmendere Creek,,,Point(39.756944444 41.002777777),3,
+http://www.wikidata.org/entity/Q21043427,Putamish,,Point(34.306680555 44.554708333),Point(34.306680555 44.554708333),2,
+http://www.wikidata.org/entity/Q16676684,Mirnovka,,Point(34.518 45.802),Point(34.518 45.802),4,270.0
+http://www.wikidata.org/entity/Q34858339,Balka Kalinovskaya,,,Point(32.67018 45.47325),2,
+http://www.wikidata.org/entity/Q15696390,Küçük Çatırlıq,,Point(33.78 45.875),Point(33.78 45.875),4,
+http://www.wikidata.org/entity/Q16713645,Hasta-Bash,,Point(34.074 44.422),Point(34.074 44.422),6,5.63
+http://www.wikidata.org/entity/Q23960312,,,Point(40.814138888 43.083472222),Point(40.854444444 43.115555555),2,
+http://www.wikidata.org/entity/Q35548492,,,Point(37.823278 47.859556),Point(37.823278 47.859556),1,
+http://www.wikidata.org/entity/Q24682281,Toumishi,,Point(41.33711 42.77211),Point(41.33711 42.77211),4,62.0
+http://www.wikidata.org/entity/Q18689526,Terme River,,Point(37.0267 41.2108),Point(37.0267 41.2108),11,233.0
+http://www.wikidata.org/entity/Q16718816,Churyuk-Su,,Point(35.3451 45.248),Point(35.3451 45.248),4,148.0
+http://www.wikidata.org/entity/Q24683527,Okumi river,,Point(41.501666666 42.621944444),Point(41.501666666 42.621944444),7,559.0
+http://www.wikidata.org/entity/Q23954746,Zagmata,,Point(34.074 44.422),Point(34.0687 44.4406),2,5.6
+http://www.wikidata.org/entity/Q16713645,Hasta-Bash,,Point(34.074 44.422),Point(34.0587 44.4406),6,5.63
+http://www.wikidata.org/entity/Q41345936,Koy-Asan,,,Point(35.558055555 45.183611111),3,67.4
+http://www.wikidata.org/entity/Q16701637,Stalnaya,,Point(34.6598 45.7952),Point(34.6598 45.7952),3,134.0
+http://www.wikidata.org/entity/Q32643988,Chemitokvadzhe,,,Point(39.425093 43.829689),0,
+http://www.wikidata.org/entity/Q17157251,Andus,,Point(34.5972 44.7684),Point(34.5972 44.7684),5,52.0
+http://www.wikidata.org/entity/Q32749407,Dzhardzhava,,Point(36.472 45.33),Point(36.472 45.33),4,24.1
+http://www.wikidata.org/entity/Q18401568,Makopse,,Point(39.210378 43.992075),Point(39.210378 43.992075),10,
+http://www.wikidata.org/entity/Q30888881,Kurpechenskaya,,,Point(35.422777777 45.258888888),3,56.5
+http://www.wikidata.org/entity/Q19296191,Melet Cayi,,Point(37.933394 40.984533),Point(37.933394 40.984533),5,
+http://www.wikidata.org/entity/Q16469935,Demerdji,,Point(34.41923 44.67568),Point(34.41923 44.67568),6,53.4
+http://www.wikidata.org/entity/Q19931192,Bulhanak,,Point(36.485 45.361),Point(36.480555555 45.371666666),4,
+http://www.wikidata.org/entity/Q16494536,Beranda,,,Point(39.516111 43.752778),1,
+http://www.wikidata.org/entity/Q19296191,Melet Cayi,,Point(37.933394 40.984533),Point(38.097527 40.416232),5,
+http://www.wikidata.org/entity/Q24686905,Gudau,,Point(40.639166666 43.100833333),Point(40.665277777 43.182777777),3,45.0
+http://www.wikidata.org/entity/Q16378066,Chakvistsqali,,Point(41.723611111 41.715277777),Point(41.723611111 41.715277777),3,176.0
+http://www.wikidata.org/entity/Q15039011,Bolshaya Cherepakha,,Point(38.938331 47.249592),Point(38.938331 47.249592),1,
+http://www.wikidata.org/entity/Q24686905,Gudau,,Point(40.639166666 43.100833333),Point(40.639166666 43.100833333),3,45.0
+http://www.wikidata.org/entity/Q16718816,Churyuk-Su,,Point(35.3451 45.248),Point(35.0495 45.01548),4,148.0
+http://www.wikidata.org/entity/Q24686240,Gagida,,Point(41.533333333 42.526944444),Point(41.533333333 42.526944444),4,270.0
+http://www.wikidata.org/entity/Q24686240,Gagida,,Point(41.533333333 42.526944444),Point(41.540277777 42.573888888),4,270.0
+http://www.wikidata.org/entity/Q24682378,East Gumista River,,,Point(41.1326184 43.3101426),2,222.0
+http://www.wikidata.org/entity/Q19931192,Bulhanak,,Point(36.485 45.361),Point(36.485 45.361),4,
+http://www.wikidata.org/entity/Q36538662,Mamayka,,Point(39.695277777 43.625277777),Point(39.695277777 43.625277777),2,
+http://www.wikidata.org/entity/Q24682378,East Gumista River,,,Point(41.003611111 43.087777777),2,222.0
+http://www.wikidata.org/entity/Q24683527,Okumi river,,Point(41.501666666 42.621944444),Point(41.856111111 42.816944444),7,559.0
+http://www.wikidata.org/entity/Q42318713,Shelen,,Point(34.81 44.82),Point(34.7636 44.8988),5,42.0
+http://www.wikidata.org/entity/Q97174177,,,Point(32.5925 45.480833),Point(32.5925 45.480833),1,
+http://www.wikidata.org/entity/Q97180631,Gvardeyskaya,,,Point(34.685 45.683888888),1,
+http://www.wikidata.org/entity/Q108534744,,,Point(32.013056 46.8775),Point(32.013056 46.8775),1,
+http://www.wikidata.org/entity/Q47486437,Koz,,Point(35.134 44.853),Point(35.133888888 44.853055555),3,22.3
+http://www.wikidata.org/entity/Q64952212,Balaklavka,,Point(33.597 44.503),Point(33.596944444 44.503055555),5,
+http://www.wikidata.org/entity/Q138610698,,,Point(39.7312 43.56873),Point(39.7312 43.56873),1,
+http://www.wikidata.org/entity/Q47528234,Chelbaka,,Point(33.9448 44.3926),Point(33.944722222 44.3925),1,12.9
+http://www.wikidata.org/entity/Q47516787,Yantyk,,,Point(35.26139 44.96556),4,50.0
+http://www.wikidata.org/entity/Q59560489,Botanicheskaya,,,Point(33.54 45.838055555),2,
+http://www.wikidata.org/entity/Q41823250,Tarkhanskaya,,,Point(36.58611 45.44444),3,11.8
+http://www.wikidata.org/entity/Q47486437,Koz,,Point(35.134 44.853),Point(35.134 44.853),3,22.3
+http://www.wikidata.org/entity/Q97240157,Dekhva,,Point(41.768888888 41.800833333),Point(41.768888888 41.800833333),3,41.0
+http://www.wikidata.org/entity/Q52391113,Ayan-Dere,,,Point(34.446621 44.7012233),4,
+http://www.wikidata.org/entity/Q41633051,Zelyony Yar,,Point(35.9743 45.3711),Point(35.974166666 45.371111111),3,
+http://www.wikidata.org/entity/Q41632982,Pischana,,,Point(35.5275 45.125),2,
+http://www.wikidata.org/entity/Q56277141,Abianus,,,,1,
+http://www.wikidata.org/entity/Q111015465,Bartskhana,,Point(41.664444444 41.649722222),Point(41.746388888 41.6025),3,19.0
+http://www.wikidata.org/entity/Q97320319,Çam Creek,,Point(41.52415 41.485823333),Point(41.598311666 41.493558333),1,
+http://www.wikidata.org/entity/Q47500870,Tukluzka,,Point(35.109 44.811),Point(35.10889 44.81111),4,28.3
+http://www.wikidata.org/entity/Q108534744,,,Point(32.013056 46.8775),Point(32.064167 46.880556),1,
+http://www.wikidata.org/entity/Q47527996,Mulla-Oglu Cokrak,,Point(35.3536 44.9777),Point(35.35361 44.97778),3,18.5
+http://www.wikidata.org/entity/Q126940547,Teshebs River,,,,1,
+http://www.wikidata.org/entity/Q59659981,Charatay,,Point(32.78 45.368),Point(32.78 45.368),2,
+http://www.wikidata.org/entity/Q47527996,Mulla-Oglu Cokrak,,Point(35.3536 44.9777),Point(35.3536 44.9777),3,18.5
+http://www.wikidata.org/entity/Q42052015,Zavetleninskaya,,,Point(34.42 45.87389),3,166.0
+http://www.wikidata.org/entity/Q41536450,Balka Adzhyel's'ka,,,Point(36.115555555 45.348333333),4,165.0
+http://www.wikidata.org/entity/Q48945080,Semisotka,,,Point(35.518888888 45.283888888),2,
+http://www.wikidata.org/entity/Q97251784,West Gumista River,,Point(41.003333333 43.089166666),Point(40.8232359 43.2976281),3,316.0
+http://www.wikidata.org/entity/Q97174126,,,Point(35.424722 45.084444),Point(35.424722 45.084444),1,
+http://www.wikidata.org/entity/Q97320319,Çam Creek,,Point(41.52415 41.485823333),Point(41.52415 41.485823333),1,
+http://www.wikidata.org/entity/Q97174177,,,Point(32.5925 45.480833),Point(32.656389 45.428889),1,
+http://www.wikidata.org/entity/Q141181349,Vardnili cascade tailrace canal,,,,0,
+http://www.wikidata.org/entity/Q47527998,Limenka,,Point(33.9868 44.4008),Point(33.986666666 44.400833333),2,6.3
+http://www.wikidata.org/entity/Q42399951,Pashala,,,Point(34.63333 44.8),3,6.0
+http://www.wikidata.org/entity/Q47500870,Tukluzka,,Point(35.109 44.811),Point(35.109 44.811),4,28.3
+http://www.wikidata.org/entity/Q47527998,Limenka,,Point(33.9868 44.4008),Point(33.9868 44.4008),2,6.3
+http://www.wikidata.org/entity/Q42329423,Choban-Kule-Uzen,,Point(34.751111111 44.811944444),Point(34.751111111 44.811944444),2,18.4
+http://www.wikidata.org/entity/Q97251784,West Gumista River,,Point(41.003333333 43.089166666),Point(41.003333333 43.089166666),3,316.0
+http://www.wikidata.org/entity/Q97174126,,,Point(35.424722 45.084444),Point(35.305833 45.115278),1,
+http://www.wikidata.org/entity/Q47478298,Edyfler,,Point(34.469 44.7162),Point(34.469 44.7162),2,10.8
+http://www.wikidata.org/entity/Q41796841,Baksu,,,Point(36.60972 45.36667),3,17.5
+http://www.wikidata.org/entity/Q42329423,Choban-Kule-Uzen,,Point(34.751111111 44.811944444),Point(34.740555555 44.876666666),2,18.4
+http://www.wikidata.org/entity/Q64952212,Balaklavka,,Point(33.597 44.503),Point(33.597 44.503),5,
+http://www.wikidata.org/entity/Q97164138,,,,,1,
+http://www.wikidata.org/entity/Q95901767,Tselinnaya,,,Point(34.213888888 45.946111111),2,
+http://www.wikidata.org/entity/Q42318713,Shelen,,Point(34.81 44.82),Point(34.81 44.82),5,42.0
+http://www.wikidata.org/entity/Q42446074,Orta-Uzen,,Point(34.559 44.755),Point(34.55961 44.75556),4,26.0
+http://www.wikidata.org/entity/Q97240157,Dekhva,,Point(41.768888888 41.800833333),Point(41.873888888 41.738611111),3,41.0
+http://www.wikidata.org/entity/Q108534792,,,Point(31.188611 46.780278),Point(31.2125 46.871389),1,
+http://www.wikidata.org/entity/Q47516547,Planerka,,Point(35.253 44.9602),Point(35.253 44.9602),2,8.6
+http://www.wikidata.org/entity/Q111015465,Bartskhana,,Point(41.664444444 41.649722222),Point(41.664444444 41.649722222),3,19.0
+http://www.wikidata.org/entity/Q108534220,,,,,1,
+http://www.wikidata.org/entity/Q108534370,,,,,1,
+http://www.wikidata.org/entity/Q108534535,,,,,1,
+http://www.wikidata.org/entity/Q108534554,,,,,1,
+http://www.wikidata.org/entity/Q108534604,,,,,1,
+http://www.wikidata.org/entity/Q42377634,Kanaka,,,Point(34.64 44.785),2,19.0
+http://www.wikidata.org/entity/Q41536450,Balka Adzhyel's'ka,,,Point(36.070555555 45.403055555),4,165.0
+http://www.wikidata.org/entity/Q42318713,Shelen,,Point(34.81 44.82),Point(34.80988 44.82043),5,42.0
+http://www.wikidata.org/entity/Q108534792,,,Point(31.188611 46.780278),Point(31.188611 46.780278),1,
+http://www.wikidata.org/entity/Q41633051,Zelyony Yar,,Point(35.9743 45.3711),Point(35.9743 45.3711),3,
+http://www.wikidata.org/entity/Q42566841,Qutlaq,,Point(34.874 44.822),Point(34.87389 44.32944),3,28.2
+http://www.wikidata.org/entity/Q97180843,Zelyonaya,,,Point(34.658055555 45.691944444),2,
+http://www.wikidata.org/entity/Q97179709,Sivash,,,Point(34.366666666 45.883333333),3,
+http://www.wikidata.org/entity/Q42566841,Qutlaq,,Point(34.874 44.822),Point(34.882 44.8947),3,28.2
+http://www.wikidata.org/entity/Q42566841,Qutlaq,,Point(34.874 44.822),Point(34.874 44.822),3,28.2
+http://www.wikidata.org/entity/Q42446074,Orta-Uzen,,Point(34.559 44.755),Point(34.559 44.755),4,26.0
+http://www.wikidata.org/entity/Q47528234,Chelbaka,,Point(33.9448 44.3926),Point(33.9448 44.3926),1,12.9
+http://www.wikidata.org/entity/Q48945025,Kamysh-Dzhilga,,,Point(36.326111111 45.059722222),3,
+http://www.wikidata.org/entity/Q48945091,Naymanskaya,,,Point(35.775277777 45.069722222),2,

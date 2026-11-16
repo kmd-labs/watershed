@@ -654,3 +654,67 @@
 .dock-wrap--off {
   display: none;
 }
+
+// The panel title doubles as the way to another sea.
+.sea-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: spacing("xxs");
+  margin: 0;
+  padding: 2px spacing("xxs") 2px 0;
+  border: 0;
+  border-radius: radius("sm");
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+
+  lucide-icon {
+    flex: none;
+    opacity: 0.6;
+    transition: opacity transition("fast");
+  }
+
+  &:hover lucide-icon {
+    opacity: 1;
+  }
+
+  &:focus-visible {
+    outline: 2px solid color("accent");
+    outline-offset: 2px;
+  }
+}
+
+// Loading another sea after the splash: a quiet note at the top of the map.
+.sea-loading {
+  position: fixed;
+  top: calc(var(--header-offset-top) + var(--kmd-brand-h, 40px) + #{spacing("md")});
+  left: 50%;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  gap: spacing("xxs");
+  min-width: 220px;
+  padding: spacing("xs") spacing("lg");
+  border-radius: radius("card");
+  transform: translateX(-50%);
+  font-size: font-size("sm");
+  color: color("text-main");
+  text-align: center;
+
+  &__bar {
+    display: block;
+    height: 3px;
+    border-radius: radius("pill");
+    background: color("line");
+    overflow: hidden;
+
+    i {
+      display: block;
+      height: 100%;
+      background: color("accent");
+      transition: width 0.3s ease;
+    }
+  }
+}

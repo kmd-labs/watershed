@@ -1,13 +1,14 @@
 #!/usr/bin/env node
 /**
- * Builds the web data files from data/baltic.source.json (HydroSHEDS / Natural Earth export).
+ * Builds the web data files of one sea from data/<sea>.source.json (HydroSHEDS / Natural Earth
+ * export; the Baltic's came with the project, the others from scripts/build-sea.py).
  *
- *   node scripts/build-data.mjs
+ *   node scripts/build-data.mjs [baltic|north|black|caspian|med]
  *
- * Output (src/assets/data/):
- *   baltic.json   everything the first frame needs: catchments, outlines, land, lakes, borders,
- *                 clipped world land, rivers of classes 1–4
- *   streams.json  the smallest streams (class 0, ~2/3 of all reaches), loaded after first render
+ * Output (src/assets/data/), fetched only once that sea is chosen:
+ *   <sea>.json          everything the first frame needs: catchments, outlines, land, lakes,
+ *                       borders, clipped world land, rivers of classes 1–4
+ *   <sea>.streams.json  the smallest streams (class 0, ~2/3 of all reaches), loaded after first render
  *
  * Work moved here from the browser:
  *   - coordinate streams are delta-encoded (wrapping uint16) → ~30% smaller after gzip
@@ -29,7 +30,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const SRC = path.join(root, 'data/baltic.source.json');
+const SEA = process.argv[2] ?? 'baltic';
+const SRC = path.join(root, `data/${SEA}.source.json`);
 const OUT = path.join(root, 'src/assets/data');
 /** Must match CONTEXT_MARGIN in globe.component.ts (lon°, lat°). */
 const CONTEXT_MARGIN = [7, 3.5];
@@ -120,7 +122,12 @@ const basinPolys = unpack([B.basinRings, B.basinXY]).map(dropLakeHoles);
 const outlines = unpack(B.outlines).map(dropLakeHoles);
 
 // ─── world land clipped to the cut-out (Sutherland–Hodgman per ring) ─────────
-const box = [LON0 - CONTEXT_MARGIN[0], LON1 + CONTEXT_MARGIN[0], LAT0 - CONTEXT_MARGIN[1], LAT1 + CONTEXT_MARGIN[1]];
+// Wide basins get more latitude around them, so that a portrait poster frame (360 × 420 mm) fitted
+// to the basin still lies on land data (the Baltic keeps 3.5°).
+const midK = Math.cos((((LAT0 + LAT1) / 2) * Math.PI) / 180);
+const needH = ((LON1 - LON0) * midK) / (360 / 420) / 0.95 + 1;
+const latM = Math.round(Math.max(CONTEXT_MARGIN[1], (needH - (LAT1 - LAT0)) / 2) * 10) / 10;
+const box = [LON0 - CONTEXT_MARGIN[0], LON1 + CONTEXT_MARGIN[0], Math.max(-85, LAT0 - latM), Math.min(85, LAT1 + latM)].map(v => Math.round(v * 10) / 10);
 const gx = v => -180 + (360 * v) / 65535, gy = v => -90 + (180 * v) / 65535;
 const qgx = v => Math.round(((v + 180) / 360) * 65535), qgy = v => Math.round(((v + 90) / 180) * 65535);
 function clipRing(pts) {
@@ -158,7 +165,8 @@ const world = unpack(B.world)
 // ─── which river systems to leave out ────────────────────────────────────────
 const sArea = r => { let a = 0; for (let i = 0, j = r.length - 2; i < r.length; j = i, i += 2) a += r[j] * r[i + 1] - r[i] * r[j + 1]; return a / 2; };
 const km2 = r => Math.abs(sArea(r)) * 111.32 * 111.32 * Math.cos((r[1] * Math.PI) / 180);
-const outlineRings = outlines[6].map(r => { const f = new Float64Array(r.length); for (let i = 0; i < r.length; i += 2) { f[i] = qx(r[i]); f[i + 1] = qy(r[i + 1]); } return f; });
+// The last outline is the whole drainage basin (one per sub-basin before it).
+const outlineRings = outlines[B.subs.length].map(r => { const f = new Float64Array(r.length); for (let i = 0; i < r.length; i += 2) { f[i] = qx(r[i]); f[i + 1] = qy(r[i + 1]); } return f; });
 const mainRing = outlineRings.reduce((a, r) => (Math.abs(sArea(r)) > Math.abs(sArea(a)) ? r : a));
 const islands = outlineRings
   .filter(r => r !== mainRing && Math.sign(sArea(r)) === Math.sign(sArea(mainRing)))
@@ -179,8 +187,10 @@ const hiddenBasin = B.groups.map(g => {
   return !!I && I.km2 < MIN_ISLAND_KM2;
 });
 
+// The Baltic export's rivers were rebuilt from HydroRIVERS separately (build-rivers.py); the other
+// seas' sources carry the HydroRIVERS lines already.
 const hrPath = path.join(root, 'data/rivers.hr.json');
-const HR = fs.existsSync(hrPath) ? JSON.parse(fs.readFileSync(hrPath, 'utf8')) : null;
+const HR = SEA === 'baltic' && fs.existsSync(hrPath) ? JSON.parse(fs.readFileSync(hrPath, 'utf8')) : null;
 let wetCount = 0, keptReaches = 0, droppedReaches = 0, vertices = 0;
 const rivers = (HR ? HR.rivers : B.rivers).map((rc0, cls) => {
   // Keep only reliable reaches; rebuild cnt / xy / g for the survivors.
@@ -216,6 +226,7 @@ const rivers = (HR ? HR.rivers : B.rivers).map((rc0, cls) => {
 
 const core = {
   v: 2,
+  sea: SEA,
   bbox: B.bbox,
   groups: B.groups,
   subs: B.subs,
@@ -228,14 +239,17 @@ const core = {
   borders: [B.borders[0], delta(u16(B.borders[1]))],
   world: pack(world),
   worldBox: box,
-  rivers: rivers.filter(r => r.cls > 0)
+  rivers: rivers.filter(r => r.cls > 0),
+  // Polish → English river and country names, and how the basin was cut (new seas only).
+  ...(B.names ? { names: B.names } : {}),
+  ...(B.method ? { method: B.method } : {})
 };
 const streams = { v: 2, rivers: rivers.filter(r => r.cls === 0) };
 
 fs.mkdirSync(OUT, { recursive: true });
-fs.writeFileSync(path.join(OUT, 'baltic.json'), JSON.stringify(core));
-fs.writeFileSync(path.join(OUT, 'streams.json'), JSON.stringify(streams));
+fs.writeFileSync(path.join(OUT, `${SEA}.json`), JSON.stringify(core));
+fs.writeFileSync(path.join(OUT, `${SEA}.streams.json`), JSON.stringify(streams));
 const kb = f => (fs.statSync(path.join(OUT, f)).size / 1024).toFixed(0);
-console.log(`baltic.json ${kb('baltic.json')} KB, streams.json ${kb('streams.json')} KB`);
+console.log(`${SEA}.json ${kb(`${SEA}.json`)} KB, ${SEA}.streams.json ${kb(`${SEA}.streams.json`)} KB`);
 console.log(`in-lake segments flagged: ${wetCount}, lake holes dropped: ${holesDropped}, world rings kept: ${world.flat().length}`);
 console.log(`rivers: ${HR ? 'HydroRIVERS rebuild' : 'source export'}; reaches kept ${keptReaches}, left out ${droppedReaches} (upstream < ${MIN_UPSTREAM_KM2} km², unnamed < ${MIN_UNNAMED_KM2} km², islands < ${MIN_ISLAND_KM2} km²); vertices ${vertices}`);

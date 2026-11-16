@@ -1,4 +1,35 @@
 import { PosterPalette } from '../../poster/poster-options';
+import { SeaId } from '../sea';
+
+/** A river's share of the drainage basin's water (or land), for story and poster texts. */
+export interface RiverShare {
+  name: string;
+  /** Formatted, e.g. "25%". */
+  share: string;
+  frac: number;
+}
+
+/** What a sea's poster figures can draw on (formatted in the current language). */
+export interface PosterFactCtx {
+  /** River mouths on the sea (HydroRIVERS). */
+  nout: string;
+  /** People in the drainage basin (GHSL), e.g. "153 mln". */
+  pop: string;
+  /** Countries with at least 0.1% of the basin. */
+  countries: string;
+  /** The largest rivers by mean flow, and the largest basin by area. */
+  top: RiverShare[];
+  topArea: RiverShare;
+}
+
+export interface PosterFact {
+  value: string;
+  caption: string;
+  note?: string;
+}
+
+/** Replaces the texts that name the sea (the base dictionary is the Baltic's). */
+export type SeaOverlay = (base: Dict) => Partial<Dict>;
 
 export type Lang = 'en' | 'pl';
 
@@ -89,8 +120,9 @@ export interface Dict {
   storyTopRivers: string;
   storyCountries: string;
   storyFinaleTitle: string;
-  storyFinaleText: (seaArea: string, shareArea: string, seaFlow: string, shareFlow: string, nevaShare: string) => string;
-  storyFinaleTextSame: (sea: string, shareArea: string, shareFlow: string, nevaShare: string) => string;
+  /** `top`: the largest rivers by mean flow, largest first. */
+  storyFinaleText: (seaArea: string, shareArea: string, seaFlow: string, shareFlow: string, top: RiverShare[]) => string;
+  storyFinaleTextSame: (sea: string, shareArea: string, shareFlow: string, top: RiverShare[]) => string;
   topButton: string;
   hintTop: string;
   topHint: string;
@@ -237,6 +269,25 @@ export interface Dict {
   sourcesTitle: string;
 
   subNames: string[];
+  // ─── seas ───
+  /** Short name of each sea (picker, loading note). */
+  seaNames: Record<SeaId, string>;
+  changeSea: string;
+  chooseSea: string;
+  pickerTitle: string;
+  pickerSubtitle: string;
+  pickerClose: string;
+  pickerStats: (area: string, mouths: string) => string;
+  pickerPeople: (pop: string) => string;
+  pickerCurrent: string;
+  seaLoading: (sea: string) => string;
+  millionPeople: (n: string) => string;
+  /** Poster figures of the whole basin (new seas; the Baltic's are built in the poster maker). */
+  posterFacts?: (c: PosterFactCtx) => PosterFact[];
+  /** How this sea's basin was drawn (method popup), and its extra sources. */
+  methodSeaTitle?: string;
+  methodSea?: string;
+  sourcesExtra?: { label: string; url: string }[];
   countries: Record<string, string>;
   riverNames: Record<string, string>;
 }

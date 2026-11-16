@@ -285,6 +285,21 @@ export class PosterStudioComponent implements OnDestroy {
     const total = d.total;
     const pct = (v: number) => `${this.i18n.num(v * 100, v < 0.1 ? 1 : 0)}%`;
     const b = o.focus >= 0 ? d.basins[o.focus] : null;
+    if (!b && t.posterFacts) {
+      // Other seas: figures drawn from the data (rivers, people, the largest rivers, countries)
+      // plus the sea's own sourced facts (core/i18n/seas.*.ts).
+      const named = d.basins.filter(x => x.river && x.name);
+      const label = (x: (typeof named)[number]) => this.i18n.river(x.name!).replace(/ \(.+\)$/, '');
+      const byFlow = [...named].sort((p, q) => q.dis - p.dis).slice(0, 3);
+      const byArea = [...named].sort((p, q) => q.area - p.area)[0];
+      return t.posterFacts({
+        nout: this.i18n.num(total.nout),
+        pop: t.millionPeople(this.i18n.num((total.pop ?? 0) / 1e6)),
+        countries: this.i18n.num(total.ctry.length),
+        top: byFlow.map(x => ({ name: label(x), frac: x.dis / total.dis, share: pct(x.dis / total.dis) })),
+        topArea: { name: byArea ? label(byArea) : '', frac: byArea ? byArea.area / total.parea : 0, share: byArea ? pct(byArea.area / total.parea) : '' }
+      });
+    }
     if (!b) {
       return [
         { value: this.i18n.num(total.nout), caption: t.factRivers, note: t.factRiversNote },

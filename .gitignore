@@ -5,3 +5,6 @@ node_modules/
 *.log
 data/etopo.nc
 data/hydrorivers/
+
+# Raw HydroSHEDS / Natural Earth / GeoNames downloads for scripts/build-sea.py
+data/raw/

@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 """
-Builds src/assets/data/relief.webp — a subtle hillshade for the globe cut-out.
+Builds src/assets/data/<sea>.relief.webp — a subtle hillshade for the globe cut-out of one sea.
 
-Source: NOAA ETOPO1 (1 arc-minute, public domain), fetched from ERDDAP for the cut-out box
-(must match `worldBox` written by scripts/build-data.mjs: lon 2–45.2°E, lat 45.3–72.9°N):
+Source: NOAA ETOPO1 (1 arc-minute, public domain), fetched from ERDDAP for the cut-out box, i.e.
+the `worldBox` that scripts/build-data.mjs wrote into src/assets/data/<sea>.json (cached in
+data/raw/etopo/<sea>.nc; the Baltic's is data/etopo.nc):
 
-    curl -o data/etopo.nc "https://coastwatch.pfeg.noaa.gov/erddap/griddap/etopo180.nc?altitude%5B(45.3):1:(72.9)%5D%5B(2.0):1:(45.2)%5D"
-    python scripts/build-relief.py data/etopo.nc
+    node scripts/build-data.mjs <sea>
+    python -I scripts/build-relief.py <sea>
 
 Needs numpy, scipy and Pillow. Output is a greyscale image on the lon/lat grid, north up, where
 128 means "flat": the globe blends it with `soft-light`, so the sea and plains stay untouched and
@@ -24,8 +25,18 @@ GAIN = 300.0  # shade units → grey levels around 128
 LIGHTS = [(315, 0.5), (270, 0.25), (0, 0.25)]  # azimuth (deg, clockwise from north), weight
 SUN_ALT = np.radians(45)
 
-src = Path(sys.argv[1] if len(sys.argv) > 1 else 'data/etopo.nc')
-out = Path(__file__).resolve().parent.parent / 'src/assets/data/relief.webp'
+import json, urllib.request
+ROOT = Path(__file__).resolve().parent.parent
+SEA = sys.argv[1] if len(sys.argv) > 1 else 'baltic'
+W0, W1, S0, S1 = json.loads((ROOT / f'src/assets/data/{SEA}.json').read_text(encoding='utf-8'))['worldBox']
+src = ROOT / ('data/etopo.nc' if SEA == 'baltic' else f'data/raw/etopo/{SEA}.nc')
+if not src.exists():
+    src.parent.mkdir(parents=True, exist_ok=True)
+    url = (f'https://coastwatch.pfeg.noaa.gov/erddap/griddap/etopo180.nc?altitude%5B({S0}):1:({S1})%5D%5B({W0}):1:({W1})%5D')
+    req = urllib.request.Request(url, headers={'User-Agent': 'watershed-data-build/1.0'})
+    with urllib.request.urlopen(req, timeout=300) as r:
+        src.write_bytes(r.read())
+out = ROOT / f'src/assets/data/{SEA}.relief.webp'
 OUT_WIDTH = 2048  # upscaled ~3x on the globe anyway; smooth shading survives resampling
 
 nc = netcdf_file(str(src), 'r', mmap=False)

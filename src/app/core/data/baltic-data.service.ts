@@ -1,5 +1,7 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { ThemeService } from '@kmd/design-system';
+import { I18nService } from '../i18n/i18n.service';
+import { SeaId } from '../sea';
 import { cssToHex, hexToRgb } from '../color';
 import {
   BalticData,
@@ -83,12 +85,18 @@ function undelta(b64: string | null): Uint16Array {
 const frame = () => new Promise<void>(r => setTimeout(r, 0));
 
 /**
- * Loads the Baltic dataset in two steps: `baltic.json` (everything the first frame needs) and,
- * once that is on screen, `streams.json` (the smallest streams) and the relief shading.
+ * Loads one sea's dataset — only the chosen sea's, only once it is chosen — in two steps:
+ * `<sea>.json` (everything the first frame needs) and, once that is on screen,
+ * `<sea>.streams.json` (the smallest streams) and `<sea>.relief.webp` (the relief shading).
  */
 @Injectable({ providedIn: 'root' })
 export class BalticDataService {
   private readonly theme = inject(ThemeService);
+  private readonly i18n = inject(I18nService);
+  /** Sea of the data in `data` (or being loaded). */
+  readonly sea = signal<SeaId | null>(null);
+  /** Bumped by every load; a response for an earlier load is dropped. */
+  private loadId = 0;
 
   readonly data = signal<BalticData | null>(null);
   readonly error = signal<boolean>(false);
@@ -101,10 +109,6 @@ export class BalticDataService {
 
   private network?: RiverNetwork;
 
-  constructor() {
-    this.load();
-  }
-
   /** Per-segment distance to the mouth (km) for a loaded river class. */
   readonly mouthKm = (rc: RiverClassGeometry): Float32Array | null => this.network?.mouthKm(rc) ?? null;
 
@@ -113,41 +117,62 @@ export class BalticDataService {
     return this.network?.trace(lon, lat, basin) ?? null;
   }
 
-  private async load() {
+  /** Switches to `sea`: drops the current data and downloads that sea's. */
+  async load(sea: SeaId) {
+    if (sea === this.sea() && (this.data() || this.progress() > 0) && !this.error()) return;
+    const id = ++this.loadId;
+    const current = () => id === this.loadId;
+    this.sea.set(sea);
+    this.data.set(null);
+    this.streams.set(null);
+    this.relief.set(null);
+    this.error.set(false);
+    this.network = undefined;
+    this.i18n.dataNames.set(null);
     try {
       this.progress.set(0.05);
-      const res = await fetch('assets/data/baltic.json');
+      const res = await fetch(`assets/data/${sea}.json`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const raw = (await res.json()) as RawBaltic;
+      if (!current()) return;
       this.progress.set(0.6);
       // Start the deferred downloads now; they are not needed for the first frame.
-      const streams = fetch('assets/data/streams.json').then(r => (r.ok ? (r.json() as Promise<RawStreams>) : null));
-      const relief = this.loadImage('assets/data/relief.webp');
+      const streams = fetch(`assets/data/${sea}.streams.json`).then(r => (r.ok ? (r.json() as Promise<RawStreams>) : null));
+      const relief = this.loadImage(`assets/data/${sea}.relief.webp`);
       await frame();
+      if (!current()) return;
       const data = this.build(raw);
+      this.i18n.dataNames.set(raw.names ?? null);
       this.progress.set(1);
       performance.mark('watershed:data');
       this.data.set(data);
-      this.loadLater(data, streams, relief);
+      this.loadLater(data, streams, relief, current);
     } catch (err) {
+      if (!current()) return;
       console.error(err);
       this.error.set(true);
     }
   }
 
-  private async loadLater(data: BalticData, streams: Promise<RawStreams | null>, relief: Promise<ImageBitmap | HTMLImageElement | null>) {
-    relief.then(img => img && this.relief.set(img)).catch(() => undefined);
+  private async loadLater(
+    data: BalticData,
+    streams: Promise<RawStreams | null>,
+    relief: Promise<ImageBitmap | HTMLImageElement | null>,
+    current: () => boolean
+  ) {
+    relief.then(img => img && current() && this.relief.set(img)).catch(() => undefined);
     try {
       const s = await streams;
-      if (!s?.rivers[0]) return;
+      if (!s?.rivers[0] || !current()) return;
       await frame();
+      if (!current()) return;
       const rc = this.riverClass(s.rivers[0]);
       this.network?.add(rc);
       this.streams.set(rc);
       performance.mark('watershed:streams');
     } catch (err) {
       // The map is complete without the smallest streams; keep going.
-      console.warn('streams.json', err);
+      console.warn('streams', err);
     }
   }
 
@@ -205,7 +230,8 @@ export class BalticDataService {
       return {
         ...g,
         id,
-        river: g.kind === 'basin' && g.dis > 0,
+        // Desert wadis carry ~0 m³/s on average but are rivers all the same.
+        river: g.kind === 'basin' && (g.dis > 0 || g.nreach > 0),
         mosaic: 0,
         bb: [x0, x1, y0, y1],
         cen: [sx / Math.max(n, 1), sy / Math.max(n, 1)]

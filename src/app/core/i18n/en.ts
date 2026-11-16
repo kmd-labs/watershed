@@ -82,10 +82,10 @@ export const EN: Dict = {
   storyTopRivers: 'Largest rivers',
   storyCountries: 'Countries',
   storyFinaleTitle: 'Six seas, one Baltic',
-  storyFinaleText: (sa, pa, sf, pf, neva) =>
-    `The ${sa} collects the most land (${pa} of the basin), while the ${sf} receives the most river water (${pf}). The Neva alone brings ${neva} of everything the rivers deliver to the Baltic.`,
-  storyFinaleTextSame: (sea, pa, pf, neva) =>
-    `The ${sea} both collects the most land (${pa} of the basin) and receives the most river water (${pf}). The Neva alone brings ${neva} of everything the rivers deliver to the Baltic.`,
+  storyFinaleText: (sa, pa, sf, pf, top) =>
+    `The ${sa} collects the most land (${pa} of the basin), while the ${sf} receives the most river water (${pf}). The Neva alone brings ${top[0]?.share ?? '–'} of everything the rivers deliver to the Baltic.`,
+  storyFinaleTextSame: (sea, pa, pf, top) =>
+    `The ${sea} both collects the most land (${pa} of the basin) and receives the most river water (${pf}). The Neva alone brings ${top[0]?.share ?? '–'} of everything the rivers deliver to the Baltic.`,
   topButton: 'Top 20',
   hintTop: 'Step through the rivers with the arrows, or press play · drag to move · scroll to zoom',
   topHint: 'Go through the 20 largest river basins, from the largest',
@@ -255,6 +255,23 @@ export const EN: Dict = {
     'Baltic Proper',
     'Danish Straits & Kattegat'
   ],
+  seaNames: {
+    baltic: 'Baltic Sea',
+    north: 'North Sea',
+    med: 'Mediterranean',
+    black: 'Black Sea',
+    caspian: 'Caspian Sea'
+  },
+  changeSea: 'Change sea…',
+  chooseSea: 'Choose a sea',
+  pickerTitle: 'Which drainage basin?',
+  pickerSubtitle: 'Each sea is a different map of rivers. Its data loads only once you choose it; you can switch seas any time from the view menu.',
+  pickerClose: 'Close',
+  pickerStats: (area, mouths) => `${area} · ${mouths} river mouths`,
+  pickerPeople: pop => `${pop} people`,
+  pickerCurrent: 'now',
+  seaLoading: sea => `Loading the ${sea}…`,
+  millionPeople: n => `${n} million`,
   countries: {
     'Szwecja': 'Sweden',
     'Rosja': 'Russia',

@@ -1,0 +1,405 @@
+river,en,pl,mouth,coord,links,area
+http://www.wikidata.org/entity/Q214535,Glomma,Glomma,Point(10.956667 59.176515),Point(11.8031 62.6183),53,42441.0
+http://www.wikidata.org/entity/Q119314,North Sea Canal,Kanał Morza Północnego,,Point(4.755663888 52.428916666),24,
+http://www.wikidata.org/entity/Q214535,Glomma,Glomma,Point(10.956667 59.176515),Point(10.956667 59.176515),53,42441.0
+http://www.wikidata.org/entity/Q214535,Glomma,Glomma,Point(10.956667 59.176515),Point(10.94902778 59.20305556),53,42441.0
+http://www.wikidata.org/entity/Q216373,River Tyne,Tyne,Point(-1.4158 55.0119),Point(-1.4158 55.0119),51,2145.0
+http://www.wikidata.org/entity/Q217061,Yser,IJzer,,Point(2.723055555 51.152777777),45,1101.0
+http://www.wikidata.org/entity/Q216373,River Tyne,Tyne,Point(-1.4158 55.0119),Point(-2.1304 54.9888),51,2145.0
+http://www.wikidata.org/entity/Q216373,River Tyne,Tyne,Point(-1.4158 55.0119),Point(-1.418888888 55.010277777),51,2145.0
+http://www.wikidata.org/entity/Q584,Rhine,Ren,Point(4.093055555 51.980833333),Point(4.093055555 51.980833333),190,185000.0
+http://www.wikidata.org/entity/Q584,Rhine,Ren,Point(4.093055555 51.980833333),Point(9.1786 47.6662),190,185000.0
+http://www.wikidata.org/entity/Q584,Rhine,Ren,Point(4.093055555 51.980833333),Point(8.67481 46.632513),190,185000.0
+http://www.wikidata.org/entity/Q7337648,River Nairn,Nairn,Point(-3.860276 57.592041),Point(-3.860276 57.592041),10,
+http://www.wikidata.org/entity/Q1644,Elbe,Łaba,Point(8.722222222 53.922222222),Point(14.233055555 50.8875),122,148268.0
+http://www.wikidata.org/entity/Q1644,Elbe,Łaba,Point(8.722222222 53.922222222),Point(15.536436 50.775549),122,148268.0
+http://www.wikidata.org/entity/Q1644,Elbe,Łaba,Point(8.722222222 53.922222222),Point(8.722222222 53.922222222),122,148268.0
+http://www.wikidata.org/entity/Q221807,River Yare,Yare,,Point(1.7375 52.5725),18,
+http://www.wikidata.org/entity/Q300661,Aa River,Aa,Point(2.0932 51.0151),Point(1.9342 50.6069),28,1215.0
+http://www.wikidata.org/entity/Q300661,Aa River,Aa,Point(2.0932 51.0151),Point(2.0932 51.0151),28,1215.0
+http://www.wikidata.org/entity/Q387736,River Don,Don,Point(-2.078305555 57.175555555),Point(-2.078305555 57.175555555),28,
+http://www.wikidata.org/entity/Q515022,River Tees,Tees,Point(-1.156311 54.622381),Point(-1.156311 54.622381),33,1834.0
+http://www.wikidata.org/entity/Q515022,River Tees,Tees,Point(-1.156311 54.622381),Point(-2.466388888 54.700555555),33,1834.0
+http://www.wikidata.org/entity/Q550995,Humber,Humber,Point(0.0925 53.5425),Point(0.0925 53.5425),44,24750.0
+http://www.wikidata.org/entity/Q550995,Humber,Humber,Point(0.0925 53.5425),Point(-0.690277777 53.700555555),44,24750.0
+http://www.wikidata.org/entity/Q537889,Drammenselva,Drammenselva,Point(10.239166666 59.737777777),Point(10.239166666 59.737777777),24,17000.0
+http://www.wikidata.org/entity/Q537889,Drammenselva,Drammenselva,Point(10.239166666 59.737777777),Point(10.042777777 60.010833333),24,17000.0
+http://www.wikidata.org/entity/Q515022,River Tees,Tees,Point(-1.156311 54.622381),Point(-1.15 54.633333333),33,1834.0
+http://www.wikidata.org/entity/Q1648,Ems,Ems,,Point(7.24472222 53.32555556),60,17934.0
+http://www.wikidata.org/entity/Q15057482,Liver Å,Liver Å,,Point(9.88316 57.5237),5,
+http://www.wikidata.org/entity/Q15102681,Åstrup Møllebæk,Åstrup Møllebæk,,Point(9.9433 57.4443),2,
+http://www.wikidata.org/entity/Q12067337,River Colne,Rzeka Colne,,Point(0.98096 51.8255),10,
+http://www.wikidata.org/entity/Q1650,Weser,Wezera,Point(8.522222 53.561111),Point(9.64806 51.42139),73,47960.0
+http://www.wikidata.org/entity/Q1650,Weser,Wezera,Point(8.522222 53.561111),Point(8.522222 53.561111),73,47960.0
+http://www.wikidata.org/entity/Q702719,Jade,Jade,Point(8.197 53.4108),Point(8.197 53.4108),21,
+http://www.wikidata.org/entity/Q702719,Jade,Jade,Point(8.197 53.4108),Point(8.2694 53.2812),21,
+http://www.wikidata.org/entity/Q702719,Jade,Jade,Point(8.197 53.4108),Point(8.243 53.3353),21,
+http://www.wikidata.org/entity/Q555450,Akerselva,Akerselva,Point(10.755474 59.907514),Point(10.755474 59.907514),20,
+http://www.wikidata.org/entity/Q19714,River Trent,Trent,,Point(-0.7 53.7),59,15300.0
+http://www.wikidata.org/entity/Q923381,Rhine–Meuse–Scheldt delta,Delta Renu i Mozy,,Point(4.715880555 51.730430555),26,240140.0
+http://www.wikidata.org/entity/Q3314,Eider,Eider,,Point(10.127222222 54.138333333),50,3275.0
+http://www.wikidata.org/entity/Q1345836,Oude Rijn,Stary Ren,Point(4.3983 52.2119),Point(4.9635 52.0921),21,
+http://www.wikidata.org/entity/Q1433715,River Wear,Wear,,Point(-1.357777777 54.916111111),37,
+http://www.wikidata.org/entity/Q555450,Akerselva,Akerselva,Point(10.755474 59.907514),Point(10.7524 59.9247),20,
+http://www.wikidata.org/entity/Q1345836,Oude Rijn,Stary Ren,Point(4.3983 52.2119),Point(4.39833 52.2119),21,
+http://www.wikidata.org/entity/Q1524840,Western Scheldt,Skalda Zachodnia,,Point(3.86581 51.37092),25,
+http://www.wikidata.org/entity/Q1345836,Oude Rijn,Stary Ren,Point(4.3983 52.2119),Point(4.3983 52.2119),21,
+http://www.wikidata.org/entity/Q19686,River Thames,Tamiza,Point(0.61 51.5),Point(-2.029722222 51.694444444),131,15300.0
+http://www.wikidata.org/entity/Q503262,River Tweed,Tweed,Point(-1.986574 55.764164),Point(-1.986574 55.764164),55,3900.0
+http://www.wikidata.org/entity/Q1416809,River Findhorn,Findhorn,Point(-3.634535 57.631863),Point(-3.634535 57.631863),13,
+http://www.wikidata.org/entity/Q603027,River Esk,Esk (dopływ Morza Północnego),,Point(-0.612222 54.4925),15,362.0
+http://www.wikidata.org/entity/Q19686,River Thames,Tamiza,Point(0.61 51.5),Point(0.61 51.5),131,15300.0
+http://www.wikidata.org/entity/Q964949,River Dee,Dee,Point(-2.06716 57.142332),Point(-2.06716 57.142332),40,2100.0
+http://www.wikidata.org/entity/Q1009271,Ghent–Terneuzen Canal,Kanał Terneuzen-Gandawa,,Point(3.782388888 51.1466),21,
+http://www.wikidata.org/entity/Q1266165,Oosterschelde,Skalda Wschodnia,,Point(3.965555555 51.553888888),25,
+http://www.wikidata.org/entity/Q1193908,River Hull,Hull,,Point(-0.331194444 53.738936111),19,
+http://www.wikidata.org/entity/Q1932137,Miele,Miele,,Point(8.95033836 54.09269957),6,
+http://www.wikidata.org/entity/Q1941117,River Stour,Stour,,Point(1.16043 51.95527),21,858.0
+http://www.wikidata.org/entity/Q1989481,Nieuwe Waterweg,Nieuwe Waterweg,,Point(4.191388888 51.941944444),18,
+http://www.wikidata.org/entity/Q2905610,River Blackwater,Blackwater,,Point(0.65815 51.7537),11,
+http://www.wikidata.org/entity/Q3492233,River Welland,Welland,,Point(0.0308 52.8983),18,610.0
+http://www.wikidata.org/entity/Q3492233,River Welland,Welland,,Point(0.0308 52.8983),18,1580.0
+http://www.wikidata.org/entity/Q2001027,River Orwell,Orwell,Point(1.2855 51.9597),Point(1.064 52.2289),18,
+http://www.wikidata.org/entity/Q37620,Scheldt,Skalda,Point(3.545 51.4228),Point(3.545 51.4228),79,35500.0
+http://www.wikidata.org/entity/Q2001027,River Orwell,Orwell,Point(1.2855 51.9597),Point(1.2855 51.9597),18,
+http://www.wikidata.org/entity/Q2001027,River Orwell,Orwell,Point(1.2855 51.9597),Point(1.3 51.966666666),18,
+http://www.wikidata.org/entity/Q19722,River Nene,Nene,Point(0.2161 52.8214),Point(0.2161 52.8214),27,1634.0
+http://www.wikidata.org/entity/Q19718,River Ouse,Ouse,,Point(-0.696111 53.7022),34,3315.0
+http://www.wikidata.org/entity/Q19722,River Nene,Nene,Point(0.2161 52.8214),Point(-1.2103 52.2318),27,1634.0
+http://www.wikidata.org/entity/Q3440681,River Beauly,Beauly,Point(-4.424114 57.493507),Point(-4.424114 57.493507),16,
+http://www.wikidata.org/entity/Q19720,River Spey,Spey,Point(-3.098504 57.674187),Point(-3.098504 57.674187),38,3008.0
+http://www.wikidata.org/entity/Q19716,River Great Ouse,Great Ouse,,Point(0.355 52.81),40,8530.0
+http://www.wikidata.org/entity/Q37620,Scheldt,Skalda,Point(3.545 51.4228),Point(3.2664 49.9864),79,35500.0
+http://www.wikidata.org/entity/Q2669073,Scheur,Scheur,Point(4.1634 51.9554),Point(4.1634 51.9554),18,
+http://www.wikidata.org/entity/Q2669073,Scheur,Scheur,Point(4.1634 51.9554),Point(4.321 51.8932),18,
+http://www.wikidata.org/entity/Q2166040,Vidå,Vidå,,Point(8.6758 54.9585),17,1081.0
+http://www.wikidata.org/entity/Q2669073,Scheur,Scheur,Point(4.1634 51.9554),Point(4.242 51.915),18,
+http://www.wikidata.org/entity/Q41986,Meuse,Moza,Point(4.667777777 51.715),Point(4.667777777 51.715),94,36000.0
+http://www.wikidata.org/entity/Q41986,Meuse,Moza,Point(4.667777777 51.715),Point(5.633538888 47.97435),94,36000.0
+http://www.wikidata.org/entity/Q41986,Meuse,Moza,Point(4.667777777 51.715),Point(4.018889 51.866389),94,36000.0
+http://www.wikidata.org/entity/Q5767687,Varde River,Varde Å,Point(8.314444 55.5775),Point(8.3627 55.6001),12,1090.0
+http://www.wikidata.org/entity/Q5767687,Varde River,Varde Å,Point(8.314444 55.5775),Point(8.314444 55.5775),12,1090.0
+http://www.wikidata.org/entity/Q4504996,Uggerby Å,Uggerby Å,Point(10.1571 57.59183),Point(10.1571 57.59183),9,355.0
+http://www.wikidata.org/entity/Q5767687,Varde River,Varde Å,Point(8.314444 55.5775),Point(8.7175 55.710639),12,1090.0
+http://www.wikidata.org/entity/Q4504996,Uggerby Å,Uggerby Å,Point(10.1571 57.59183),Point(10.1333 57.5833),9,355.0
+http://www.wikidata.org/entity/Q1882240,Maade,,,Point(8.15222 53.5619),6,
+http://www.wikidata.org/entity/Q2022073,,,,,1,
+http://www.wikidata.org/entity/Q11250696,Askerelva,,Point(10.477907 59.817758),Point(10.477907 59.817758),2,37.0
+http://www.wikidata.org/entity/Q2001706,Leopold Canal,,,Point(3.638363 51.264466),10,400.0
+http://www.wikidata.org/entity/Q370470,Lower Rhine,,,Point(5.35 51.966666666),7,
+http://www.wikidata.org/entity/Q1854148,Mouth of the Ems river,,,,1,
+http://www.wikidata.org/entity/Q4129930,Alna,,Point(10.7555 59.896),Point(10.7555 59.896),12,
+http://www.wikidata.org/entity/Q430043,Marsdiep,,,Point(4.744722222 52.984722222),10,
+http://www.wikidata.org/entity/Q7337458,River Glaven,,,Point(1.0075 52.97),2,
+http://www.wikidata.org/entity/Q7581773,Spynie Canal,,Point(-3.282451 57.717191),Point(-3.282451 57.717191),3,
+http://www.wikidata.org/entity/Q7337082,River Ancholme,,,Point(-0.5249 53.6783),6,
+http://www.wikidata.org/entity/Q4733298,River Glass,,Point(-4.301598 57.65938),Point(-4.301598 57.65938),7,
+http://www.wikidata.org/entity/Q7337826,River Stiffkey,,,Point(0.961 52.9574),4,
+http://www.wikidata.org/entity/Q4999559,Burn of Muchalls,,Point(-2.163458 57.012338),Point(-2.163458 57.012338),1,
+http://www.wikidata.org/entity/Q1283506,River Eden,,Point(-2.82007 56.373381),Point(-2.82007 56.373381),7,
+http://www.wikidata.org/entity/Q1603301,River Helmsdale,,Point(-3.648753 58.114104),Point(-3.648753 58.114104),8,
+http://www.wikidata.org/entity/Q703477,Kongeå,,,Point(8.6886 55.3836),20,
+http://www.wikidata.org/entity/Q4999561,Pheppie Burn,,Point(-2.156265 57.02022),Point(-2.156265 57.02022),1,
+http://www.wikidata.org/entity/Q1393243,Nidelva,,Point(8.7403 58.4165),Point(8.7403 58.4165),15,4015.0
+http://www.wikidata.org/entity/Q1602001,Ostenau,,,Point(9.02136 54.5661),6,74.0
+http://www.wikidata.org/entity/Q2473946,River Ugie,,Point(-1.798482 57.516575),Point(-1.798482 57.516575),11,
+http://www.wikidata.org/entity/Q2179338,,,,Point(4.19429 51.96717),3,
+http://www.wikidata.org/entity/Q5432615,Falsa Burn,,Point(-0.963788 60.344774),Point(-0.963788 60.344774),1,
+http://www.wikidata.org/entity/Q1533729,Godel,,,Point(8.4454876 54.6928906),4,
+http://www.wikidata.org/entity/Q7337598,River Lossie,,Point(-3.278876 57.719922),Point(-3.278876 57.719922),12,
+http://www.wikidata.org/entity/Q7337802,River Sgitheach,,Point(-4.317607 57.655182),Point(-4.317607 57.655182),7,
+http://www.wikidata.org/entity/Q7337301,River Coquet,,,Point(-2.348 55.368),11,
+http://www.wikidata.org/entity/Q7337486,River Heacham,,,Point(0.470384 52.903732),2,
+http://www.wikidata.org/entity/Q11250696,Askerelva,,Point(10.477907 59.817758),Point(10.43111111 59.84444444),2,37.0
+http://www.wikidata.org/entity/Q7337319,River Crouch,,,Point(0.939167 51.6267),8,
+http://www.wikidata.org/entity/Q5365581,Elliot Water,,Point(-2.617815 56.544291),Point(-2.617815 56.544291),3,
+http://www.wikidata.org/entity/Q1310434,Eio,,,Point(7.069421 60.469922),5,1173.0
+http://www.wikidata.org/entity/Q7337429,River Freshney,,,Point(-0.0872 53.5668),2,
+http://www.wikidata.org/entity/Q7337300,River Conon,,Point(-4.427976 57.574257),Point(-4.427976 57.574257),10,
+http://www.wikidata.org/entity/Q924838,Skienselva,,,Point(9.654581 59.145497),7,10815.0
+http://www.wikidata.org/entity/Q1515974,River Aln,,Point(-1.610403 55.385177),Point(-2.007 55.392),12,
+http://www.wikidata.org/entity/Q2790905,Brielse Maas,,,,4,
+http://www.wikidata.org/entity/Q7337609,River Lymn,,,Point(0.3174 53.09282),4,
+http://www.wikidata.org/entity/Q2548348,Wangertief,,,Point(8.01985 53.6834),1,
+http://www.wikidata.org/entity/Q7337162,River Blyth,,,Point(1.673 52.3141),4,
+http://www.wikidata.org/entity/Q2030781,Sincfal,,,Point(3.371258333 51.363175),5,
+http://www.wikidata.org/entity/Q4583695,Såna,,Point(10.6897 59.5277),Point(10.70852 59.5338),6,
+http://www.wikidata.org/entity/Q2000645,River North Esk,,Point(-2.431666666 56.751666666),Point(-2.431666666 56.751666666),9,
+http://www.wikidata.org/entity/Q3575520,Zijkanaal D,,,Point(4.751944444 52.434722222),3,
+http://www.wikidata.org/entity/Q990659,River Brora,,Point(-3.846162 58.010147),Point(-3.846162 58.010147),7,
+http://www.wikidata.org/entity/Q4560392,,,,Point(9.559722222 59.103333333),2,
+http://www.wikidata.org/entity/Q3746234,Bytham River,,,Point(1.743 52.526),4,
+http://www.wikidata.org/entity/Q7337644,River Mun,,,Point(1.4413 52.8766),2,
+http://www.wikidata.org/entity/Q1627440,Hooksieler Tief,,,Point(8.03654 53.6307),1,
+http://www.wikidata.org/entity/Q2033423,Skien watershed,,Point(9.62887 59.1348),Point(9.62887 59.1348),12,10807.67
+http://www.wikidata.org/entity/Q1790866,Figgjoelva,,,Point(5.547777777 58.811666666),5,
+http://www.wikidata.org/entity/Q4864059,Barry Burn,,Point(-2.716107 56.494254),Point(-2.716107 56.494254),4,
+http://www.wikidata.org/entity/Q7337870,River Ter,,,Point(0.598259 51.7505),2,
+http://www.wikidata.org/entity/Q1649829,,,,Point(8.534932 54.807243),3,
+http://www.wikidata.org/entity/Q1325091,Elbe Urstromtal,,,,5,
+http://www.wikidata.org/entity/Q641834,,,Point(8.7114 58.4339),Point(8.34196 58.98837),3,4012.56
+http://www.wikidata.org/entity/Q2033423,Skien watershed,,Point(9.62887 59.1348),Point(8.4068 59.5583),12,10807.67
+http://www.wikidata.org/entity/Q7337515,River Ingol,,,Point(0.4529 52.8444),4,
+http://www.wikidata.org/entity/Q2304466,River South Esk,,Point(-2.456112 56.702835),Point(-2.456112 56.702835),9,
+http://www.wikidata.org/entity/Q642694,Otra,,Point(8.013611111 58.144444444),Point(8.013611111 58.144444444),29,3740.0
+http://www.wikidata.org/entity/Q136660,Zaan,,,Point(4.813888888 52.469444444),18,
+http://www.wikidata.org/entity/Q487864,Harle,,,Point(7.80861 53.7072),11,200.0
+http://www.wikidata.org/entity/Q7337513,River Hun,,,Point(0.560833 52.9719),2,
+http://www.wikidata.org/entity/Q7337207,River Can,,,Point(0.45422 51.7377),3,
+http://www.wikidata.org/entity/Q11154062,Canal of Blankenberge,,,,4,5498.0
+http://www.wikidata.org/entity/Q4904382,Biel Water,,Point(-2.550804 55.998375),Point(-2.550804 55.998375),3,
+http://www.wikidata.org/entity/Q1786232,River Alde,,,Point(1.54 52.16),9,
+http://www.wikidata.org/entity/Q641834,,,Point(8.7114 58.4339),Point(8.7114 58.4339),3,4012.56
+http://www.wikidata.org/entity/Q4583695,Såna,,Point(10.6897 59.5277),Point(10.6897 59.5277),6,
+http://www.wikidata.org/entity/Q3505332,Surgeon,,Point(2.7396 50.5232),Point(2.7396 50.5232),3,36.0
+http://www.wikidata.org/entity/Q1515974,River Aln,,Point(-1.610403 55.385177),Point(-1.610403 55.385177),12,
+http://www.wikidata.org/entity/Q642694,Otra,,Point(8.013611111 58.144444444),Point(7.427355 59.619961),29,3740.0
+http://www.wikidata.org/entity/Q6549925,Limpet Burn,,Point(-2.178336 56.992333),Point(-2.178336 56.992333),1,
+http://www.wikidata.org/entity/Q5089950,Chelmer and Blackwater Navigation,,,Point(0.59433 51.75395),4,
+http://www.wikidata.org/entity/Q325067,Husumer Mühlenau,,,Point(9.01325 54.4756),7,
+http://www.wikidata.org/entity/Q4129930,Alna,,Point(10.7555 59.896),Point(10.859 59.9667),12,
+http://www.wikidata.org/entity/Q297792,Örekilsälven,,,Point(11.677766 58.434616),10,1340.2
+http://www.wikidata.org/entity/Q427742,Canal through Zuid-Beveland,,,Point(4.004166666 51.4825),9,
+http://www.wikidata.org/entity/Q338299,River Deben,,,Point(1.383333333 52.0),8,
+http://www.wikidata.org/entity/Q1771213,,,Point(10.6418 59.9114),Point(10.6418 59.9114),8,
+http://www.wikidata.org/entity/Q1585393,Haringvliet,,,Point(4.215833333 51.771666666),18,
+http://www.wikidata.org/entity/Q1549554,Canal Dunkerque-Escaut,,,Point(3.30111111 50.26638889),8,
+http://www.wikidata.org/entity/Q2601506,River Ythan,,Point(-1.990816 57.308995),Point(-1.990816 57.308995),9,680.0
+http://www.wikidata.org/entity/Q6869475,Minsmere River,,,Point(1.61667 52.2333),5,
+http://www.wikidata.org/entity/Q7739044,The Haven,,,Point(0.02369 52.93985),2,
+http://www.wikidata.org/entity/Q7626062,Strömsån,,,Point(11.1768 58.9399),5,
+http://www.wikidata.org/entity/Q829215,Bervie Water,,Point(-2.271195 56.843867),Point(-2.271195 56.843867),8,
+http://www.wikidata.org/entity/Q315952,Arlau,,,Point(8.87188911 54.5280552),8,
+http://www.wikidata.org/entity/Q2148526,Ribe Å,,,Point(8.66388889 55.34222222),5,977.0
+http://www.wikidata.org/entity/Q7357286,Tysso,,,Point(6.57757 60.1171),3,
+http://www.wikidata.org/entity/Q3505332,Surgeon,,Point(2.7396 50.5232),Point(2.6865 50.4177),3,36.0
+http://www.wikidata.org/entity/Q2240487,Zuidervaartje,,,,3,
+http://www.wikidata.org/entity/Q7337197,River Burn,,,Point(0.7301 52.961),5,
+http://www.wikidata.org/entity/Q545575,Westerwoldse Aa,,,Point(7.13972 53.15472),6,
+http://www.wikidata.org/entity/Q4129930,Alna,,Point(10.7555 59.896),Point(10.79806 59.90392),12,
+http://www.wikidata.org/entity/Q5422634,Eye Water,,Point(-2.086495 55.871805),Point(-2.086495 55.871805),5,
+http://www.wikidata.org/entity/Q4577207,,,Point(10.51916667 59.70416667),Point(10.51916667 59.70416667),5,114.0
+http://www.wikidata.org/entity/Q548155,Ems-Jade-Kanal,,,Point(7.6365 53.4613),7,
+http://www.wikidata.org/entity/Q512254,Boudewijnkanaal,,,Point(3.205 51.300555555),8,
+http://www.wikidata.org/entity/Q4573655,,,,Point(10.28333333 59.74833333),3,
+http://www.wikidata.org/entity/Q12004706,,,Point(10.530705 59.68109),Point(10.51877 59.67308),2,20.0
+http://www.wikidata.org/entity/Q12310648,Esrum å,,,Point(12.3736 56.0917),5,
+http://www.wikidata.org/entity/Q106651272,River Peffery,,Point(-4.40787 57.592899),Point(-4.40787 57.592899),1,
+http://www.wikidata.org/entity/Q12000494,Sima,,Point(7.138055555 60.496944444),Point(7.330083333 60.565583333),2,146.14
+http://www.wikidata.org/entity/Q35288281,Solbergbekken,,Point(10.651689 59.615858),Point(10.67394 59.6256),1,
+http://www.wikidata.org/entity/Q12717518,,,,,2,
+http://www.wikidata.org/entity/Q24677627,Waren Burn,,Point(-1.76921 55.60297),Point(-1.76921 55.60297),1,
+http://www.wikidata.org/entity/Q92195455,,,Point(10.568433 59.546625),Point(10.568433 59.546625),1,18.0
+http://www.wikidata.org/entity/Q109017402,Green Burn,,Point(-0.93986 60.61014),Point(-0.93986 60.61014),0,
+http://www.wikidata.org/entity/Q24677627,Waren Burn,,Point(-1.76921 55.60297),Point(-1.76382 55.55956),1,
+http://www.wikidata.org/entity/Q19370097,,,Point(10.530065 59.532828),Point(10.5124 59.5536),1,35.0
+http://www.wikidata.org/entity/Q19370970,Glomma basin,,Point(10.956667 59.176515),Point(10.8187 61.4029),1,41994.67
+http://www.wikidata.org/entity/Q108907975,Burn of Aith,,Point(-1.208988 60.046567),Point(-1.208988 60.046567),0,
+http://www.wikidata.org/entity/Q58596211,Lysakervassdraget,,Point(10.6418 59.9114),Point(10.542784 60.048618),0,176.76
+http://www.wikidata.org/entity/Q23747383,Henne Å,,,Point(8.1984 55.7244),1,
+http://www.wikidata.org/entity/Q11991880,,,Point(10.755474 59.907514),Point(10.681898 60.073132),1,237.84
+http://www.wikidata.org/entity/Q24636606,River Wansbeck,,Point(-1.52722 55.16114),Point(-1.52722 55.16114),5,
+http://www.wikidata.org/entity/Q55572356,,,Point(10.740101 59.34593),Point(10.72118 59.38212),1,
+http://www.wikidata.org/entity/Q16868959,Asheldham Brook,,,Point(0.931389 51.6792),1,
+http://www.wikidata.org/entity/Q96207572,Leyhörner Sieltief,,,,1,
+http://www.wikidata.org/entity/Q24649396,Dry Burn,,Point(-2.426935 55.975559),Point(-2.426935 55.975559),1,
+http://www.wikidata.org/entity/Q58486184,,,Point(7.456218 58.020223),Point(7.4618 58.572379),1,1816.01
+http://www.wikidata.org/entity/Q70090982,,,Point(10.7555 59.896),Point(10.87121 59.938929),1,68.59
+http://www.wikidata.org/entity/Q11254034,Hååna,,,Point(5.64756 58.69348),2,
+http://www.wikidata.org/entity/Q24638951,Ousdale Burn,,Point(-3.573639 58.146474),Point(-3.573639 58.146474),1,
+http://www.wikidata.org/entity/Q23747284,,,,Point(12.3825 56.077222222),2,
+http://www.wikidata.org/entity/Q12000494,Sima,,Point(7.138055555 60.496944444),Point(7.138055555 60.496944444),2,146.14
+http://www.wikidata.org/entity/Q58596211,Lysakervassdraget,,Point(10.6418 59.9114),Point(10.6418 59.9114),0,176.76
+http://www.wikidata.org/entity/Q11975222,,,Point(9.5649 59.1058),Point(9.41254 59.099),1,259.53
+http://www.wikidata.org/entity/Q23746845,Hæstrup Møllebæk,,,Point(9.93099 57.43499),4,
+http://www.wikidata.org/entity/Q20978720,Pampus,,,Point(5.069011 52.364822),3,
+http://www.wikidata.org/entity/Q35288281,Solbergbekken,,Point(10.651689 59.615858),Point(10.651689 59.615858),1,
+http://www.wikidata.org/entity/Q58728242,,,Point(8.77522 58.461741),Point(8.75632 58.500865),0,18.49
+http://www.wikidata.org/entity/Q23749588,Brøns Å,,,Point(8.679166666 55.187222222),3,
+http://www.wikidata.org/entity/Q23741658,Rejsby Å,,,Point(8.67708 55.23132),1,
+http://www.wikidata.org/entity/Q111535626,Monikie Burn,,Point(-2.693225 56.514602),Point(-2.693225 56.514602),0,
+http://www.wikidata.org/entity/Q16993515,Gypsey Race,,,Point(-0.19083333 54.08111111),2,
+http://www.wikidata.org/entity/Q53581957,Neuharlingersiel Tief,,,,0,
+http://www.wikidata.org/entity/Q55674488,,,Point(8.013315 58.143878),Point(8.013315 58.143878),1,3752.08
+http://www.wikidata.org/entity/Q19369036,,,Point(10.873581 59.17679),Point(10.873581 59.17679),1,
+http://www.wikidata.org/entity/Q58486184,,,Point(7.456218 58.020223),Point(7.456218 58.020223),1,1816.01
+http://www.wikidata.org/entity/Q24677699,Silver Burn,,Point(-2.070778 57.195564),Point(-2.070778 57.195564),1,
+http://www.wikidata.org/entity/Q21764606,Ronselarebeek,,,,3,2.8
+http://www.wikidata.org/entity/Q55572356,,,Point(10.740101 59.34593),Point(10.740101 59.34593),1,
+http://www.wikidata.org/entity/Q111269792,Allt a' Bhurg,,Point(-3.577087 58.148694),Point(-3.577087 58.148694),0,
+http://www.wikidata.org/entity/Q23738242,Sneum Å,,,Point(8.62042778 55.43613889),4,
+http://www.wikidata.org/entity/Q19370970,Glomma basin,,Point(10.956667 59.176515),Point(10.956667 59.176515),1,41994.67
+http://www.wikidata.org/entity/Q58488677,Bjerkreimsvassdraget,,,,0,703.27
+http://www.wikidata.org/entity/Q108756925,Kinness Burn,,Point(-2.784122 56.338812),Point(-2.784122 56.338812),2,
+http://www.wikidata.org/entity/Q12315854,Havnegrøften,,,Point(8.23889 55.5275),1,
+http://www.wikidata.org/entity/Q23749560,Brede Å,,,Point(8.7928845 55.079515),6,
+http://www.wikidata.org/entity/Q111535689,Craigmill Burn,,Point(-2.682367 56.50703),Point(-2.682367 56.50703),0,
+http://www.wikidata.org/entity/Q12004706,,,Point(10.530705 59.68109),Point(10.530705 59.68109),2,20.0
+http://www.wikidata.org/entity/Q58728242,,,Point(8.77522 58.461741),Point(8.77522 58.461741),0,18.49
+http://www.wikidata.org/entity/Q58624638,Tyssovassdraget,,,,1,389.64
+http://www.wikidata.org/entity/Q55674488,,,Point(8.013315 58.143878),Point(7.702718 58.941332),1,3752.08
+http://www.wikidata.org/entity/Q19369036,,,Point(10.873581 59.17679),Point(10.90807 59.25835),1,
+http://www.wikidata.org/entity/Q55587218,Dauerudbekken,,,Point(10.32047 59.73593),1,
+http://www.wikidata.org/entity/Q23734938,River Varbro,,,Point(9.89754 57.51812),2,
+http://www.wikidata.org/entity/Q23893997,,,Point(10.283 59.748),Point(10.177194 59.867538),1,310.09
+http://www.wikidata.org/entity/Q24679219,Water of Tyrie,,Point(-1.95364 57.67495),Point(-1.95364 57.67495),1,
+http://www.wikidata.org/entity/Q24679180,Burn of Mosset,,Point(-3.600746 57.633291),Point(-3.600746 57.633291),2,
+http://www.wikidata.org/entity/Q24639665,Muckle Burn,,Point(-3.644791 57.639937),Point(-3.644791 57.639937),1,
+http://www.wikidata.org/entity/Q11991880,,,Point(10.755474 59.907514),Point(10.755474 59.907514),1,237.84
+http://www.wikidata.org/entity/Q19370097,,,Point(10.530065 59.532828),Point(10.530065 59.532828),1,35.0
+http://www.wikidata.org/entity/Q106831500,Bøbekken,,,Point(10.49833333 59.78166667),1,
+http://www.wikidata.org/entity/Q58483787,,,Point(10.477907 59.817758),Point(10.408811 59.859914),0,37.21
+http://www.wikidata.org/entity/Q58483787,,,Point(10.477907 59.817758),Point(10.477907 59.817758),0,37.21
+http://www.wikidata.org/entity/Q24652145,Water of Cruden,,Point(-1.84816 57.415936),Point(-1.84816 57.415936),4,
+http://www.wikidata.org/entity/Q23893997,,,Point(10.283 59.748),Point(10.283 59.748),1,310.09
+http://www.wikidata.org/entity/Q24640464,Burn of Latheronwheel,,Point(-3.381252 58.270086),Point(-3.381252 58.270086),1,
+http://www.wikidata.org/entity/Q24639038,Pease Burn,,Point(-2.330455 55.930325),Point(-2.330455 55.930325),1,
+http://www.wikidata.org/entity/Q24659669,River Averon,,Point(-4.251279 57.681918),Point(-4.251279 57.681918),5,
+http://www.wikidata.org/entity/Q24651750,Clyth Burn,,Point(-3.245626 58.301038),Point(-3.245626 58.301038),1,
+http://www.wikidata.org/entity/Q63927889,,,Point(9.33235 58.75712),Point(9.32707 58.76267),1,
+http://www.wikidata.org/entity/Q24636606,River Wansbeck,,Point(-1.52722 55.16114),Point(-2.137 55.1409),5,
+http://www.wikidata.org/entity/Q11980709,Kinso,,,Point(6.76811 60.3468),3,
+http://www.wikidata.org/entity/Q24648071,Burn of Durn,,Point(-2.684682 57.682873),Point(-2.684682 57.682873),1,
+http://www.wikidata.org/entity/Q58525866,Eidfjordvassdraget,,,,0,1169.59
+http://www.wikidata.org/entity/Q58604144,Åna,,,Point(6.6729333 58.082125),0,
+http://www.wikidata.org/entity/Q15272671,River Blyth,,,Point(-1.503 55.127),6,
+http://www.wikidata.org/entity/Q92195455,,,Point(10.568433 59.546625),Point(10.56737 59.54975),1,18.0
+http://www.wikidata.org/entity/Q34748559,Zijkanaal G,,,Point(4.83742 52.42451),1,
+http://www.wikidata.org/entity/Q18493302,Opo,,,,2,
+http://www.wikidata.org/entity/Q23736502,,,,Point(9.87807 57.40266),2,
+http://www.wikidata.org/entity/Q15222064,Great Eau,,,Point(0.21666667 53.41666667),4,
+http://www.wikidata.org/entity/Q24639044,Peffer Burn,,Point(-2.612514 56.033516),Point(-2.612514 56.033516),1,
+http://www.wikidata.org/entity/Q70090982,,,Point(10.7555 59.896),Point(10.7555 59.896),1,68.59
+http://www.wikidata.org/entity/Q15731984,Osterley,,,Point(8.542 54.845),1,
+http://www.wikidata.org/entity/Q32480505,Benser Tief,,,Point(7.575277777 53.674166666),3,
+http://www.wikidata.org/entity/Q24639370,River Lyne,,Point(-1.52385 55.210057),Point(-1.52385 55.210057),1,
+http://www.wikidata.org/entity/Q97198035,Ekraelva,,,,1,13.0
+http://www.wikidata.org/entity/Q23042277,Nesheimvassdraget,,,Point(6.6667 58.0759),1,26.69
+http://www.wikidata.org/entity/Q24656709,Berriedale Water,,Point(-3.497452 58.181979),Point(-3.497452 58.181979),4,
+http://www.wikidata.org/entity/Q34892852,,,,Point(9.62722 59.05269),1,
+http://www.wikidata.org/entity/Q24679195,Blackdog Burn,,Point(-2.059347 57.217579),Point(-2.059347 57.217579),1,
+http://www.wikidata.org/entity/Q11975222,,,Point(9.5649 59.1058),Point(9.5649 59.1058),1,259.53
+http://www.wikidata.org/entity/Q24643088,Eathie Burn,,Point(-4.040125 57.650256),Point(-4.040125 57.650256),1,
+http://www.wikidata.org/entity/Q63927889,,,Point(9.33235 58.75712),Point(9.33235 58.75712),1,
+http://www.wikidata.org/entity/Q23739824,,,,Point(9.766666666 57.3),1,
+http://www.wikidata.org/entity/Q138764107,,,,,0,
+http://www.wikidata.org/entity/Q137166372,,,,Point(9.11451 58.64931),0,
+http://www.wikidata.org/entity/Q137166373,,,Point(9.119119 58.649634),Point(9.119119 58.649634),0,21.86
+http://www.wikidata.org/entity/Q136952137,,,Point(10.6897 59.5277),Point(10.791822 59.580943),0,139.11
+http://www.wikidata.org/entity/Q137972255,Zuiderdiep,,,Point(4.4 51.7),1,
+http://www.wikidata.org/entity/Q136649170,,,Point(9.33249 58.75716),Point(9.33249 58.75716),0,48.15
+http://www.wikidata.org/entity/Q136952137,,,Point(10.6897 59.5277),Point(10.6897 59.5277),0,139.11
+http://www.wikidata.org/entity/Q137178976,Schlägen,,Point(8.614256 53.88169),Point(8.627643 53.863584),2,
+http://www.wikidata.org/entity/Q136996397,,,Point(10.410796 59.601704),Point(10.389786 59.614243),0,
+http://www.wikidata.org/entity/Q137166373,,,Point(9.119119 58.649634),Point(9.065412 58.654414),0,21.86
+http://www.wikidata.org/entity/Q137178976,Schlägen,,Point(8.614256 53.88169),Point(8.614256 53.88169),2,
+http://www.wikidata.org/entity/Q136649170,,,Point(9.33249 58.75716),Point(9.24806 58.77914),0,48.15
+http://www.wikidata.org/entity/Q130759641,Vättlandsån,,,,0,
+http://www.wikidata.org/entity/Q136996397,,,Point(10.410796 59.601704),Point(10.410796 59.601704),0,
+http://www.wikidata.org/entity/Q136525175,Oer-IJ,,,Point(4.608888888 52.563333333),2,
+http://www.wikidata.org/entity/Q135432621,Skuggälven,,,,0,
+http://www.wikidata.org/entity/Q135432732,Hämmensån,,,,0,
+http://www.wikidata.org/entity/Q136996441,,,Point(10.384883 59.542932),Point(10.360072 59.548514),0,
+http://www.wikidata.org/entity/Q130759238,,,,,0,
+http://www.wikidata.org/entity/Q130759663,,,,,0,
+http://www.wikidata.org/entity/Q136996441,,,Point(10.384883 59.542932),Point(10.384883 59.542932),0,
+http://www.wikidata.org/entity/Q114451596,Ord Burn,,Point(-3.60538 58.13556),Point(-3.60538 58.13556),0,
+http://www.wikidata.org/entity/Q115973967,Garvock Burn,,,,0,
+http://www.wikidata.org/entity/Q124849096,Bilsdean Burn,,Point(-2.37618 55.94748),Point(-2.37618 55.94748),0,
+http://www.wikidata.org/entity/Q124884529,Brothock Water,,Point(-2.5801 56.55627),Point(-2.5801 56.55627),0,
+http://www.wikidata.org/entity/Q121312994,Cockley Burn,,Point(-1.95592 55.73121),Point(-1.95592 55.73121),0,
+http://www.wikidata.org/entity/Q112845897,Ussie Burn,,Point(-4.42261 57.5804),Point(-4.42261 57.5804),0,
+http://www.wikidata.org/entity/Q116742478,Burn of Mundurno,,Point(-2.06586 57.20493),Point(-2.06586 57.20493),0,
+http://www.wikidata.org/entity/Q115732391,Burn of Papagoe,,Point(-3.06252 58.44677),Point(-3.06252 58.44677),0,
+http://www.wikidata.org/entity/Q124879116,Burn of Mel,,Point(-0.86083 60.71509),Point(-0.86083 60.71509),0,
+http://www.wikidata.org/entity/Q115867133,Black Water,,Point(-1.82797 57.56688),Point(-1.82797 57.56688),0,
+http://www.wikidata.org/entity/Q121332850,Dunbar Burn,,Point(-1.57045 55.26696),Point(-1.57045 55.26696),0,
+http://www.wikidata.org/entity/Q121332845,Lady Burn,,Point(-1.57286 55.27934),Point(-1.57286 55.27934),0,
+http://www.wikidata.org/entity/Q121312989,Ross Low,,Point(-1.78543 55.61687),Point(-1.78543 55.61687),0,
+http://www.wikidata.org/entity/Q121312991,South Low,,Point(-1.88243 55.68458),Point(-1.88243 55.68458),0,
+http://www.wikidata.org/entity/Q124433846,Dowlaw Burn,,Point(-2.2112 55.9287),Point(-2.2112 55.9287),0,
+http://www.wikidata.org/entity/Q121332853,Stank Letch,,Point(-1.53369 55.23223),Point(-1.53369 55.23223),0,
+http://www.wikidata.org/entity/Q124433850,Greenheugh Burn,,Point(-2.2112 55.9287),Point(-2.2112 55.9287),0,
+http://www.wikidata.org/entity/Q124433849,Hazeldean Burn,,Point(-2.2112 55.9287),Point(-2.2112 55.9287),0,
+http://www.wikidata.org/entity/Q124433854,Littlecleugh Burn,,Point(-2.2112 55.9287),Point(-2.2112 55.9287),0,
+http://www.wikidata.org/entity/Q124433847,Menzie Cleugh,,Point(-2.2112 55.9287),Point(-2.2112 55.9287),0,
+http://www.wikidata.org/entity/Q115733556,Burn of Warehouse,,Point(-3.18239 58.33307),Point(-3.18239 58.33307),0,
+http://www.wikidata.org/entity/Q124433848,Mucklecleugh Burn,,Point(-2.2112 55.9287),Point(-2.2112 55.9287),0,
+http://www.wikidata.org/entity/Q124433855,Oldcambus Burn,,Point(-2.2112 55.9287),Point(-2.2112 55.9287),0,
+http://www.wikidata.org/entity/Q114833850,Rosskeen Burn,,Point(-4.20145 57.69275),Point(-4.20145 57.69275),1,
+http://www.wikidata.org/entity/Q124426386,Kenly Water,,Point(-2.67912 56.319082),Point(-2.67912 56.319082),0,
+http://www.wikidata.org/entity/Q121536791,Skelton Beck,,,Point(-1.023 54.553),1,
+http://www.wikidata.org/entity/Q121332854,Spital Burn,,Point(-1.51432 55.17481),Point(-1.51432 55.17481),0,
+http://www.wikidata.org/entity/Q121312981,Howick Burn,,,Point(-1.593366 55.439894),0,
+http://www.wikidata.org/entity/Q121312992,North Low,,Point(-1.90812 55.70229),Point(-1.90812 55.70229),0,
+http://www.wikidata.org/entity/Q124879110,Burn of Vatsdeild,,Point(-0.85794 60.71925),Point(-0.85794 60.71925),0,
+http://www.wikidata.org/entity/Q117790830,Benholm Burn,,Point(-2.30756 56.80803),Point(-2.30756 56.80803),0,
+http://www.wikidata.org/entity/Q124426393,Cameron Burn,,Point(-2.74015 56.29587),Point(-2.74015 56.29587),0,
+http://www.wikidata.org/entity/Q121312984,Brunton Burn,,Point(-1.64197 55.53741),Point(-1.64197 55.53741),0,
+http://www.wikidata.org/entity/Q112136925,Tore Burn,,Point(-2.27205 57.68222),Point(-2.27205 57.68222),0,
+http://www.wikidata.org/entity/Q124879032,Burn of Heuken,,Point(-0.83719 60.72937),Point(-0.83719 60.72937),0,
+http://www.wikidata.org/entity/Q121312987,Ingram Burn,,Point(-1.67776 55.59493),Point(-1.67776 55.59493),0,
+http://www.wikidata.org/entity/Q124738367,St Andrew's Burn,,Point(-2.14761 55.88813),Point(-2.14761 55.88813),0,
+http://www.wikidata.org/entity/Q112259522,Catterline Burn,,Point(-2.21675 56.88973),Point(-2.21675 56.88973),0,
+http://www.wikidata.org/entity/Q116784656,Bennet's Burn,,Point(-2.55537 55.95584),Point(-2.55537 55.95584),0,
+http://www.wikidata.org/entity/Q115733548,Burn of Jubidale,,Point(-3.14477 58.35578),Point(-3.14477 58.35578),0,
+http://www.wikidata.org/entity/Q124433840,Uily Strand,,Point(-2.16767 55.91346),Point(-2.16767 55.91346),0,
+http://www.wikidata.org/entity/Q124433844,Catch-a-Penny Burn,,Point(-2.06275 55.83809),Point(-2.06275 55.83809),0,
+http://www.wikidata.org/entity/Q124433839,Moor Burn,,Point(-2.17774 55.91703),Point(-2.17774 55.91703),0,
+http://www.wikidata.org/entity/Q111840621,Loch of Strathbeg watercourse to the sea,,Point(-1.88635 57.63855),Point(-1.88635 57.63855),0,
+http://www.wikidata.org/entity/Q112625323,Abbey Burn,,Point(-2.12189 55.88233),Point(-2.12189 55.88233),0,
+http://www.wikidata.org/entity/Q124433852,Dunglass Burn,,Point(-2.366711 55.945919),Point(-2.366711 55.945919),0,
+http://www.wikidata.org/entity/Q112136934,Burn of Melrose,,Point(-2.44627 57.66881),Point(-2.44627 57.66881),0,
+http://www.wikidata.org/entity/Q124424604,Loch Watenan outflow watercourse,,Point(-3.16095 58.346),Point(-3.16095 58.346),0,
+http://www.wikidata.org/entity/Q124433843,Abbey Burn,,Point(-2.12189 55.88237),Point(-2.12189 55.88237),0,
+http://www.wikidata.org/entity/Q115733532,Mill Burn,,Point(-3.13117 58.35903),Point(-3.13117 58.35903),0,
+http://www.wikidata.org/entity/Q117790851,"Den of Benholm, burn",,Point(-2.3206 56.81345),Point(-2.3206 56.81345),0,
+http://www.wikidata.org/entity/Q112670101,The Dour,,Point(-2.194515 57.672025),Point(-2.194515 57.672025),0,
+http://www.wikidata.org/entity/Q121332851,Blakemoor Burn,,Point(-1.55206 55.243),Point(-1.55206 55.243),0,
+http://www.wikidata.org/entity/Q124879097,Burn of Welbigarth,,Point(-0.85049 60.72253),Point(-0.85049 60.72253),0,
+http://www.wikidata.org/entity/Q112315360,Clyne Burn,,Point(-3.84074 58.02435),Point(-3.84074 58.02435),0,
+http://www.wikidata.org/entity/Q114349666,Burn of Latheron,,Point(-3.36017 58.27679),Point(-3.36017 58.27679),0,
+http://www.wikidata.org/entity/Q121332852,Croft Letch,,Point(-1.54849 55.24015),Point(-1.54849 55.24015),0,
+http://www.wikidata.org/entity/Q112624368,Heriot Water,,Point(-2.33292 55.9265),Point(-2.33292 55.9265),0,
+http://www.wikidata.org/entity/Q121332842,Bondicarr Burn,,Point(-1.55525 55.30892),Point(-1.55525 55.30892),0,
+http://www.wikidata.org/entity/Q116784652,Brox Burn,,Point(-2.48838 55.99508),Point(-2.48838 55.99508),0,
+http://www.wikidata.org/entity/Q124738368,Scape Burn,,Point(-2.14759 55.88821),Point(-2.14759 55.88821),0,
+http://www.wikidata.org/entity/Q124849356,Marshall Meadows Burn,,Point(-2.03092 55.80385),Point(-2.03092 55.80385),0,
+http://www.wikidata.org/entity/Q115867131,Annachie Burn,,Point(-1.82224 57.56988),Point(-1.82224 57.56988),0,
+http://www.wikidata.org/entity/Q121365861,Neuharlinger Sieltief,,,,1,
+http://www.wikidata.org/entity/Q117825641,Burn of Mail,,Point(-1.23237 60.03376),Point(-1.23237 60.03376),0,
+http://www.wikidata.org/entity/Q121312983,Embleton Burn,,Point(-1.61847 55.50045),Point(-1.61847 55.50045),0,
+http://www.wikidata.org/entity/Q124433842,Milldown Burn,,Point(-2.13189 55.8899),Point(-2.13189 55.8899),0,
+http://www.wikidata.org/entity/Q124879098,Burn of Furlings,,Point(-0.85216 60.7225),Point(-0.85216 60.7225),0,
+http://www.wikidata.org/entity/Q121312990,Fenham Burn,,Point(-1.84281 55.64406),Point(-1.84281 55.64406),0,
+http://www.wikidata.org/entity/Q121332848,Chevington Burn,,Point(-1.57507 55.27754),Point(-1.57507 55.27754),0,
+http://www.wikidata.org/entity/Q115733631,Burn of Shalligoe,,Point(-3.27857 58.29782),Point(-3.27857 58.29782),0,
+http://www.wikidata.org/entity/Q117839163,Allt na Cùile,,Point(-3.79662 58.05967),Point(-3.79662 58.05967),0,
+http://www.wikidata.org/entity/Q124846839,Cambo Burn,,Point(-2.63427 56.29599),Point(-2.63427 56.29599),0,
+http://www.wikidata.org/entity/Q124433851,Cockburnspath Burn,,Point(-2.333302 55.930874),Point(-2.333302 55.930874),0,
+http://www.wikidata.org/entity/Q124963795,Wakefield Burn,,Point(-2.74016 56.29577),Point(-2.74016 56.29577),0,
+http://www.wikidata.org/entity/Q111535701,Panlathymill Burn,,Point(-2.692903 56.514886),Point(-2.692903 56.514886),0,
+http://www.wikidata.org/entity/Q115920136,Mill Burn,,Point(-1.20578 60.10854),Point(-1.20578 60.10854),0,
+http://www.wikidata.org/entity/Q112133486,Balnagown River,,Point(-4.05106 57.72969),Point(-4.05106 57.72969),0,
+http://www.wikidata.org/entity/Q116814644,Swilken Burn,,Point(-2.806552 56.344147),Point(-2.806552 56.344147),2,
+http://www.wikidata.org/entity/Q124433845,Lamb's Burn,,Point(-2.05306 55.82384),Point(-2.05306 55.82384),0,
+http://www.wikidata.org/entity/Q130480272,,,,,0,
+http://www.wikidata.org/entity/Q130480355,,,,,0,
+http://www.wikidata.org/entity/Q130480379,,,,,0,
+http://www.wikidata.org/entity/Q130730085,,,,,1,
+http://www.wikidata.org/entity/Q130737901,,,,,0,
+http://www.wikidata.org/entity/Q130754717,,,,,0,
+http://www.wikidata.org/entity/Q130754736,,,,,0,
+http://www.wikidata.org/entity/Q130754765,,,,,0,
+http://www.wikidata.org/entity/Q130754908,,,,,0,
+http://www.wikidata.org/entity/Q130755042,,,,,0,
+http://www.wikidata.org/entity/Q130758856,,,,,0,
+http://www.wikidata.org/entity/Q130758871,,,,,0,
+http://www.wikidata.org/entity/Q130759132,,,,,0,
+http://www.wikidata.org/entity/Q112829376,Kinloss Burn,,Point(-3.5816 57.6367),Point(-3.5816 57.6367),0,
+http://www.wikidata.org/entity/Q113847502,Spuikanaal Bath,,,Point(4.230055555 51.430444444),1,
+http://www.wikidata.org/entity/Q124849142,Oldhamstocks Burn,,Point(-2.39658 55.92773),Point(-2.39658 55.92773),0,
+http://www.wikidata.org/entity/Q121312986,Annstead Burn,,Point(-1.6492 55.57232),Point(-1.6492 55.57232),0,
+http://www.wikidata.org/entity/Q124433841,Starney Burn,,Point(-2.13328 55.90098),Point(-2.13328 55.90098),0,
+http://www.wikidata.org/entity/Q112624332,Thornton Burn,,Point(-2.3976 55.96087),Point(-2.3976 55.96087),0,
+http://www.wikidata.org/entity/Q115770641,Loch Loy to Moray Firth watercourse,,Point(-3.81736 57.60198),Point(-3.81736 57.60198),0,

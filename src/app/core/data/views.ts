@@ -9,7 +9,7 @@ export type MapView = 'top' | 'catchments' | 'story' | 'seas' | 'mosaic' | 'rain
 /** Ground of the "Basin mosaic" view: white (prints, light pages) or black (the classic look). */
 export type MosaicGround = 'light' | 'dark';
 
-/** Number of sea sub-basins in the dataset (Bothnian Bay … Danish Straits & Kattegat). */
+/** Most sub-basins a sea has (colour tokens sub-0…5, sea-0…5; the Baltic and the Mediterranean). */
 export const SUB_COUNT = 6;
 
 /** Theme token (`--color-sub-<i>`, src/styles.scss) for the sea sub-basin with the given id. */
@@ -24,5 +24,5 @@ export const mosaicToken = (slot: number, ground: MosaicGround = 'light') => (gr
 /** "Where the rivers end": river colour per sea (`--color-sea-<i>` / `--color-sea-dark-<i>`). */
 export const seaToken = (sub: number, ground: MosaicGround = 'light') => (ground === 'dark' ? `sea-dark-${sub}` : `sea-${sub}`);
 
-/** Steps of the "Where the rivers end" presentation: intro, one per sea, finale. */
-export const STORY_STEPS = SUB_COUNT + 2;
+/** Steps of the "Where the rivers end" presentation: intro, one per sub-basin, finale. */
+export const storySteps = (subs: number) => subs + 2;

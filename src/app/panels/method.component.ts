@@ -36,6 +36,10 @@ const SOURCES = [
     <p>{{ t.methodRaindrop }}</p>
     <h3>{{ t.methodReliefTitle }}</h3>
     <p>{{ t.methodRelief }}</p>
+    @if (t.methodSea) {
+      <h3>{{ t.methodSeaTitle }}</h3>
+      <p>{{ t.methodSea }}</p>
+    }
     <h3>{{ t.methodTermsTitle }}</h3>
     <dl>
       @for (term of t.terms; track term.term) {
@@ -45,7 +49,7 @@ const SOURCES = [
     </dl>
     <h3>{{ t.sourcesTitle }}</h3>
     <ul>
-      @for (s of sources; track s.url) {
+      @for (s of sources.concat(t.sourcesExtra ?? []); track s.url) {
         <li><a [href]="s.url" target="_blank" rel="noopener">{{ s.label }}</a></li>
       }
     </ul>

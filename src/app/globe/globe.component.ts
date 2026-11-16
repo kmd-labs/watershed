@@ -19,7 +19,7 @@ import { ThemeService } from '@kmd/design-system';
 import { isAtMost } from '@kmd/design-system/utils/breakpoints';
 import { BalticData, Basin, Poly, RaindropPath, RiverClassGeometry } from '../core/data/baltic.model';
 import { cssToHex } from '../core/color';
-import { MapView, MOSAIC_COUNT, MosaicGround, STORY_STEPS, SUB_COUNT, mosaicToken, seaToken, subToken } from '../core/data/views';
+import { MapView, MOSAIC_COUNT, MosaicGround, SUB_COUNT, mosaicToken, seaToken, subToken } from '../core/data/views';
 
 export interface GlobeHover {
   /** Basin under the pointer. */
@@ -493,7 +493,24 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
   ngOnDestroy() {
     cancelAnimationFrame(this.raf);
     this.resizeObs?.disconnect();
+    // Switching seas recreates the map: hand the WebGL context back rather than wait for GC.
     this.renderer?.dispose();
+    this.renderer?.forceContextLoss();
+  }
+
+  /**
+   * The starting view of the whole drainage basin. Calibrated on the Baltic (outline 9–38°E,
+   * 49–69°N → centre 20°E 59°N, altitude 3.2, 4.6 in portrait): centred a little west of the
+   * basin's middle, the altitude scaled with its extent.
+   */
+  private homeView(w: number, h: number): View {
+    let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9;
+    for (const r of this.softOutlines()[this.data().subs.length]) {
+      for (let i = 0; i < r.length; i += 2) { x0 = Math.min(x0, r[i]); x1 = Math.max(x1, r[i]); y0 = Math.min(y0, r[i + 1]); y1 = Math.max(y1, r[i + 1]); }
+    }
+    const mid = (y0 + y1) / 2;
+    const k = Math.max((y1 - y0) / 20.2, ((x1 - x0) * Math.cos(mid * DEG)) / (29 * Math.cos(59.1 * DEG)));
+    return { lon: (x0 + x1) / 2 - 0.12 * (x1 - x0), lat: mid, alt: (w / Math.max(h, 1) < 0.9 ? 4.6 : 3.2) * k };
   }
 
   /** Smoothly moves the camera over a basin. */
@@ -705,7 +722,7 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
     this.emitProgress(0.9);
 
     const w = this.host.nativeElement.clientWidth, h = this.host.nativeElement.clientHeight;
-    this.home = { lon: 20, lat: 59, alt: w / Math.max(h, 1) < 0.9 ? 4.6 : 3.2 };
+    this.home = this.homeView(w, h);
     this.altMax = this.home.alt * ALT_OUT;
     this.cam = { ...this.home };
 
@@ -793,7 +810,7 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
   private buildContext(data: BalticData, width: number) {
     const [W0, W1, S0, S1] = data.worldBox;
     this.contextCanvas.width = width;
-    this.contextCanvas.height = Math.round((width * (S1 - S0)) / (W1 - W0) / Math.cos(59 * DEG));
+    this.contextCanvas.height = Math.round((width * (S1 - S0)) / (W1 - W0) / Math.cos(((S0 + S1) / 2) * DEG));
     this.contextTex = new THREE.CanvasTexture(this.contextCanvas);
     this.contextTex.colorSpace = THREE.SRGBColorSpace;
     this.drawContext();
@@ -846,7 +863,7 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
   private buildRegion(data: BalticData, width: number) {
     const [LON0, LON1, LAT0, LAT1] = data.bbox;
     this.RW = Math.min(this.renderer.capabilities.maxTextureSize, width);
-    this.RH = Math.round(((this.RW * (LAT1 - LAT0)) / (LON1 - LON0) / Math.cos(59 * DEG)) * 0.62);
+    this.RH = Math.round(((this.RW * (LAT1 - LAT0)) / (LON1 - LON0) / Math.cos(((LAT0 + LAT1) / 2) * DEG)) * 0.62);
     this.regionCanvas.width = this.RW;
     this.regionCanvas.height = this.RH;
     this.regionCtx = this.regionCanvas.getContext('2d')!;
@@ -909,7 +926,7 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
       x.strokeStyle = this.colors['ink']; x.globalAlpha = 0.16; x.lineWidth = 0.9 * s;
       data.basins.forEach((b, i) => { if (b.kind === 'basin') { path(data.basinPolys[i]); x.stroke(); } });
       x.globalAlpha = 0.28; x.lineWidth = 1.3 * s;
-      for (let k = 0; k < 6; k++) { path(soft[k]); x.stroke(); }
+      for (let k = 0; k < data.subs.length; k++) { path(soft[k]); x.stroke(); }
     }
 
     // Drainage divide (it also traces the coast): soft and light, so skerries do not turn into
@@ -918,7 +935,7 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
     x.strokeStyle = dark ? this.colors['darkOutline'] : this.colors['outline'];
     x.globalAlpha = OUTLINE_ALPHA;
     x.lineWidth = 1.4 * s;
-    path(soft[6]); x.stroke();
+    path(soft[this.data().subs.length]); x.stroke();
     x.globalAlpha = 1;
     x.setTransform(1, 0, 0, 1, 0, 0);
     return this.uploadRegion();
@@ -1156,9 +1173,10 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
 
   /** Starts a story step: the step's sea draws its rivers down to the coast; the camera follows. */
   private startStoryStep(step: number) {
-    this.story = { t: step >= 1 && step <= SUB_COUNT ? 0 : 1 };
+    const subs = this.data().subs.length;
+    this.story = { t: step >= 1 && step <= subs ? 0 : 1 };
     const data = this.data();
-    if (step >= 1 && step <= SUB_COUNT) {
+    if (step >= 1 && step <= subs) {
       let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9;
       for (const b of data.basins) {
         if (b.sub !== step - 1) continue;
@@ -1219,7 +1237,7 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
         // Intro and finale: the top rivers in full, everything else stays a ghost.
         ghost = STORY_GHOST;
         km = pos.has(i) ? -1 : 1e9;
-      } else if (story && step < STORY_STEPS - 1) {
+      } else if (story && step < data.subs.length + 1) {
         const sea = b.sub + 1; // step that reveals this basin's sea
         ghost = STORY_GHOST;
         km = sea < step ? -1 : sea === step ? this.subMaxKm[b.sub] * (1 - e) - 0.001 : 1e9;
@@ -1632,7 +1650,7 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
     this.camera.aspect = width / height;
     this.camera.clearViewOffset();
     const aspectKey = Math.round((width / height) * 1000);
-    const whole = this.softOutlines()[6];
+    const whole = this.softOutlines()[data.subs.length];
     if (!this.printWholeAlt.has(aspectKey)) this.printWholeAlt.set(aspectKey, this.fitPrint(whole));
     const alt = this.fitPrint(style.focus >= 0 ? data.basinPolys[style.focus] : whole);
     // Zoomed in on one basin, rivers draw a little heavier (gently, not to scale).
@@ -1813,20 +1831,29 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
       ctx.fillStyle = colour;
       for (const poly of polys) { ctx.beginPath(); for (const r of poly) ring(r); ctx.fill('evenodd'); }
     };
+    const boxRing = ([L0, L1, A0, A1]: [number, number, number, number]) => {
+      const out: number[] = [], N = 64;
+      for (let i = 0; i <= N; i++) out.push(L0 + ((L1 - L0) * i) / N, A0);
+      for (let i = 0; i <= N; i++) out.push(L1, A0 + ((A1 - A0) * i) / N);
+      for (let i = N; i >= 0; i--) out.push(L0 + ((L1 - L0) * i) / N, A1);
+      for (let i = N; i >= 0; i--) out.push(L0, A0 + ((A1 - A0) * i) / N);
+      return out;
+    };
+    // Beyond the cut-out box there is no data: a frame corner reaching past it reads as land.
+    ctx.fillStyle = style.paper;
+    ctx.fillRect(0, 0, W, H);
+    ctx.save();
+    ctx.beginPath();
+    ring(boxRing(data.worldBox));
+    ctx.clip();
     ctx.fillStyle = style.sea;
     ctx.fillRect(0, 0, W, H);
     fill(data.world, style.paper);
+    ctx.restore();
     // Inside the data box the detailed coast and lakes replace the coarse world outline.
-    const [LON0, LON1, LAT0, LAT1] = data.bbox;
-    const box: number[] = [];
-    const N = 64;
-    for (let i = 0; i <= N; i++) box.push(LON0 + ((LON1 - LON0) * i) / N, LAT0);
-    for (let i = 0; i <= N; i++) box.push(LON1, LAT0 + ((LAT1 - LAT0) * i) / N);
-    for (let i = N; i >= 0; i--) box.push(LON0 + ((LON1 - LON0) * i) / N, LAT1);
-    for (let i = N; i >= 0; i--) box.push(LON0, LAT0 + ((LAT1 - LAT0) * i) / N);
     ctx.save();
     ctx.beginPath();
-    ring(box);
+    ring(boxRing(data.bbox));
     ctx.clip();
     ctx.fillStyle = style.sea;
     ctx.fillRect(0, 0, W, H);
@@ -1843,7 +1870,7 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
     ctx.lineWidth = Math.max(1, px(0.13));
     ctx.lineJoin = 'round';
     ctx.beginPath();
-    for (const r of style.focus >= 0 ? data.basinPolys[style.focus] : this.softOutlines()[6]) ring(r);
+    for (const r of style.focus >= 0 ? data.basinPolys[style.focus] : this.softOutlines()[data.subs.length]) ring(r);
     ctx.stroke();
   }
 

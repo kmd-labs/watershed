@@ -1,4 +1,6 @@
 import { Component, computed, effect, inject, signal, untracked, viewChild } from '@angular/core';
+import { SeaId, SeaService } from './core/sea';
+import { SeaPickerComponent } from './sea/sea-picker.component';
 import {
   LucideAngularModule,
   Globe,
@@ -47,7 +49,7 @@ import { I18nService } from './core/i18n/i18n.service';
 import { Lang } from './core/i18n/i18n.types';
 import { BalticDataService } from './core/data/baltic-data.service';
 import { Basin, RaindropPath } from './core/data/baltic.model';
-import { MapView, MosaicGround, STORY_STEPS, mosaicToken, seaToken } from './core/data/views';
+import { MapView, MosaicGround, mosaicToken, seaToken, storySteps } from './core/data/views';
 import { GlobeComponent, GlobeHover, GlobePick } from './globe/globe.component';
 import { PosterStudioComponent } from './poster/poster-studio.component';
 import { DEFAULT_POSTER, PosterOptions } from './poster/poster-options';
@@ -98,6 +100,7 @@ interface LegendItem {
     BasinDetailComponent,
     CountryListComponent,
     SeaListComponent,
+    SeaPickerComponent,
     PosterStudioComponent
   ],
   templateUrl: './app.component.html',
@@ -105,6 +108,7 @@ interface LegendItem {
 })
 export class AppComponent {
   readonly i18n = inject(I18nService);
+  readonly seas = inject(SeaService);
   readonly bp = inject(BreakpointService);
   readonly popup = inject(PopupService);
   readonly tooltip = inject(TooltipService);
@@ -155,6 +159,16 @@ export class AppComponent {
   /** Poster maker choices (the view's state, also carried by its links). */
   readonly posterOpts = signal<PosterOptions>(DEFAULT_POSTER);
   readonly globeProgress = signal(0);
+  /** The splash has gone (later sea switches show a small loading note instead). */
+  readonly splashGone = signal(false);
+  /** Steps of "Where the rivers end" for this sea: intro, one per sub-basin, finale. */
+  readonly storyStepCount = computed(() => storySteps(this.store.data()?.subs.length ?? 6));
+  /** Loading another sea after the splash: progress 0–1, or null when nothing is loading. */
+  readonly seaLoading = computed(() => {
+    if (!this.splashGone() || !this.seas.sea() || this.mapFailed() || this.store.error()) return null;
+    const p = this.store.progress() * 0.45 + this.globeProgress() * 0.55;
+    return this.store.data() && this.globeProgress() >= 1 ? null : p;
+  });
   /** The 3D map could not be created (see GlobeComponent.failed). */
   readonly mapFailed = signal(false);
   /** The legend & layers panel can fold down to a single pill. */
@@ -176,7 +190,7 @@ export class AppComponent {
     const v = this.view() === 'poster' ? this.lastMap() : this.view();
     return v === 'top' ? 'catchments' : v;
   });
-  readonly presSteps = computed(() => (this.presKind() === 'top' ? TOP_N + 2 : STORY_STEPS));
+  readonly presSteps = computed(() => (this.presKind() === 'top' ? TOP_N + 2 : this.storyStepCount()));
   readonly presDots = computed(() => Array.from({ length: this.presSteps() }, (_, i) => i));
 
   /** The TOP_N largest river basins, largest first (step 1 = #1). */
@@ -207,6 +221,7 @@ export class AppComponent {
       basin: view === 'poster' ? this.posterOpts().focus : this.selected(),
       step: this.storyStep(),
       drop: this.drop()?.start ?? null,
+      sea: this.seas.sea(),
       palette: this.posterOpts().palette,
       by: this.posterOpts().by
     };
@@ -305,10 +320,18 @@ export class AppComponent {
         supportedLangs: this.i18n.langs
       });
     });
+    // The chosen sea's data — and only that sea's — loads once a sea is chosen (at entry from the
+    // link or the last visit, else from the picker); switching seas starts its map afresh.
+    effect(() => {
+      const sea = this.seas.sea();
+      if (sea) untracked(() => this.loadSea(sea));
+    });
     // Splash: half data (download + decode), half map setup; held for at least MIN_SPLASH_MS.
+    // With no sea yet it waits behind the sea picker.
     effect(() => {
       const t = this.i18n.t();
       if (this.store.error()) { this.splash.setError(t.loadError); return; }
+      if (!this.seas.sea()) { this.splash.setProgress(0, t.chooseSea); return; }
       const data = this.store.progress(), map = this.mapFailed() ? 1 : this.globeProgress();
       this.splash.setProgress((data * 0.45 + map * 0.55) * 100, data < 1 ? t.loading : t.splashBuilding);
       if (!this.splashDone && this.splash.revealed() && map >= 1) {
@@ -316,10 +339,15 @@ export class AppComponent {
         performance.mark('watershed:map');
         setTimeout(() => {
           this.splash.finish();
+          this.splashGone.set(true);
           performance.mark('watershed:splash');
           this.autoplay();
         }, Math.max(0, MIN_SPLASH_MS - performance.now()));
       }
+    });
+    // After a later sea switch the running tour starts again once the new map is on screen.
+    effect(() => {
+      if (this.globeProgress() >= 1 && this.splashGone()) untracked(() => this.autoplay());
     });
   }
 
@@ -332,11 +360,30 @@ export class AppComponent {
     }))
   );
 
-  readonly viewOptions = computed<DropdownOption<MapView>[]>(() => {
+  /** Starts another sea: its own data and a fresh map; the view stays, the tours restart. */
+  private loadSea(sea: SeaId) {
+    if (this.store.sea() === sea) return;
+    this.globeProgress.set(0);
+    this.selected.set(-1);
+    this.drop.set(null);
+    this.dropNote.set(null);
+    this.playStory(false);
+    if (this.store.sea()) this.storyStep.set(0);
+    this.posterOpts.update(o => ({ ...o, focus: -1, title: null, subtitle: null, line: null }));
+    void this.store.load(sea);
+  }
+
+  /** The view menu also opens the sea picker (its last entry). */
+  onViewChange(v: MapView | 'sea') {
+    if (v === 'sea') this.seas.pickerOpen.set(true);
+    else this.setView(v);
+  }
+
+  readonly viewOptions = computed<DropdownOption<MapView | 'sea'>[]>(() => {
     const t = this.i18n.t();
     // The start view first; each tour right before the map it closes onto (the sea-by-sea story →
     // sea sub-basins, top 20 → catchments); then the art view; the hands-on raindrop last.
-    const all: DropdownOption<MapView>[] = [
+    const all: DropdownOption<MapView | 'sea'>[] = [
       { value: 'story', label: t.viewStory, icon: Route },
       { value: 'seas', label: t.viewSeas, icon: Layers },
       { value: 'top', label: t.viewTop(TOP_N), icon: Trophy },
@@ -344,7 +391,8 @@ export class AppComponent {
       { value: 'mosaic', label: t.viewMosaic, icon: Palette },
       { value: 'raindrop', label: t.viewRaindrop, icon: Droplet },
       // On phones the header pill shows the short name (the long one would push it off screen).
-      { value: 'poster', label: t.viewPoster, shortLabel: this.bp.mobile() ? t.viewPosterShort : undefined, icon: ImageDown }
+      { value: 'poster', label: t.viewPoster, shortLabel: this.bp.mobile() ? t.viewPosterShort : undefined, icon: ImageDown },
+      { value: 'sea', label: t.changeSea, icon: Waves }
     ];
     // Without the map the tours and the poster maker have nothing to show.
     return this.mapFailed() ? all.filter(o => o.value !== 'top' && o.value !== 'story' && o.value !== 'poster') : all;
@@ -474,20 +522,25 @@ export class AppComponent {
         facts: [] as { k: string; v: string }[]
       };
     }
-    if (step >= STORY_STEPS - 1) {
+    if (step >= this.storyStepCount() - 1) {
       const byArea = [...d.subs].sort((a, b) => b.parea - a.parea)[0];
       const byFlow = [...d.subs].sort((a, b) => b.dis - a.dis)[0];
-      const neva = d.basins.find(b => b.name === 'Newa');
+      // The largest rivers by mean flow (the Baltic's text names the Neva; the others say who).
+      const top = d.basins
+        .filter(b => b.river && b.name)
+        .sort((a, b) => b.dis - a.dis)
+        .slice(0, 3)
+        .map(b => ({ name: this.i18n.river(b.name!).replace(/ \(.+\)$/, ''), frac: b.dis / total.dis, share: pct(b.dis, total.dis) }));
       return {
         title: t.storyFinaleTitle,
         color: '',
         text:
           byArea.id === byFlow.id
-            ? t.storyFinaleTextSame(t.subNames[byArea.id], pct(byArea.parea, total.parea), pct(byFlow.dis, total.dis), neva ? pct(neva.dis, total.dis) : '–')
+            ? t.storyFinaleTextSame(t.subNames[byArea.id], pct(byArea.parea, total.parea), pct(byFlow.dis, total.dis), top)
             : t.storyFinaleText(
                 t.subNames[byArea.id], pct(byArea.parea, total.parea),
                 t.subNames[byFlow.id], pct(byFlow.dis, total.dis),
-                neva ? pct(neva.dis, total.dis) : '–'
+                top
               ),
         facts: d.subs.map(s => ({ k: t.subNames[s.id], v: `${pct(s.parea, total.parea)} · ${this.i18n.flow(s.dis)}` }))
       };
@@ -538,7 +591,7 @@ export class AppComponent {
           note: '',
           color: `var(--color-${seaToken(i, this.ground())})`,
           kind: 'line' as const,
-          dim: step < STORY_STEPS - 1 && i + 1 > step,
+          dim: step < this.storyStepCount() - 1 && i + 1 > step,
           current: step === i + 1
         }))
       };
