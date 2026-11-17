@@ -156,6 +156,14 @@ export class EntryMap {
     }
   }
 
+  /** Where each sea's name goes on the water (CSS px, current layout), in SEA_IDS order. */
+  anchors(): [number, number][] {
+    return SEA_IDS.map(s => {
+      const [a, b] = this.P(...LABEL_AT[s]);
+      return [a / this.dpr, b / this.dpr];
+    });
+  }
+
   /** Width of the drawn basins in CSS px. */
   get width() {
     return this.mapW;

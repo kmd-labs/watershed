@@ -34,9 +34,14 @@ export class SeaService {
   }
 
   choose(sea: SeaId) {
+    this.begin(sea);
+    this.pickerOpen.set(false);
+  }
+
+  /** Starts the sea (its data begins to load) while the entry finishes its own animation. */
+  begin(sea: SeaId) {
     this.sea.set(sea);
     this.last.set(sea);
-    this.pickerOpen.set(false);
     try {
       localStorage.setItem(STORAGE_KEY, sea);
     } catch {

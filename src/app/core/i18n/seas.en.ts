@@ -87,7 +87,7 @@ export const SEAS_EN: Record<'north' | 'black' | 'med' | 'caspian', SeaOverlay> 
     subs: ['Skagerrak', 'Northern North Sea', 'German Bight & Wadden Sea', 'Southern North Sea', 'Western North Sea'],
     intro:
       'The North Sea drainage basin is all the land whose rain and snowmelt ends up in the North Sea: from the Alps, where the Rhine begins, to the fjords of Norway and the east coast of Britain. Every catchment on the map is the area drained by one river down to its mouth; coastal strips without a sizeable river drain straight to the sea.',
-    method: 'Rivers flowing into the English Channel or the Kattegat (which belongs to the Baltic) are not counted here.',
+    method: 'Rivers flowing into the English Channel or the Kattegat (which belongs to the Baltic) are not counted here. Rivers ending in the IJsselmeer and Markermeer (which drain through the Afsluitdijk sluices into the Wadden Sea) or in the Rhine–Meuse delta waters (Haringvliet, Hollands Diep) count as flowing into the North Sea.',
     facts: c => [
       { value: c.nout, caption: 'rivers flow into the North Sea', note: MOUTHS_NOTE('the North Sea') },
       { value: c.pop, caption: 'people live in its drainage basin', note: POP_NOTE },

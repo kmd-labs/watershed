@@ -96,7 +96,7 @@ export const SEAS_PL: Record<'north' | 'black' | 'med' | 'caspian', SeaOverlay> 
     ],
     intro:
       'Zlewisko Morza Północnego to cały ląd, z którego woda z deszczu i roztopów trafia do Morza Północnego: od Alp, gdzie zaczyna się Ren, po fiordy Norwegii i wschodnie wybrzeże Wielkiej Brytanii. Każda zlewnia na mapie to obszar odwadniany przez jedną rzekę aż do jej ujścia; pasy wybrzeża bez większej rzeki oddają wodę wprost do morza.',
-    method: 'Rzeki uchodzące do kanału La Manche i do Kattegatu (należy już do Bałtyku) nie są tu liczone.',
+    method: 'Rzeki uchodzące do kanału La Manche i do Kattegatu (należy już do Bałtyku) nie są tu liczone. Rzeki kończące się w IJsselmeer i Markermeer (odpływają przez śluzy Afsluitdijk do Morza Wattowego) oraz w wodach delty Renu i Mozy (Haringvliet, Hollands Diep) są liczone jako uchodzące do Morza Północnego.',
     facts: c => [
       { value: c.nout, caption: 'rzek uchodzi do Morza Północnego', note: MOUTHS_NOTE('Morza Północnego') },
       { value: c.pop, caption: 'ludzi mieszka w jego zlewisku', note: POP_NOTE },

@@ -326,3 +326,16 @@ $top: calc(var(--header-offset-top) + var(--kmd-brand-h, 40px) + #{spacing("lg")
     height: 9px;
   }
 }
+
+// The area list (hundreds of basins) scrolls inside its own height instead of running out of
+// the panel, which would clip it.
+.studio__area ::ng-deep .dropdown__menu {
+  max-height: var(--area-menu-max, 320px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  flex-wrap: nowrap;
+}
+
+.studio__area ::ng-deep .dropdown__item {
+  flex: none;
+}

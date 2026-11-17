@@ -27,6 +27,12 @@ How a sea's drainage basin is found
     80 m) as in scripts/build-rivers.py; size class = 7 − ORD_FLOW (≥ 1000 m³/s → class 4).
   · `clip_lat` (Mediterranean): reaches and units south of it are left out — the Nile is shown in
     Egypt only, without its upstream basin.
+  · `lake_water` (North Sea): the Natural Earth lakes inside this box count as the sea's water —
+    the IJsselmeer and Markermeer, which drain through the Afsluitdijk sluices into the Wadden Sea;
+    HydroRIVERS ends the IJssel, the Vecht and the polder rivers there, 25–55 km from open water.
+  · `delta_water` (North Sea): a rough outline of estuary water Natural Earth draws as land — the
+    Haringvliet, Hollands Diep and Volkerak, where HydroRIVERS ends the Meuse and the Mark–Dintel.
+    Used only to find mouths (all outlets there reach the North Sea), never drawn.
 """
 import base64, json, math, sys, time
 from pathlib import Path
@@ -55,7 +61,8 @@ GHSL = RAW / 'ghsl_pop_2025/GHS_POP_E2025_GLOBE_R2023A_4326_30ss_V1_0.tif'
 # order, the first polygon holding a mouth wins (the last is the fallback); `lbl`: sea-name position.
 SEAS = {
     'north': dict(
-        read=(-6.0, 45.5, 17.5, 62.5), tiles=['eu'], water='ocean', tol_km=12,
+        read=(-6.0, 45.5, 17.5, 62.5), tiles=['eu'], water='ocean', tol_km=12, lake_water=(5.0, 52.2, 6.1, 53.1),
+        delta_water=[(3.95, 51.62), (4.75, 51.62), (4.75, 51.86), (3.95, 51.86)],
         poly=[(-3.40, 58.70), (-3.00, 59.30), (-1.80, 60.10), (-1.00, 61.00), (13.0, 61.0), (13.0, 58.20), (11.45, 57.90),
               (10.60, 57.73), (10.2, 57.4), (9.6, 56.8), (9.4, 56.0), (9.3, 55.4), (9.15, 54.8), (9.5, 54.3), (10.0, 53.7),
               (10.5, 51.0), (3.0, 50.8), (1.92, 50.99), (1.40, 51.17), (1.0, 51.15), (0.0, 51.2), (-1.5, 51.5), (-2.4, 52.5),
@@ -64,7 +71,9 @@ SEAS = {
         subs=[
             dict(pl='Skagerrak', en='Skagerrak', lbl=(9.2, 57.95), poly=[(7.0, 57.6), (13.0, 57.6), (13.0, 61.0), (7.0, 61.0)]),
             dict(pl='Północna część Morza Północnego', en='Northern North Sea', lbl=(2.0, 59.2), poly=[(-6.0, 56.0), (7.0, 56.0), (7.0, 61.5), (-6.0, 61.5)]),
-            dict(pl='Zatoka Niemiecka i Morze Wattowe', en='German Bight & Wadden Sea', lbl=(7.3, 54.6), poly=[(4.6, 52.9), (13.0, 52.9), (13.0, 57.6), (4.6, 57.6)]),
+            # with the IJsselmeer and Markermeer, which empty into the Wadden Sea
+            dict(pl='Zatoka Niemiecka i Morze Wattowe', en='German Bight & Wadden Sea', lbl=(7.3, 54.6),
+                 poly=[(4.6, 52.9), (5.0, 52.9), (5.0, 52.2), (6.2, 52.2), (6.2, 52.9), (13.0, 52.9), (13.0, 57.6), (4.6, 57.6)]),
             dict(pl='Południowa część Morza Północnego', en='Southern North Sea', lbl=(2.7, 52.4), poly=[(-0.2, 50.5), (13.0, 50.5), (13.0, 52.9), (0.5, 52.9), (0.5, 51.95), (-0.2, 51.95)]),  # with the Thames estuary
             dict(pl='Zachodnia część Morza Północnego', en='Western North Sea', lbl=(0.6, 54.9), poly=[(-6.0, 50.5), (4.6, 50.5), (4.6, 56.0), (-6.0, 56.0)]),
         ]),
@@ -140,6 +149,14 @@ if C['water'] == 'ocean':
     water = shapely.intersection(shapely.union_all(ocean.geometry.values), SEA_POLY)
 else:
     water = shapely.difference(SEA_POLY, land_u)
+if C.get('lake_water'):
+    lb = box(*C['lake_water'])
+    lk_w = pd.concat([gpd.read_file(NE(n), bbox=lb.bounds) for n in ('ne_10m_lakes', 'ne_10m_lakes_europe')], ignore_index=True)
+    lw = shapely.union_all([shapely.make_valid(g) for g in lk_w.geometry.values if g is not None and g.intersects(lb)])
+    water = shapely.union_all([water, shapely.intersection(lw, lb)])
+    log(f'lakes counted as the sea: {shapely.intersection(lw, lb).area:.2f} deg²')
+if C.get('delta_water'):
+    water = shapely.union_all([water, Polygon(C['delta_water'])])
 water = shapely.make_valid(water)
 K = math.cos(math.radians((READ[1] + READ[3]) / 2))
 scale = lambda geom: shapely.transform(geom, lambda xy: xy * np.array([K, 1.0]))

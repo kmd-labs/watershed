@@ -1802,11 +1802,12 @@ export class GlobeComponent implements AfterViewInit, OnDestroy {
     this.camera.clearViewOffset();
     this.camera.updateProjectionMatrix();
     if (layer) {
-      // Two soft copies of the rivers (shrunk and stretched back = blurred) glow under the sharp ones.
+      // Two soft copies of the rivers (shrunk and stretched back = blurred) glow under the sharp ones;
+      // the wide one faint, or dense river networks would burn into solid patches of light.
       ctx.globalCompositeOperation = 'screen';
       ctx.imageSmoothingEnabled = true;
       ctx.imageSmoothingQuality = 'high';
-      for (const [f, a] of [[1 / 7, 0.9], [1 / 22, 0.8]] as const) {
+      for (const [f, a] of [[1 / 7, 0.6], [1 / 22, 0.32]] as const) {
         const sm = document.createElement('canvas');
         sm.width = Math.max(1, Math.round(width * f));
         sm.height = Math.max(1, Math.round(height * f));

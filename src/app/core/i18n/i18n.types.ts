@@ -294,13 +294,18 @@ export interface Dict {
   pickerLast: string;
   /** Under the entry map while no sea is pointed at. */
   pickerHint: string;
-  // ─── entry: light or dark mode, and the sea ───
+  // ─── entry: the mode (Atlas or Midnight), then the sea ───
+  /** The modes' names. */
   lookNames: Record<Look, string>;
+  /** What each mode is, over its name ("Light mode"). */
+  lookKinds: Record<Look, string>;
   lookNotes: Record<Look, string>;
-  /** On the split map: what a click on a sea does in each half. */
-  lookOpenIn: Record<Look, string>;
-  /** Call to action in each half: the full map of seas in that mode. */
+  /** Call to action in each half: the map of seas in that mode. */
   lookPick: string;
+  /** Short sea names for the map's labels on phones ("Baltic"). */
+  seaShort: Record<SeaId, string>;
+  /** The selected sea is opening. */
+  seaOpening: (sea: string) => string;
   lookCurrent: string;
   /** On the full map: back to the choice of mode. */
   lookChange: string;

@@ -16,7 +16,7 @@
     </div>
   </div>
 
-  <section class="studio__panel glass-panel" [attr.aria-label]="t.viewPoster">
+  <section #panel class="studio__panel glass-panel" [attr.aria-label]="t.viewPoster">
     <h2 class="studio__title">{{ t.viewPoster }}</h2>
 
     <div class="studio__group">
@@ -43,10 +43,15 @@
 
     <div class="studio__group">
       <span class="studio__label">{{ t.posterArea }}</span>
+      <!-- Hundreds of basins: the list opens where the panel has more room and scrolls inside -->
       <app-dropdown
+        #area
         class="studio__area"
         variant="default"
-        direction="up"
+        [direction]="areaMenu().dir"
+        [style.--area-menu-max.px]="areaMenu().max"
+        (pointerdown)="fitAreaMenu()"
+        (keydown)="fitAreaMenu()"
         [fullWidth]="true"
         menuMinWidth="260px"
         [options]="areaOptions()"

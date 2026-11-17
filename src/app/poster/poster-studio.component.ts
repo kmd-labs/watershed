@@ -49,6 +49,10 @@ export class PosterStudioComponent implements OnDestroy {
   readonly downloadIcon = Download;
 
   private readonly frame = viewChild.required<ElementRef<HTMLElement>>('frame');
+  private readonly panelRef = viewChild.required<ElementRef<HTMLElement>>('panel');
+  private readonly areaRef = viewChild.required('area', { read: ElementRef<HTMLElement> });
+  /** The area list: opens up or down, wherever the panel has more room, at most that tall. */
+  readonly areaMenu = signal<{ dir: 'up' | 'down'; max: number }>({ dir: 'up', max: 320 });
   private readonly preview = viewChild.required<ElementRef<HTMLCanvasElement>>('preview');
   private readonly frameSize = signal({ w: 0, h: 0 });
 
@@ -139,6 +143,17 @@ export class PosterStudioComponent implements OnDestroy {
     this.resizeObs?.disconnect();
     const globe = this.globe();
     this.queue = this.queue.then(() => globe?.printEnd());
+  }
+
+  /** Before the area list opens: room above and below the field inside the scrolling panel. */
+  fitAreaMenu() {
+    const panel = this.panelRef().nativeElement.getBoundingClientRect();
+    const field = this.areaRef().nativeElement.getBoundingClientRect();
+    const above = field.top - panel.top - 12, below = panel.bottom - field.bottom - 12;
+    const dir = above >= below ? 'up' : 'down';
+    this.areaMenu.set({ dir, max: Math.max(140, Math.round(Math.min(420, dir === 'up' ? above : below))) });
+    // Once open, the chosen basin is in view.
+    setTimeout(() => this.areaRef().nativeElement.querySelector('.dropdown__item--selected')?.scrollIntoView({ block: 'nearest' }), 30);
   }
 
   set(patch: Partial<PosterOptions>) {

@@ -153,18 +153,18 @@ $entry-seas: (
 
   // Poster maker river palettes, derived from the mosaic and sea colours. Pastel (white paper):
   // saturation down, lightness up, still dark enough to read as hairlines on white. Vivid (black
-  // paper): saturation and lightness up. Neon (black paper): full saturation, a little lighter;
+  // paper): saturation and lightness up (a touch brighter). Neon (black paper): full saturation, a little lighter;
   // the poster maker adds a soft glow.
   @for $i from 1 through list.length($mosaic) {
     $c: list.nth($mosaic, $i);
     --color-print-pastel-#{$i - 1}: #{color.scale($c, $saturation: -45%, $lightness: 18%)};
-    --color-print-vivid-#{$i - 1}: #{color.scale($c, $saturation: 50%, $lightness: 14%)};
+    --color-print-vivid-#{$i - 1}: #{color.scale($c, $saturation: 50%, $lightness: 24%)};
     --color-print-neon-#{$i - 1}: #{color.scale(color.change($c, $saturation: 100%), $lightness: 20%)};
   }
   @for $i from 1 through list.length($sea) {
     $c: list.nth($sea, $i);
     --color-print-pastel-sea-#{$i - 1}: #{color.scale($c, $saturation: -45%, $lightness: 18%)};
-    --color-print-vivid-sea-#{$i - 1}: #{color.scale($c, $saturation: 50%, $lightness: 14%)};
+    --color-print-vivid-sea-#{$i - 1}: #{color.scale($c, $saturation: 50%, $lightness: 24%)};
     --color-print-neon-sea-#{$i - 1}: #{color.scale(color.change($c, $saturation: 100%), $lightness: 20%)};
   }
 

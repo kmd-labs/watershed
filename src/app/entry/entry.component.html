@@ -1,19 +1,21 @@
 @let t = i18n.t();
+@let label = seaLabel();
 
 <div
   #dialog
   class="entry entry--{{ step() }}"
   [class.entry--moving]="moving()"
-  [class.entry--opening]="opening() !== null"
+  [class.entry--chosen]="chosen() !== null"
+  [class.entry--leaving]="leaving()"
   [class.entry--lean-classic]="step() === 'look' && !moving() && lean() === 'classic'"
   [class.entry--lean-midnight]="step() === 'look' && !moving() && lean() === 'midnight'"
   [style.--split]="split() + '%'"
   role="dialog"
   aria-modal="true"
-  [attr.aria-label]="t.pickerTitle"
+  [attr.aria-label]="step() === 'look' ? t.lookNames.classic + ' / ' + t.lookNames.midnight : t.pickerTitle"
   tabindex="-1">
   <!-- One map for both steps: paper underneath, the night (and its glow) clipped to the right of
-       the divider. Clicks on it pick a sea, or a mode. -->
+       the divider. On the map of seas a click on a basin chooses its sea. -->
   <div
     #stage
     class="atlas"
@@ -29,92 +31,107 @@
     <i class="atlas__divider" aria-hidden="true"></i>
   </div>
 
-  <!-- The split map: each half's mode, and a way on to the full map in it -->
+  <!-- Step 1, the mode: each half of the screen is one button -->
   <div class="halves" [inert]="step() !== 'look'">
     @for (lk of looks; track lk) {
-      <section class="half half--{{ lk }}" [attr.aria-label]="t.lookNames[lk]">
-        <div class="half__body">
-          <h2 class="half__name">{{ t.lookNames[lk] }}</h2>
-          <p class="half__note">{{ t.lookNotes[lk] }}</p>
-          <div class="half__foot">
-            <button
-              type="button"
-              class="half__cta"
-              (focus)="lean.set(lk)"
-              (blur)="lean.set(null)"
-              (click)="toMap(lk); $event.stopPropagation()">
-              {{ t.lookPick }}
-            </button>
+      <button
+        type="button"
+        class="half half--{{ lk }}"
+        [attr.aria-label]="t.lookNames[lk] + ' — ' + t.lookKinds[lk] + '. ' + t.lookNotes[lk]"
+        [attr.aria-current]="look.look() === lk ? 'true' : null"
+        (mouseenter)="lean.set(lk)"
+        (mouseleave)="lean.set(null)"
+        (focus)="lean.set(lk)"
+        (blur)="lean.set(null)"
+        (click)="toMap(lk)">
+        <span class="half__body">
+          <span class="half__kind">{{ t.lookKinds[lk] }}</span>
+          <span class="half__name">{{ t.lookNames[lk] }}</span>
+          <span class="half__note">{{ t.lookNotes[lk] }}</span>
+          <span class="half__foot">
+            <span class="half__cta">
+              <span>{{ t.lookPick }}</span>
+              <lucide-icon [img]="arrowIcon" [size]="15"></lucide-icon>
+            </span>
             @if (look.look() === lk) {
               <em class="half__now">{{ t.lookCurrent }}</em>
             }
-          </div>
-        </div>
-      </section>
+          </span>
+        </span>
+      </button>
     }
   </div>
 
-  <!-- The full map: heading, sea buttons with the numbers, back to the modes -->
+  <!-- Step 2, the sea: heading, the five seas named on the map, the dock -->
   <div class="full" [inert]="step() !== 'sea'">
     <header class="full__head" #head>
       <h1 class="full__title">{{ t.pickerTitle }}</h1>
       <p class="full__subtitle">{{ t.pickerSubtitle }}</p>
     </header>
 
-    <nav class="full__dock glass-panel" #dock [attr.aria-label]="t.pickerTitle">
-      <ul class="chips">
-        @for (c of cards(); track c.id) {
-          <li>
-            <button
-              type="button"
-              class="chip"
-              [class.chip--hot]="hot() === c.id"
-              [style.--chip]="'var(--color-entry-' + c.id + ')'"
-              [attr.aria-current]="seas.sea() === c.id ? 'true' : null"
-              [attr.aria-describedby]="'entry-stats'"
-              (mouseenter)="hot.set(c.id)"
-              (mouseleave)="hot.set(null)"
-              (focus)="hot.set(c.id)"
-              (blur)="hot.set(null)"
-              (click)="chooseSea(c.id)">
-              <i class="chip__dot" aria-hidden="true"></i>
-              <span>{{ c.name }}</span>
-              @if (c.mark) {
-                <em class="chip__mark">{{ c.mark }}</em>
-              }
-            </button>
-          </li>
+    <ul class="pills" [class.pills--ready]="pills().length > 0" [attr.aria-label]="t.pickerTitle">
+      @for (id of seaIds; track id; let i = $index) {
+        @let p = pills()[i];
+        <li>
+          <button
+            #pill
+            type="button"
+            class="pill"
+            [class.pill--hot]="hot() === id"
+            [class.pill--dim]="(hot() !== null && hot() !== id) || (chosen() !== null && chosen() !== id)"
+            [class.pill--chosen]="chosen() === id"
+            [style.--sea]="'var(--color-entry-' + id + ')'"
+            [style.left.px]="p?.x ?? 0"
+            [style.top.px]="p?.y ?? 0"
+            [style.transition-delay.ms]="step() === 'sea' && !moving() && !hot() ? i * 50 : 0"
+            [attr.aria-label]="t.seaNames[id] + '. ' + stats(id)"
+            [attr.aria-current]="seas.sea() === id ? 'true' : null"
+            (mouseenter)="!chosen() && hot.set(id)"
+            (mouseleave)="!chosen() && hot.set(null)"
+            (focus)="!chosen() && hot.set(id)"
+            (blur)="!chosen() && hot.set(null)"
+            (click)="chooseSea(id)">
+            @if (chosen() === id) {
+              <lucide-icon class="pill__check" [img]="checkIcon" [size]="14" aria-hidden="true"></lucide-icon>
+            } @else {
+              <i class="pill__dot" aria-hidden="true"></i>
+            }
+            <span class="pill__name">{{ label[id] }}</span>
+            @if (chosen() !== id && marked()(id); as m) {
+              <em class="pill__mark">{{ m }}</em>
+            }
+          </button>
+        </li>
+      }
+    </ul>
+
+    <div class="full__dock glass-panel" #dock>
+      <p class="full__stats" aria-live="polite">
+        @if (chosen(); as c) {
+          <b>{{ t.seaOpening(t.seaNames[c]) }}</b>
+        } @else if (hot(); as h) {
+          <b>{{ t.seaNames[h] }}</b> · {{ stats(h) }}
+        } @else {
+          {{ t.pickerHint }}
         }
-      </ul>
-      <div class="full__foot">
-        <p class="full__stats" id="entry-stats" aria-live="polite">
-          @if (hot(); as h) {
-            <b>{{ t.seaNames[h] }}</b> · {{ stats(h) }}
-          } @else {
-            {{ t.pickerHint }}
-          }
-        </p>
-        <button type="button" class="full__mode" (click)="toModes()">
-          <lucide-icon [img]="modeIcon" [size]="14"></lucide-icon>
-          <span>{{ t.lookChange }}</span>
-        </button>
-      </div>
-    </nav>
+      </p>
+      <button type="button" class="full__mode" (click)="toModes()">
+        <lucide-icon [img]="modeIcon" [size]="14"></lucide-icon>
+        <span>{{ t.lookChange }}</span>
+      </button>
+    </div>
   </div>
 
   @if (tip(); as tp) {
-    <div class="tip" [class.tip--night]="tp.look === 'midnight'" [style.left.px]="tp.x" [style.top.px]="tp.y" aria-hidden="true">
+    <div class="tip" [style.left.px]="tp.x" [style.top.px]="tp.y" aria-hidden="true">
       <b>{{ t.seaNames[tp.id] }}</b>
       <span>{{ stats(tp.id) }}</span>
-      @if (tp.look) {
-        <em>{{ t.lookOpenIn[tp.look] }}</em>
-      }
     </div>
   }
 
   <!-- Logotype, language and (once a sea is open) close -->
   <div class="entry__bar">
-    <!-- On the split map the logotype stands on paper (left): the black one there -->
+    <!-- On the modes the logotype stands on paper (left): the black one there -->
     <img
       class="entry__logo"
       [src]="step() === 'look' ? 'assets/design-system/logo/kmd-black-orange.svg' : theme.logoSrc()"
@@ -136,7 +153,7 @@
           </button>
         }
       </div>
-      @if (closable()) {
+      @if (closable() && !chosen()) {
         <button type="button" class="entry__close" [attr.aria-label]="t.pickerClose" [title]="t.pickerClose" (click)="close()">
           <lucide-icon [img]="closeIcon" [size]="16"></lucide-icon>
         </button>
